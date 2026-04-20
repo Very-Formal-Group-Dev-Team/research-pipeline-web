@@ -1,0 +1,89 @@
+/* calendar.css */
+
+/* Remove default borders, use subtle shadows */
+.rbc-calendar {
+  font-family: 'DM Sans', sans-serif;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Header row (Mon, Tue, etc.) */
+.rbc-header {
+  padding: 12px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #171717;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+
+/* Day cells */
+.rbc-day-bg {
+  transition: background 0.15s ease;
+}
+.rbc-day-bg:hover {
+  background: #f8fafc;
+}
+
+/* Today highlight */
+.rbc-today {
+  background: #eff6ff !important;
+}
+
+/* Remove heavy grid borders */
+.rbc-month-view,
+.rbc-time-view {
+  border: none;
+}
+.rbc-month-row {
+  border-top: 1px solid #f1f5f9;
+}
+.rbc-header + .rbc-header,
+.rbc-day-bg + .rbc-day-bg {
+  border-left: 1px solid #f1f5f9;
+}
+
+/* Events */
+.rbc-event {
+  background: #EC1E24 !important;
+  border: none !important;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white !important;
+  box-shadow: 0 1px 4px rgba(236, 30, 36, 0.3);
+  transition: opacity 0.15s;
+}
+.rbc-event:hover {
+  opacity: 0.85;
+}
+.rbc-event.rbc-selected {
+  background: #EC1E24 !important;
+  box-shadow: 0 2px 8px rgba(236, 30, 36, 0.4);
+}
+.rbc-event-label {
+  color: white !important;
+}
+
+/* Date number */
+.rbc-date-cell {
+  padding: 8px 10px 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+.rbc-date-cell.rbc-now a {
+  background: #EC1E24;
+  color: white;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

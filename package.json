@@ -1,0 +1,38 @@
+{
+  "name": "student-research-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "moment": "^2.30.1",
+    "next": "16.0.10",
+    "react": "19.2.1",
+    "react-big-calendar": "^1.19.4",
+    "react-dom": "19.2.1",
+    "react-easy-crop": "^5.5.6",
+    "react-icons": "^5.5.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/uuid": "^11.0.0",
+    "autoprefixer": "^10.4.22",
+    "baseline-browser-mapping": "^2.10.8",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.10",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5"
+  }
+}
