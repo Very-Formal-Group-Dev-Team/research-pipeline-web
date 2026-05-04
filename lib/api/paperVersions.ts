@@ -41,6 +41,8 @@ export interface DiffResult {
   message?: string;
   changes?: DiffChange[];
   stats?: DiffStats;
+  currentHtml?: string | null;
+  previousHtml?: string | null;
 }
 
 // ─── API calls ──────────────────────────────────────────────────────────────

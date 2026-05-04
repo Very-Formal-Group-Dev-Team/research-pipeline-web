@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   FiUploadCloud,
   FiDownload,
@@ -75,6 +75,118 @@ function DiffView({ changes }: { changes: DiffChange[] }) {
   );
 }
 
+function RenderedDiffView({ diff, mode }: { diff: DiffResult; mode: 'current' | 'previous' }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    const html = mode === 'current' ? diff.currentHtml : diff.previousHtml;
+    if (!html) {
+      container.innerHTML = '<div class="text-sm text-neutral-500 italic">Rendered view not available for this file type.</div>';
+      return;
+    }
+
+    // Set the HTML first
+    container.innerHTML = html;
+
+    if (!diff.changes || diff.changes.length === 0) return;
+
+    // Build the plain text used for mapping: current = all non-removed parts; previous = all non-added parts
+    const parts = diff.changes;
+    const plain = (mode === 'current'
+      ? parts.filter((p) => !p.removed).map((p) => p.value).join('')
+      : parts.filter((p) => !p.added).map((p) => p.value).join('')) || '';
+
+    // Collect text nodes with cumulative offsets
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+    const nodes: { node: Text; start: number; end: number }[] = [];
+    let cur: Node | null = walker.nextNode();
+    let idx = 0;
+    while (cur) {
+      const txt = cur.nodeValue || '';
+      const len = txt.length;
+      if (len > 0) {
+        nodes.push({ node: cur as Text, start: idx, end: idx + len });
+        idx += len;
+      }
+      cur = walker.nextNode();
+    }
+
+    const fullText = nodes.map((n) => n.node.nodeValue || '').join('');
+    if (!fullText || fullText.length === 0) return;
+
+    // Find ranges for parts in the plain text
+    const ranges: { start: number; end: number; type: 'added' | 'removed' }[] = [];
+    let pointer = 0;
+    for (const part of parts) {
+      if (mode === 'current' && part.removed) continue;
+      if (mode === 'previous' && part.added) continue;
+      const val = part.value || '';
+      if (!val) continue;
+      const startIndex = fullText.indexOf(val, pointer);
+      if (startIndex === -1) {
+        // try from beginning if not found
+        const alt = fullText.indexOf(val);
+        if (alt === -1) continue;
+        pointer = alt + val.length;
+        ranges.push({ start: alt, end: alt + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
+      } else {
+        ranges.push({ start: startIndex, end: startIndex + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
+        pointer = startIndex + val.length;
+      }
+    }
+
+    if (ranges.length === 0) return;
+
+    // Wrap ranges from end -> start to avoid offset invalidation
+    ranges.sort((a, b) => b.start - a.start);
+    for (const r of ranges) {
+      // find start node
+      let startNodeIndex = -1;
+      for (let i = 0; i < nodes.length; i++) {
+        if (r.start >= nodes[i].start && r.start < nodes[i].end) {
+          startNodeIndex = i;
+          break;
+        }
+      }
+      if (startNodeIndex === -1) continue;
+
+      let endNodeIndex = startNodeIndex;
+      while (endNodeIndex < nodes.length && r.end > nodes[endNodeIndex].end) endNodeIndex++;
+      if (endNodeIndex >= nodes.length) continue;
+
+      const startNode = nodes[startNodeIndex].node;
+      const endNode = nodes[endNodeIndex].node;
+      const startOffset = r.start - nodes[startNodeIndex].start;
+      const endOffset = r.end - nodes[endNodeIndex].start;
+
+      const range = document.createRange();
+      try {
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        const wrapper = document.createElement('span');
+        if (r.type === 'added') {
+          wrapper.className = 'bg-success-100 text-success-800 decoration-success-400';
+        } else {
+          wrapper.className = 'bg-error-100 text-error-800 line-through decoration-error-400';
+        }
+        range.surroundContents(wrapper);
+      } catch (e) {
+        // surroundContents may throw for malformed ranges; ignore and continue
+        // (best-effort highlighting)
+        // console.error('wrap error', e);
+      }
+    }
+  }, [diff, mode]);
+
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-white p-4 max-h-none sm:max-h-96 overflow-auto">
+      <div ref={containerRef} />
+    </div>
+  );
+}
+
 function VersionCard({
   version,
   isLatest,
@@ -91,6 +203,8 @@ function VersionCard({
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'text' | 'rendered'>('text');
+  const [renderSide, setRenderSide] = useState<'current' | 'previous'>('current');
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -271,6 +385,45 @@ function VersionCard({
 
               {diff && diff.supported && diff.stats && diff.changes && (
                 <div className="space-y-3">
+                  {/* View mode toggle: Text or Rendered (HTML) */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex rounded-md bg-neutral-100 p-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setViewMode('text'); }}
+                          className={`px-3 py-1 text-sm rounded ${viewMode === 'text' ? 'bg-white' : 'text-neutral-600'}`}
+                        >
+                          Text
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setViewMode('rendered'); }}
+                          className={`px-3 py-1 text-sm rounded ${viewMode === 'rendered' ? 'bg-white' : 'text-neutral-600'}`}
+                        >
+                          Rendered
+                        </button>
+                      </div>
+
+                      {viewMode === 'rendered' && (
+                        <div className="ml-3 inline-flex items-center gap-2 text-sm text-neutral-600">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setRenderSide('current'); }}
+                            className={`px-2 py-1 rounded ${renderSide === 'current' ? 'bg-neutral-200' : ''}`}
+                          >
+                            Current
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setRenderSide('previous'); }}
+                            className={`px-2 py-1 rounded ${renderSide === 'previous' ? 'bg-neutral-200' : ''}`}
+                          >
+                            Previous
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-neutral-400">
+                      {diff.stats.previousWords} → {diff.stats.currentWords} words
+                    </div>
+                  </div>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="flex items-center gap-1 text-success-700 font-medium">
                       <FiPlus className="w-3.5 h-3.5" />
@@ -284,7 +437,11 @@ function VersionCard({
                       {diff.stats.previousWords} → {diff.stats.currentWords} total words
                     </span>
                   </div>
-                  <DiffView changes={diff.changes} />
+                  {viewMode === 'text' ? (
+                    <DiffView changes={diff.changes} />
+                  ) : (
+                    <RenderedDiffView diff={diff} mode={renderSide} />
+                  )}
                 </div>
               )}
             </div>
