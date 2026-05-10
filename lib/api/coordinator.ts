@@ -153,15 +153,33 @@ export interface CreateCourseDefensePayload {
   endTime: string;
   location: string;
   venue?: string;
+  forceSchedule?: boolean;
+  holdDefense?: boolean;
+}
+
+export interface CourseDefenseConflict {
+  conflict: true;
+  message: string;
+  max_overlap_minutes: number;
+  candidate_total_minutes: number;
+  effective_minutes: number;
+  conflicts: Array<{
+    defense_id: string;
+    project_id: string;
+    start_time: string;
+    end_time: string;
+    overlap_minutes: number;
+  }>;
 }
 
 export interface CourseDefenseResult {
   count: number;
   defenses: Defense[];
+  status: string;
 }
 
 export function createDefenseForCourse(courseId: string, payload: CreateCourseDefensePayload) {
-  return post<CourseDefenseResult>(`/coordinator/courses/${courseId}/defenses`, payload);
+  return post<CourseDefenseResult | CourseDefenseConflict>(`/coordinator/courses/${courseId}/defenses`, payload);
 }
 
 // ─── Projects ───────────────────────────────────────────────────────────────
