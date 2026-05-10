@@ -99,6 +99,7 @@ export default function CoordinatorDefensesPage() {
     effective_minutes?: number;
     conflicts: Array<{ domain: string; defense_id: string; project_id: string; start_time: string; end_time: string | null }>;
   } | null>(null);
+  const [conflictAction, setConflictAction] = useState<'hold' | 'confirm' | null>(null);
 
   // Sorting & expand
   const [sortBy, setSortBy] = useState<'time' | 'status'>('time');
@@ -197,19 +198,22 @@ export default function CoordinatorDefensesPage() {
     setSubmitting(false);
   }
 
-  async function handleForceApprove() {
+  async function handleConflictResolution(action: 'hold' | 'confirm') {
     if (!conflictPrompt) return;
+    setConflictAction(action);
     setSubmitting(true);
     const res = await verifyDefense(conflictPrompt.defenseId, {
       venue: conflictPrompt.venue,
       verifiedSchedule: conflictPrompt.verifiedSchedule,
       verifiedEndTime: conflictPrompt.verifiedEndTime,
       notes: conflictPrompt.notes,
-      forceApprove: true,
+      forceApprove: action === 'confirm',
+      holdDefense: action === 'hold',
     });
 
     if (!res.error) {
       setConflictPrompt(null);
+      setConflictAction(null);
       closeModal();
       await loadDefenses();
     }
@@ -230,7 +234,13 @@ export default function CoordinatorDefensesPage() {
 
 
   const displayedDefenses = (() => {
-    const list = tab === 'pending' ? pendingDefenses : allDefenses;
+    let list = tab === 'pending' ? pendingDefenses : allDefenses;
+    
+    // Filter out pending from the 'all' tab view
+    if (tab === 'all') {
+      list = list.filter(defense => defense.status !== 'pending');
+    }
+    
     const statusOrder: Record<string, number> = { pending: 0, moved: 1, approved: 2, rejected: 3, scheduled: 4, completed: 5, cancelled: 6 };
     return [...list].sort((a, b) => {
       if (sortBy === 'status') {
@@ -374,6 +384,17 @@ export default function CoordinatorDefensesPage() {
                             onClick={(e: React.MouseEvent) => { e.stopPropagation(); openModal(defense, 'reject'); }}
                           >
                             <FiX className="mr-1" /> Reject
+                          </Button>
+                        </>
+                      )}
+                      {/* Actions for approved/scheduled defenses in all tab */}
+                      {defense.status !== 'pending' && tab === 'all' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); openModal(defense, 'move'); }}
+                          >
+                            <FiMove className="mr-1" /> Reschedule
                           </Button>
                         </>
                       )}
@@ -574,12 +595,15 @@ export default function CoordinatorDefensesPage() {
 
       <Modal
         isOpen={!!conflictPrompt}
-        onClose={() => setConflictPrompt(null)}
+        onClose={() => {
+          setConflictPrompt(null);
+          setConflictAction(null);
+        }}
         title="Schedule Conflict Found"
       >
         <div className="p-6 space-y-4">
           <p className="text-sm text-neutral-600">
-            This defense overlaps with existing confirmed schedules. You can cancel and choose another time, or force approval to proceed anyway.
+            This defense overlaps with existing confirmed schedules. Choose how to proceed:
           </p>
           <div className="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-sm text-warning-800">
             {uniqueConflictCount} overlapping schedule{uniqueConflictCount === 1 ? '' : 's'} detected.
@@ -605,12 +629,39 @@ export default function CoordinatorDefensesPage() {
               </ul>
             </div>
           )}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-neutral-700 space-y-2">
+            <div>
+              <p className="font-medium text-blue-900 mb-1">Option 1: Hold Defense</p>
+              <p className="text-blue-800 text-xs">Queue this defense. It will be scheduled automatically when the conflicting slot becomes available.</p>
+            </div>
+            <div>
+              <p className="font-medium text-blue-900 mb-1">Option 2: Confirm</p>
+              <p className="text-blue-800 text-xs">Approve regardless of the time conflict. Both defenses will be scheduled at their requested times.</p>
+            </div>
+          </div>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setConflictPrompt(null)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConflictPrompt(null);
+                setConflictAction(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button variant="error" onClick={handleForceApprove} disabled={submitting}>
-              {submitting ? 'Confirming...' : 'Force Approve'}
+            <Button
+              variant="primary"
+              onClick={() => handleConflictResolution('hold')}
+              disabled={submitting}
+            >
+              {submitting && conflictAction === 'hold' ? 'Processing...' : 'Hold Defense'}
+            </Button>
+            <Button
+              variant="error"
+              onClick={() => handleConflictResolution('confirm')}
+              disabled={submitting}
+            >
+              {submitting && conflictAction === 'confirm' ? 'Confirming...' : 'Confirm'}
             </Button>
           </div>
         </div>

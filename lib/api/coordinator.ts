@@ -132,7 +132,7 @@ export function getPendingDefenses() {
   return get<Defense[]>('/coordinator/defenses/pending');
 }
 
-export function verifyDefense(defenseId: string, payload: { venue?: string; verifiedSchedule?: string; verifiedEndTime?: string; notes?: string; forceApprove?: boolean }) {
+export function verifyDefense(defenseId: string, payload: { venue?: string; verifiedSchedule?: string; verifiedEndTime?: string; notes?: string; forceApprove?: boolean; holdDefense?: boolean }) {
   return post<Defense | VerifyDefenseConflict>(`/coordinator/defenses/${defenseId}/verify`, payload);
 }
 

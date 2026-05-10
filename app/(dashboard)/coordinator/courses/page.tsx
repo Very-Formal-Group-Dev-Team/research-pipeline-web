@@ -141,6 +141,13 @@ export default function CoordinatorCoursesPage() {
       setDefenseError('Date, start time, end time, and location are required.');
       return;
     }
+
+    // Client-side: verify end time is after start time before submitting
+    if (defenseForm.endTime <= defenseForm.startTime) {
+      setDefenseError('End time must be after start time.');
+      return;
+    }
+
     setDefenseSubmitting(true);
     setDefenseError('');
     setDefenseSuccess('');
