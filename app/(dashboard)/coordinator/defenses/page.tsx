@@ -14,6 +14,7 @@ import {
   FiChevronUp,
   FiMonitor,
   FiMove,
+  FiTrash2,
 } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
@@ -21,6 +22,7 @@ import {
   getPendingDefenses,
   verifyDefense,
   rejectDefense,
+  deleteDefense,
   type Defense,
 } from '@/lib/api/coordinator';
 
@@ -104,6 +106,10 @@ export default function CoordinatorDefensesPage() {
   // Sorting & expand
   const [sortBy, setSortBy] = useState<'time' | 'status'>('time');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<Defense | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function loadDefenses() {
     setLoading(true);
@@ -229,6 +235,17 @@ export default function CoordinatorDefensesPage() {
       await loadDefenses();
     }
     setSubmitting(false);
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await deleteDefense(deleteTarget.id);
+    if (!res.error) {
+      setDeleteTarget(null);
+      await loadDefenses();
+    }
+    setDeleting(false);
   }
 
 
@@ -396,6 +413,13 @@ export default function CoordinatorDefensesPage() {
                           >
                             <FiMove className="mr-1" /> Reschedule
                           </Button>
+                          <button
+                            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setDeleteTarget(defense); }}
+                            className="p-2 text-neutral-400 hover:text-error-500 hover:bg-error-50 rounded-lg transition-colors"
+                            title="Delete defense"
+                          >
+                            <FiTrash2 />
+                          </button>
                         </>
                       )}
                       {isExpanded ? (
@@ -667,6 +691,26 @@ export default function CoordinatorDefensesPage() {
         </div>
       </Modal>
 
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Defense"
+      >
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-neutral-600">
+            Are you sure you want to permanently delete the{' '}
+            <strong>{deleteTarget?.defense_type}</strong> defense for{' '}
+            <strong>{deleteTarget?.project_title}</strong>? This cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="error" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
     </DashboardLayout>
   );

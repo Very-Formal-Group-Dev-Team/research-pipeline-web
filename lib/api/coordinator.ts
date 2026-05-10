@@ -144,6 +144,10 @@ export function setDefenseVenue(defenseId: string, venue: string) {
   return patch<{ success: boolean }>(`/coordinator/defenses/${defenseId}/venue`, { venue });
 }
 
+export function deleteDefense(defenseId: string) {
+  return del<{ success: boolean }>(`/coordinator/defenses/${defenseId}`);
+}
+
 // ─── Course Defenses ────────────────────────────────────────────────────────
 
 export interface CreateCourseDefensePayload {
