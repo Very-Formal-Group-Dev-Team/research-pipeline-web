@@ -13,10 +13,14 @@ export interface Defense {
   start_time: string;
   end_time: string | null;
   location: string;
-  modality: string;
+  modality?: string | null;
   status: string;
   created_by: string;
   created_by_name?: string;
+  adviser_name?: string;
+  venue?: string | null;
+  status_label?: string;
+  scheduled_at?: string;
   created_at: string;
 }
 
@@ -34,7 +38,7 @@ export function getMyDefenses() {
   return get<Defense[]>('/defenses/me');
 }
 
-/** Fetch defenses for all projects the current user is a member of (student view). */
+/** Fetch defense schedules for all projects the current user is a member of. */
 export function getMyProjectDefenses() {
   return get<Defense[]>('/defenses/my-projects');
 }

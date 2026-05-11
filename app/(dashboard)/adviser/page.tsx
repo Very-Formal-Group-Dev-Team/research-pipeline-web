@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardTitle, CardDescription } from '@/components/ui/Card';
 import JoinGroupCard from '@/components/ui/JoinGroupCard';
@@ -12,8 +12,14 @@ import moment from 'moment'
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '@/components/Calendar.css'
 import CustomToolBar from '@/components/CalendarToolBar';
-import { useState } from 'react';
 import { MOCK_ADVISER_STATS } from '@/lib/mock-data';
+import { getMyProjectDefenses, type Defense } from '@/lib/api/defenses';
+
+function parseDefenseDate(iso?: string | null) {
+  if (!iso) return null;
+  const parsed = new Date(iso.replace(/Z$/i, ''));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 export default function AdviserDashboardPage() {
   const router = useRouter();
@@ -22,25 +28,49 @@ export default function AdviserDashboardPage() {
   const localizer = momentLocalizer(moment);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState('month');
-  const eventList = [
-    {
-      title: 'Board Meeting',
-      start: new Date(2026, 2, 20, 10, 0), // Year, Month (0-indexed), Day, Hour, Min
-      end: new Date(2026, 2, 20, 12, 0),
-    },
-  ];
+  const [defenses, setDefenses] = useState<Defense[]>([]);
+  const [defensesLoading, setDefensesLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDefenses() {
+      const res = await getMyProjectDefenses();
+      if (!cancelled && res.data) setDefenses(res.data);
+      if (!cancelled) setDefensesLoading(false);
+    }
+
+    loadDefenses();
+    return () => { cancelled = true; };
+  }, []);
+
+  const eventList = defenses
+    .map((defense) => {
+      const start = parseDefenseDate(defense.start_time || defense.scheduled_at);
+      const end = parseDefenseDate(defense.end_time || defense.start_time || defense.scheduled_at);
+      if (!start || !end) return null;
+
+      return {
+        title: `${defense.project_title} · ${defense.defense_type}`,
+        start,
+        end,
+      };
+    })
+    .filter((event): event is { title: string; start: Date; end: Date } => Boolean(event));
+
+  const loading = isLoading || defensesLoading;
 
   const stats = [
     { icon: <FiUsers />, label: 'Total Advisees', value: String(MOCK_ADVISER_STATS.totalAdvisees), color: 'bg-accent-100 text-accent-600' },
     { icon: <FiFolder />, label: 'Active Projects', value: String(MOCK_ADVISER_STATS.activeProjects), color: 'bg-success-100 text-success-600' },
-    { icon: <FiCalendar />, label: 'Upcoming Defenses', value: String(MOCK_ADVISER_STATS.upcomingDefenses), color: 'bg-warning-100 text-warning-600', href: '/adviser/schedule' },
+    { icon: <FiCalendar />, label: 'Upcoming Defenses', value: String(defenses.length), color: 'bg-warning-100 text-warning-600', href: '/adviser/schedule' },
     { icon: <FiTrendingUp />, label: 'Completed Projects', value: String(MOCK_ADVISER_STATS.completedProjects), color: 'bg-primary-100 text-primary-600' },
   ];
 
   return (
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        {isLoading ? (
+        {loading ? (
           <div className="flex items-center justify-center h-64">
             <p className="text-neutral-500">Loading...</p>
           </div>
