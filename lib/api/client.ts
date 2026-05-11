@@ -68,6 +68,15 @@ async function request<T>(
     const contentType = res.headers.get('Content-Type') || '';
     const body = contentType.includes('application/json') ? await res.json() : null;
 
+    // For 409 Conflict, return the conflict data in the response for client-side handling
+    if (res.status === 409 && body) {
+      return {
+        data: body as T,
+        error: null,
+        status: res.status,
+      };
+    }
+
     if (!res.ok) {
       return {
         data: null,

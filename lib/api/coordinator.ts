@@ -132,7 +132,7 @@ export function getPendingDefenses() {
   return get<Defense[]>('/coordinator/defenses/pending');
 }
 
-export function verifyDefense(defenseId: string, payload: { venue?: string; verifiedSchedule?: string; verifiedEndTime?: string; notes?: string; forceApprove?: boolean }) {
+export function verifyDefense(defenseId: string, payload: { venue?: string; verifiedSchedule?: string; verifiedEndTime?: string; notes?: string; forceApprove?: boolean; holdDefense?: boolean }) {
   return post<Defense | VerifyDefenseConflict>(`/coordinator/defenses/${defenseId}/verify`, payload);
 }
 
@@ -144,6 +144,10 @@ export function setDefenseVenue(defenseId: string, venue: string) {
   return patch<{ success: boolean }>(`/coordinator/defenses/${defenseId}/venue`, { venue });
 }
 
+export function deleteDefense(defenseId: string) {
+  return del<{ success: boolean }>(`/coordinator/defenses/${defenseId}`);
+}
+
 // ─── Course Defenses ────────────────────────────────────────────────────────
 
 export interface CreateCourseDefensePayload {
@@ -153,15 +157,33 @@ export interface CreateCourseDefensePayload {
   endTime: string;
   location: string;
   venue?: string;
+  forceSchedule?: boolean;
+  holdDefense?: boolean;
+}
+
+export interface CourseDefenseConflict {
+  conflict: true;
+  message: string;
+  max_overlap_minutes: number;
+  candidate_total_minutes: number;
+  effective_minutes: number;
+  conflicts: Array<{
+    defense_id: string;
+    project_id: string;
+    start_time: string;
+    end_time: string;
+    overlap_minutes: number;
+  }>;
 }
 
 export interface CourseDefenseResult {
   count: number;
   defenses: Defense[];
+  status: string;
 }
 
 export function createDefenseForCourse(courseId: string, payload: CreateCourseDefensePayload) {
-  return post<CourseDefenseResult>(`/coordinator/courses/${courseId}/defenses`, payload);
+  return post<CourseDefenseResult | CourseDefenseConflict>(`/coordinator/courses/${courseId}/defenses`, payload);
 }
 
 // ─── Projects ───────────────────────────────────────────────────────────────
