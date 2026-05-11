@@ -45,6 +45,7 @@ const menuItems: Record<string, MenuItem[]> = {
   adviser: [
     { label: 'Dashboard', href: '/adviser', icon: <FiHome /> },
     { label: 'My Advisees', href: '/adviser/advisees', icon: <FiUsers /> },
+    { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell /> },
     // {/* label: 'Projects Overview', href: '/adviser/projects', icon: <FiFolder /> */}
     { label: 'Meeting Schedule', href: '/defenses', icon: <FiCalendar /> },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
