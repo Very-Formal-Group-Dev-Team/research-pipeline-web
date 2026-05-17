@@ -33,7 +33,7 @@ export default function Home() {
           </h2>
           <p className="text-xl text-neutral-600 mb-8">
             A comprehensive platform for managing academic research projects from proposal to publication.
-            Collaborate with advisers, track progress, and schedule defenses—all in one place.
+            Collaborate with advisers, track progress, and schedule defenses. All in one place.
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link href="/register">

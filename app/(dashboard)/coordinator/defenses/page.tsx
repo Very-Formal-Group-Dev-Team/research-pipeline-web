@@ -278,10 +278,13 @@ export default function CoordinatorDefensesPage() {
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-primary-700">Defense Management</h1>
-          <p className="text-neutral-600 mt-1">Manage defense schedules and course-wide defense events</p>
-        </div>
+          <div>
+            <h1 className="text-3xl font-bold text-primary-700">Defense Management</h1>
+            <p className="text-neutral-600 mt-1">Manage defense schedules and course-wide defense events</p>
+            <div className="mt-4 p-3 rounded-md bg-neutral-50 border border-neutral-200 text-sm text-neutral-700">
+              This page is for coordinators to create and manage course-wide defense schedules (proposal/midterm/final). Adviser meeting requests and personal meeting bookings are managed from the Adviser's Meeting Schedule page.
+            </div>
+          </div>
 
         {/* Tabs */}
         <div className="flex gap-2 border-b border-neutral-200 pb-0">

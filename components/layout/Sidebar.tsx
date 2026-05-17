@@ -26,6 +26,7 @@ export interface MenuItem {
   href: string;
   icon: React.ReactNode;
   badge?: number;
+  tooltip?: string;
   roles?: string[];
 }
 
@@ -45,14 +46,14 @@ const menuItems: Record<string, MenuItem[]> = {
   adviser: [
     { label: 'Dashboard', href: '/adviser', icon: <FiHome /> },
     { label: 'My Advisees', href: '/adviser/advisees', icon: <FiUsers /> },
-    { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell /> },
+    { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell />, tooltip: 'Your recent notifications and alerts' },
     // {/* label: 'Projects Overview', href: '/adviser/projects', icon: <FiFolder /> */}
-    { label: 'Meeting Schedule', href: '/defenses', icon: <FiCalendar /> },
+    { label: 'Meeting Schedule', href: '/adviser/meetings', icon: <FiCalendar />, tooltip: 'Adviser meetings with students (one-on-one or group)' },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
   ],
   coordinator: [
     { label: 'Dashboard', href: '/coordinator', icon: <FiHome /> },
-    { label: 'Manage Defenses', href: '/coordinator/defenses', icon: <FiCheckSquare /> },
+    { label: 'Manage Defenses', href: '/coordinator/defenses', icon: <FiCheckSquare />, tooltip: 'Coordinator: manage course-wide defense schedules' },
     { label: 'Advisers', href: '/coordinator/advisers', icon: <FiUsers /> },
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
@@ -112,6 +113,7 @@ export default function Sidebar({ role }: SidebarProps) {
                   <Link
                     href={item.href}
                     onClick={closeSidebar}
+                    title={item.tooltip || item.label}
                     className={`
                       flex items-center gap-3 rounded-lg
                       transition-all duration-200 group text-sm px-4 py-2.5 relative

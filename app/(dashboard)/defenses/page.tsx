@@ -233,7 +233,7 @@ export default function MeetingSchedule() {
     }
 
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to book meeting.');
+      throw new Error(data?.error || 'Failed to book meeting.');
     }
 
     const createdStatus = data?.status || data?.data?.status;
