@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -49,61 +49,70 @@ function notificationIcon(type: string) {
 
 function notificationVariant(type: string): 'success' | 'error' | 'warning' | 'default' | 'primary' {
   switch (type) {
-    case 'defense_approved': return 'success';
-    case 'defense_rejected': return 'error';
-    case 'defense_moved': return 'warning';
-    case 'schedule': return 'primary';
-    default: return 'default';
+    case 'defense_approved':
+      return 'success';
+    case 'defense_rejected':
+      return 'error';
+    case 'defense_moved':
+      return 'warning';
+    case 'schedule':
+      return 'primary';
+    default:
+      return 'default';
   }
 }
 
 function typeLabel(type: string): string {
   switch (type) {
-    case 'defense_approved': return 'Approved';
-    case 'defense_rejected': return 'Rejected';
-    case 'defense_moved': return 'Moved';
-    case 'schedule': return 'Schedule';
-    case 'invitation': return 'Invitation';
-    default: return type;
+    case 'defense_approved':
+      return 'Approved';
+    case 'defense_rejected':
+      return 'Rejected';
+    case 'defense_moved':
+      return 'Moved';
+    case 'schedule':
+      return 'Schedule';
+    case 'invitation':
+      return 'Invitation';
+    default:
+      return type;
   }
 }
 
 export default function AdviserNotificationsPage() {
   const { user, handleLogout } = useDashboardUser('Adviser');
+
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
-
-  async function loadNotifications() {
-    const notifRes = await getMyNotifications();
-    if (notifRes.data) setNotifications(notifRes.data);
-    setLoading(false);
-  }
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      if (cancelled) return;
-      await loadNotifications();
+      const res = await getMyNotifications(100);
+      if (!cancelled && res.data) setNotifications(res.data);
+      if (!cancelled) setLoading(false);
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleMarkRead(id: string) {
     await markNotificationRead(id);
     setNotifications((prev) =>
-      prev.map((notification) => (notification.id === id ? { ...notification, is_read: true } : notification))
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
     );
   }
 
   async function handleMarkAllRead() {
     await markAllNotificationsRead();
-    setNotifications((prev) => prev.map((notification) => ({ ...notification, is_read: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }
 
-  const unreadCount = notifications.filter((notification) => !notification.is_read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
@@ -111,7 +120,9 @@ export default function AdviserNotificationsPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Notifications</h1>
-            <p className="text-neutral-600 mt-1">Stay updated on defense schedules and project activity</p>
+            <p className="text-neutral-600 mt-1">
+              Defense schedules, project updates, and institution activity for your advisees
+            </p>
           </div>
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
@@ -138,18 +149,28 @@ export default function AdviserNotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <div>
-                        <h3 className={`font-semibold text-lg ${!notification.is_read ? 'text-primary-700' : 'text-neutral-700'}`}>
+                        <h3
+                          className={`font-semibold text-lg ${
+                            !notification.is_read ? 'text-primary-700' : 'text-neutral-700'
+                          }`}
+                        >
                           {notification.title}
                         </h3>
                         <p className="text-xs text-neutral-500">
                           {formatDate(notification.created_at)}
+                          {notification.is_read && notification.read_at
+                            ? ` · Read ${formatDate(notification.read_at)}`
+                            : ''}
                         </p>
                       </div>
-                      <Badge variant={notificationVariant(notification.type)}>{typeLabel(notification.type)}</Badge>
+                      <Badge variant={notificationVariant(notification.type)}>
+                        {typeLabel(notification.type)}
+                      </Badge>
                     </div>
                     <p className="text-sm text-neutral-600 mt-1">{notification.message}</p>
                     {!notification.is_read && (
                       <button
+                        type="button"
                         onClick={() => handleMarkRead(notification.id)}
                         className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
                       >
@@ -166,7 +187,7 @@ export default function AdviserNotificationsPage() {
             <EmptyState
               icon={<FiBell />}
               title="No notifications"
-              description="You don't have any notifications yet. You'll be notified when defenses are scheduled or updated."
+              description="You don't have any notifications yet. You'll be notified about defense schedules and project activity."
             />
           </Card>
         )}
