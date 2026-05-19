@@ -3,25 +3,60 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --radius: 0.625rem;
+    --background: 40 50% 98%;
+    --foreground: 203 52% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 203 52% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 203 52% 20%;
+    --primary: 203 52% 20%;
+    --primary-foreground: 40 50% 98%;
+    --secondary: 203 25% 92%;
+    --secondary-foreground: 203 52% 20%;
+    --muted: 40 20% 96%;
+    --muted-foreground: 203 15% 40%;
+    --accent: 203 35% 88%;
+    --accent-foreground: 203 52% 20%;
+    --destructive: 358 82% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 84%;
+    --input: 0 0% 84%;
+    --ring: 203 52% 35%;
+  }
+
   body {
     @apply bg-ivory text-neutral-900;
   }
-  
+
   * {
     @apply antialiased;
+  }
+
+  .portal-calendar {
+    --background: 0 0% 100%;
+    --foreground: 203 52% 20%;
+    --primary: 203 52% 20%;
+    --primary-foreground: 40 50% 98%;
+    --muted: 40 20% 96%;
+    --muted-foreground: 203 15% 40%;
+    --accent: 203 35% 88%;
+    --accent-foreground: 203 52% 20%;
+    --border: 0 0% 88%;
+    --ring: 203 52% 35%;
   }
 }
 
 @layer components {
-  /* Modern Scrollbar */
   ::-webkit-scrollbar {
     @apply w-2 h-2;
   }
-  
+
   ::-webkit-scrollbar-track {
     @apply bg-neutral-100;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     @apply bg-neutral-300 rounded-full hover:bg-neutral-400;
   }
@@ -41,4 +76,3 @@
 .animate-modal-in {
   animation: modal-in 0.2s ease-out forwards;
 }
-
