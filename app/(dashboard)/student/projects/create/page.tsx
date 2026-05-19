@@ -495,7 +495,7 @@ export default function CreateProjectPage() {
               onChange={(e) => setResearchType(e.target.value)}
               options={[
                 { value: 'IMRAD', label: 'IMRAD' },
-                { value: 'IAAA', label: 'IAAA' },
+                { value: 'IEEE', label: 'IEEE' },
                 { value: 'custom', label: 'Custom' },
               ]}
               error={errors.researchType}
