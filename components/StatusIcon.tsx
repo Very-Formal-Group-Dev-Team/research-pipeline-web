@@ -1,16 +1,14 @@
-import { FaCheckCircle, FaEdit, FaShieldAlt, FaCheck } from "react-icons/fa"
+import { FaCheckCircle, FaEdit, FaShieldAlt, FaCheck, FaClock } from "react-icons/fa"
 import { MdTimelapse } from "react-icons/md"
 import { FaThumbsUp } from "react-icons/fa6"
 import { IoChatboxEllipses } from "react-icons/io5"
+import { formatStatusLabel } from "@/lib/utils/formatStatus"
 
 export default function StatusIcon({ status }: { status : string }) {
     let color, icon
+    const label = formatStatusLabel(status)
 
-    function getUpperCase (stat : string){
-        return stat.charAt(0).toUpperCase() + stat.slice(1)
-    }
-
-    switch (getUpperCase(status)) {
+    switch (label) {
         case "Completed":
             icon = <FaCheckCircle />
             color = "bg-green-400"
@@ -43,12 +41,20 @@ export default function StatusIcon({ status }: { status : string }) {
             icon = <FaCheck />
             color = "bg-green-100"        
             break;
+        case "Pending":
+            icon = <FaClock />
+            color = "bg-yellow-100"
+            break;
+        default:
+            icon = <FaEdit />
+            color = "bg-gray-200"
+            break;
     }
     
     return (
-        <div className={`${color} text-sm flex items-center justify-around w-fit gap-2 h-9 px-3 rounded-full`}>
+        <div className={`${color ?? "bg-gray-200"} text-sm flex items-center justify-around w-fit gap-2 h-9 px-3 rounded-full`}>
             {icon}
-            <p className="text-">{getUpperCase(status)}</p>
+            <p>{label}</p>
         </div>
     )
 }

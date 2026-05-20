@@ -17,6 +17,7 @@ import {
   FiTrash2,
 } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
+import { formatStatusLabel } from '@/lib/utils/formatStatus';
 import {
   getAllDefenses,
   getPendingDefenses,
@@ -62,14 +63,14 @@ type DefenseVariant = 'success' | 'warning' | 'error' | 'default' | 'primary';
 
 function statusBadge(status: string): { label: string; variant: DefenseVariant } {
   switch (status) {
-    case 'pending': return { label: 'Pending', variant: 'warning' };
-    case 'approved': return { label: 'Approved', variant: 'success' };
-    case 'moved': return { label: 'Moved', variant: 'primary' };
-    case 'rejected': return { label: 'Rejected', variant: 'error' };
-    case 'scheduled': return { label: 'Scheduled', variant: 'default' };
-    case 'completed': return { label: 'Completed', variant: 'success' };
-    case 'cancelled': return { label: 'Cancelled', variant: 'error' };
-    default: return { label: status, variant: 'default' };
+    case 'pending': return { label: formatStatusLabel('pending'), variant: 'warning' };
+    case 'approved': return { label: formatStatusLabel('approved'), variant: 'success' };
+    case 'moved': return { label: formatStatusLabel('moved'), variant: 'primary' };
+    case 'rejected': return { label: formatStatusLabel('rejected'), variant: 'error' };
+    case 'scheduled': return { label: formatStatusLabel('scheduled'), variant: 'default' };
+    case 'completed': return { label: formatStatusLabel('completed'), variant: 'success' };
+    case 'cancelled': return { label: formatStatusLabel('cancelled'), variant: 'error' };
+    default: return { label: formatStatusLabel(status), variant: 'default' };
   }
 }
 

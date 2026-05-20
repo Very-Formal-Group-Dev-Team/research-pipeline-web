@@ -13,16 +13,17 @@ import {
   type InstitutionProject,
 } from '@/lib/api/coordinator';
 import Button from '@/components/Button';
+import { formatStatusLabel } from '@/lib/utils/formatStatus';
 
 type BadgeVariant = 'success' | 'warning' | 'error' | 'default' | 'primary';
 
 function projectStatusBadge(status: string): { label: string; variant: BadgeVariant } {
   switch (status) {
-    case 'completed': return { label: 'Completed', variant: 'success' };
-    case 'in_progress': return { label: 'In Progress', variant: 'primary' };
-    case 'pending': return { label: 'Pending', variant: 'warning' };
-    case 'rejected': return { label: 'Rejected', variant: 'error' };
-    default: return { label: status, variant: 'default' };
+    case 'completed': return { label: formatStatusLabel('completed'), variant: 'success' };
+    case 'in_progress': return { label: formatStatusLabel('in_progress'), variant: 'primary' };
+    case 'pending': return { label: formatStatusLabel('pending'), variant: 'warning' };
+    case 'rejected': return { label: formatStatusLabel('rejected'), variant: 'error' };
+    default: return { label: formatStatusLabel(status), variant: 'default' };
   }
 }
 

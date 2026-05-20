@@ -40,7 +40,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'My Projects', href: '/student/projects', icon: <FiFolder /> },
     { label: 'Create Project', href: '/student/projects/create', icon: <FiPlus /> },
     { label: 'Notifications', href: '/student/notifications', icon: <FiBell /> },
-    { label: 'Upcoming Defenses', href: '/student/defenses', icon: <FiCalendar /> },
+    { label: 'Events', href: '/student/events', icon: <FiCalendar />, tooltip: 'Defenses, meetings, and institution events' },
     { label: 'Profile', href: '/student/profile', icon: <FiUser /> },
   ],
   adviser: [
@@ -54,6 +54,8 @@ const menuItems: Record<string, MenuItem[]> = {
   coordinator: [
     { label: 'Dashboard', href: '/coordinator', icon: <FiHome /> },
     { label: 'Manage Defenses', href: '/coordinator/defenses', icon: <FiCheckSquare />, tooltip: 'Coordinator: manage course-wide defense schedules' },
+    { label: 'Events', href: '/coordinator/events', icon: <FiCalendar />, tooltip: 'Institution-wide events and workshops' },
+    { label: 'Notifications', href: '/coordinator/notifications', icon: <FiBell />, tooltip: 'Defense and schedule notifications' },
     { label: 'Advisers', href: '/coordinator/advisers', icon: <FiUsers /> },
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
