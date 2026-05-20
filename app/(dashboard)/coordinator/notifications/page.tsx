@@ -16,15 +16,15 @@ import {
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
-  getNotificationTypeLabel,
-  getNotificationVariant,
-} from '@/lib/notifications/display';
-import {
   getMyNotifications,
   markNotificationRead,
   markAllNotificationsRead,
   type NotificationItem,
 } from '@/lib/api/notifications';
+import {
+  getNotificationTypeLabel,
+  getNotificationVariant,
+} from '@/lib/notifications/display';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -52,8 +52,9 @@ function notificationIcon(type: string) {
   }
 }
 
-export default function AdviserNotificationsPage() {
-  const { user, handleLogout } = useDashboardUser('Adviser');
+
+export default function CoordinatorNotificationsPage() {
+  const { user, handleLogout } = useDashboardUser('Coordinator');
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,13 +89,13 @@ export default function AdviserNotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
+    <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Notifications</h1>
             <p className="text-neutral-600 mt-1">
-              Defense schedules, meetings, institution events, and project updates
+              Defense verifications, institution events, and schedule updates
             </p>
           </div>
           {unreadCount > 0 && (
@@ -160,7 +161,7 @@ export default function AdviserNotificationsPage() {
             <EmptyState
               icon={<FiBell />}
               title="No notifications"
-              description="You don't have any notifications yet. You'll be notified about defense schedules and project activity."
+              description="You don't have any notifications yet. You'll be notified about defense requests and institution events."
             />
           </Card>
         )}

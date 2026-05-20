@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api')
-  .replace(/\/api\/?$/, '')
-  .replace(/\/+$/, '');
-
-function resolveImageSrc(src?: string): string | undefined {
-  if (!src) return undefined;
-  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) return src;
-  const normalizedPath = src.startsWith('/') ? src : `/${src}`;
-  return new URL(normalizedPath, `${API_ORIGIN}/`).toString();
-}
+import { resolveAvatarUrl } from '@/lib/utils/avatarUrl';
 
 export interface AvatarProps {
   src?: string;
@@ -45,8 +36,11 @@ function getInitials(name: string): string {
 export default function Avatar({ src, alt, name, size = 'md', className = '', status }: AvatarProps) {
   const displayName = alt || name || 'User';
   const initials = name ? getInitials(name) : '?';
-  const resolvedSrc = resolveImageSrc(src);
-  const isUploadAsset = resolvedSrc?.includes('/uploads/');
+  const resolvedSrc = resolveAvatarUrl(src);
+  const isUploadAsset = Boolean(
+    resolvedSrc &&
+      (resolvedSrc.startsWith('/uploads/') || resolvedSrc.includes('/uploads/')),
+  );
   const [imgError, setImgError] = useState(false);
 
   return (

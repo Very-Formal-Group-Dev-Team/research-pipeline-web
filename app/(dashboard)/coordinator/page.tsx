@@ -6,27 +6,38 @@ import Card, { CardTitle, CardDescription } from '@/components/ui/Card';
 import { FiUsers, FiFolder, FiCalendar, FiBookOpen } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
+import CoordinatorFullCalendar from '@/components/coordinator/CoordinatorFullCalendar';
 import {
+  getAllDefenses,
   getCoordinatorDashboard,
   type CoordinatorStats,
   type Institution,
 } from '@/lib/api/coordinator';
+import { getCoordinatorEvents } from '@/lib/api/events';
 
 export default function CoordinatorDashboardPage() {
   const router = useRouter();
   const { user, handleLogout } = useDashboardUser('Coordinator');
   const [stats, setStats] = useState<CoordinatorStats | null>(null);
   const [institution, setInstitution] = useState<Institution | null>(null);
+  const [defenses, setDefenses] = useState<Awaited<ReturnType<typeof getAllDefenses>>['data']>([]);
+  const [institutionEvents, setInstitutionEvents] = useState<Awaited<ReturnType<typeof getCoordinatorEvents>>['data']>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const res = await getCoordinatorDashboard();
-      if (!cancelled && res.data) {
-        setStats(res.data.stats);
-        setInstitution(res.data.institution);
+      const [dashRes, defensesRes, eventsRes] = await Promise.all([
+        getCoordinatorDashboard(),
+        getAllDefenses(),
+        getCoordinatorEvents(),
+      ]);
+      if (!cancelled && dashRes.data) {
+        setStats(dashRes.data.stats);
+        setInstitution(dashRes.data.institution);
       }
+      if (!cancelled && defensesRes.data) setDefenses(defensesRes.data);
+      if (!cancelled && eventsRes.data) setInstitutionEvents(eventsRes.data);
       if (!cancelled) setLoading(false);
     }
     load();
@@ -99,6 +110,23 @@ export default function CoordinatorDashboardPage() {
                 </div>
               </Card>
             </div>
+
+            <Card padding="none" className="overflow-hidden">
+              <div className="border-b border-neutral-200 px-6 py-4">
+                <CardTitle>Schedule Calendar</CardTitle>
+                <CardDescription>
+                  Defenses and institution events in month, week, day, year, and agenda views
+                </CardDescription>
+              </div>
+              <div className="p-3 pt-0 sm:p-4">
+                <CoordinatorFullCalendar
+                  defenses={defenses ?? []}
+                  institutionEvents={institutionEvents ?? []}
+                  coordinatorId={user.email}
+                  coordinatorName={user.name}
+                />
+              </div>
+            </Card>
           </>
         )}
       </div>

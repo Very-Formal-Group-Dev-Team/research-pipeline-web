@@ -1,17 +1,38 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
 import JoinGroupCard from '@/components/ui/JoinGroupCard';
-import { useRouter } from 'next/navigation';
+import StudentAnnouncementsPanel from '@/components/student/StudentAnnouncementsPanel';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { MOCK_DASHBOARD_INVITATIONS } from '@/lib/mock-data';
+import type { Defense } from '@/lib/api/defenses';
+import type { InstitutionEvent } from '@/lib/api/events';
+import { getMySchedule } from '@/lib/api/schedule';
 
 export default function StudentDashboardPage() {
-  const router = useRouter();
   const { user, isLoading, handleLogout } = useDashboardUser('Student');
+  const [defenses, setDefenses] = useState<Defense[]>([]);
+  const [meetings, setMeetings] = useState<Defense[]>([]);
+  const [events, setEvents] = useState<InstitutionEvent[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSchedule() {
+      const res = await getMySchedule();
+      if (!cancelled && res.data) {
+        setDefenses(res.data.defenses);
+        setMeetings(res.data.meetings);
+        setEvents(res.data.events);
+      }
+      if (!cancelled) setScheduleLoading(false);
+    }
+    loadSchedule();
+    return () => { cancelled = true; };
+  }, []);
 
   if (isLoading) {
     return (
@@ -26,7 +47,6 @@ export default function StudentDashboardPage() {
   return (
     <DashboardLayout role="student" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        {/* Welcome Banner */}
         <Card className="bg-gradient-to-r from-ivory to-white border-neutral-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -43,12 +63,16 @@ export default function StudentDashboardPage() {
           </div>
         </Card>
 
-        {/* Main Content Grid */}
+        <StudentAnnouncementsPanel
+          defenses={defenses}
+          meetings={meetings}
+          events={events}
+          loading={scheduleLoading}
+        />
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Join a Group Section */}
           <JoinGroupCard />
 
-          {/* Pending Invitations Section */}
           <Card>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 bg-crimsonRed/10 rounded-lg flex items-center justify-center">
@@ -97,4 +121,3 @@ export default function StudentDashboardPage() {
     </DashboardLayout>
   );
 }
-

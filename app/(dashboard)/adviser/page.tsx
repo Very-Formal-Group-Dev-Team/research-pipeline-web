@@ -8,32 +8,41 @@ import AdviserFullCalendar from '@/components/adviser/AdviserFullCalendar';
 import { FiUsers, FiFolder, FiCalendar, FiTrendingUp } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { MOCK_ADVISER_STATS } from '@/lib/mock-data';
-import { getMyProjectDefenses, type Defense } from '@/lib/api/defenses';
+import type { Defense } from '@/lib/api/defenses';
+import type { InstitutionEvent } from '@/lib/api/events';
+import { getMySchedule } from '@/lib/api/schedule';
 
 export default function AdviserDashboardPage() {
   const { user, isLoading, handleLogout } = useDashboardUser('Adviser');
   const [defenses, setDefenses] = useState<Defense[]>([]);
-  const [defensesLoading, setDefensesLoading] = useState(true);
+  const [meetings, setMeetings] = useState<Defense[]>([]);
+  const [institutionEvents, setInstitutionEvents] = useState<InstitutionEvent[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadDefenses() {
-      const res = await getMyProjectDefenses();
-      if (!cancelled && res.data) setDefenses(res.data);
-      if (!cancelled) setDefensesLoading(false);
+    async function loadSchedule() {
+      const res = await getMySchedule();
+      if (!cancelled && res.data) {
+        setDefenses(res.data.defenses);
+        setMeetings(res.data.meetings);
+        setInstitutionEvents(res.data.events);
+      }
+      if (!cancelled) setScheduleLoading(false);
     }
 
-    loadDefenses();
+    loadSchedule();
     return () => { cancelled = true; };
   }, []);
 
-  const loading = isLoading || defensesLoading;
+  const loading = isLoading || scheduleLoading;
+  const scheduleCount = defenses.length + meetings.length + institutionEvents.length;
 
   const stats = [
     { icon: <FiUsers />, label: 'Total Advisees', value: String(MOCK_ADVISER_STATS.totalAdvisees), color: 'bg-accent-100 text-accent-600' },
     { icon: <FiFolder />, label: 'Active Projects', value: String(MOCK_ADVISER_STATS.activeProjects), color: 'bg-success-100 text-success-600' },
-    { icon: <FiCalendar />, label: 'Upcoming Defenses', value: String(defenses.length), color: 'bg-warning-100 text-warning-600', href: '/adviser/meetings' },
+    { icon: <FiCalendar />, label: 'Upcoming Events', value: String(scheduleCount), color: 'bg-warning-100 text-warning-600', href: '/adviser/meetings' },
     { icon: <FiTrendingUp />, label: 'Completed Projects', value: String(MOCK_ADVISER_STATS.completedProjects), color: 'bg-primary-100 text-primary-600' },
   ];
 
@@ -91,14 +100,16 @@ export default function AdviserDashboardPage() {
 
             <Card padding="none" className="overflow-hidden">
               <div className="border-b border-neutral-200 px-6 py-4">
-                <CardTitle>Defense Calendar</CardTitle>
+                <CardTitle>Schedule Calendar</CardTitle>
                 <CardDescription>
-                  Month, week, day, year, and agenda views with defense type tags
+                  Defenses, meetings, and institution events
                 </CardDescription>
               </div>
               <div className="p-3 pt-0 sm:p-4">
                 <AdviserFullCalendar
                   defenses={defenses}
+                  meetings={meetings}
+                  institutionEvents={institutionEvents}
                   adviserId={user.email}
                   adviserName={user.name}
                 />
