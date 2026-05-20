@@ -15,6 +15,7 @@ import {
   FiX,
   FiCheckCircle,
   FiInfo,
+  FiCalendar,
 } from 'react-icons/fi';
 import { useSidebar } from './SidebarContext';
 import {
@@ -286,7 +287,17 @@ export default function Header({ user, onLogout }: HeaderProps) {
                           {n.type === 'defense_moved' && (
                             <FiInfo className="text-warning-600" />
                           )}
-                          {(n.type === 'invitation' || n.type === 'schedule') && (
+                          {(n.type === 'invitation' ||
+                            n.type === 'schedule' ||
+                            n.type === 'event') && (
+                            <FiCalendar className="text-primary-500" />
+                          )}
+                          {n.type !== 'defense_approved' &&
+                            n.type !== 'defense_rejected' &&
+                            n.type !== 'defense_moved' &&
+                            n.type !== 'invitation' &&
+                            n.type !== 'schedule' &&
+                            n.type !== 'event' && (
                             <FiBell className="text-primary-500" />
                           )}
                         </div>

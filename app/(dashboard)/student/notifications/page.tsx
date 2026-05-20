@@ -28,6 +28,10 @@ import {
   respondToInvitation,
   type Invitation,
 } from '@/lib/api/projects';
+import {
+  getNotificationTypeLabel,
+  getNotificationVariant,
+} from '@/lib/notifications/display';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -48,30 +52,10 @@ function notificationIcon(type: string) {
     case 'defense_moved':
       return <FiArrowRight className="text-2xl text-accent-600" />;
     case 'schedule':
+    case 'event':
       return <FiCalendar className="text-2xl text-primary-600" />;
     default:
       return <FiBell className="text-2xl text-accent-600" />;
-  }
-}
-
-function notificationVariant(type: string): 'success' | 'error' | 'warning' | 'default' | 'primary' {
-  switch (type) {
-    case 'defense_approved': return 'success';
-    case 'defense_rejected': return 'error';
-    case 'defense_moved': return 'warning';
-    case 'schedule': return 'primary';
-    default: return 'default';
-  }
-}
-
-function typeLabel(type: string): string {
-  switch (type) {
-    case 'defense_approved': return 'Approved';
-    case 'defense_rejected': return 'Rejected';
-    case 'defense_moved': return 'Moved';
-    case 'schedule': return 'Schedule';
-    case 'invitation': return 'Invitation';
-    default: return type;
   }
 }
 
@@ -129,7 +113,9 @@ export default function StudentNotificationsPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Notifications</h1>
-            <p className="text-neutral-600 mt-1">Stay updated on your defense schedules and project activity</p>
+            <p className="text-neutral-600 mt-1">
+              Defense schedules, meetings, institution events, and project activity
+            </p>
           </div>
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
@@ -223,7 +209,9 @@ export default function StudentNotificationsPage() {
                           {formatDate(notification.created_at)}
                         </p>
                       </div>
-                      <Badge variant={notificationVariant(notification.type)}>{typeLabel(notification.type)}</Badge>
+                      <Badge variant={getNotificationVariant(notification.type)}>
+                        {getNotificationTypeLabel(notification.type)}
+                      </Badge>
                     </div>
                     <p className="text-sm text-neutral-600 mt-1">{notification.message}</p>
                     {!notification.is_read && (

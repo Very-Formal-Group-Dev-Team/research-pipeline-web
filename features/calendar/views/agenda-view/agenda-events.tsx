@@ -60,7 +60,7 @@ export const AgendaEvents: FC = () => {
           >
             {groupedEvents!.map((event) => (
               <CommandItem
-                key={event.id}
+                key={`${event.id}-${event.startDate}`}
                 className={cn(
                   "mb-2 p-4 border rounded-md data-[selected=true]:bg-bg transition-all data-[selected=true]:text-none hover:cursor-pointer",
                   {

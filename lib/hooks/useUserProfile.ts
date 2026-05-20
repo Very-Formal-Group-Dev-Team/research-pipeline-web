@@ -6,15 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getUserProfile, type UserProfile } from '@/lib/api/users';
-
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/api\/?$/, '');
-
-function resolveAvatarUrl(raw?: string | null): string | undefined {
-  if (!raw) return undefined;
-  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-  if (raw.startsWith('/uploads/')) return `${API_ORIGIN}${raw}`;
-  return `${API_ORIGIN}${raw}`;
-}
+import { resolveAvatarUrl } from '@/lib/utils/avatarUrl';
 
 export interface UserProfileView {
   id: string;
