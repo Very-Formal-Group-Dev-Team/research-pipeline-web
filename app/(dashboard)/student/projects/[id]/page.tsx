@@ -7,15 +7,20 @@ import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Ca
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
 import Avatar from '@/components/ui/Avatar';
-import { FiFolder, FiUsers, FiCalendar, FiFileText, FiCopy, FiCheck, FiMail } from 'react-icons/fi';
+import { FiFolder, FiUsers, FiCalendar, FiFileText, FiCopy, FiCheck, FiMail, FiX } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   getProject,
   getProjectMembers,
   getProjectInvitations,
   inviteToProject,
+  findRelatedStudies,
+  crossReferenceStudies,
+  updateProjectKeywords,
   type Project,
   type ProjectMember,
+  type RelatedStudiesResult,
+  type CrossReferenceResult,
 } from '@/lib/api/projects';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
@@ -37,6 +42,16 @@ export default function ProjectDetailPage() {
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [paperVersions, setPaperVersions] = useState<PaperVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
+  const [findingRelated, setFindingRelated] = useState(false);
+  const [relatedStudiesError, setRelatedStudiesError] = useState<string | null>(null);
+  const [relatedStudiesResult, setRelatedStudiesResult] = useState<RelatedStudiesResult | null>(null);
+  const [keywordInput, setKeywordInput] = useState('');
+  const [editableKeywords, setEditableKeywords] = useState<string[]>([]);
+  const [savingKeywords, setSavingKeywords] = useState(false);
+  const [keywordsError, setKeywordsError] = useState<string | null>(null);
+  const [crossRefLoading, setCrossRefLoading] = useState(false);
+  const [crossRefError, setCrossRefError] = useState<string | null>(null);
+  const [crossRefResult, setCrossRefResult] = useState<CrossReferenceResult | null>(null);
 
   const loadPaperVersions = useCallback(async () => {
     if (!params.id) return;
@@ -79,6 +94,10 @@ export default function ProjectDetailPage() {
     return () => { cancelled = true; clearInterval(interval); };
   }, [params.id, loadPaperVersions]);
 
+  useEffect(() => {
+    setEditableKeywords(project?.keywords || []);
+  }, [project?.id, project?.keywords]);
+
   const copyProjectCode = () => {
     if (project?.project_code) {
       navigator.clipboard.writeText(project.project_code);
@@ -120,6 +139,75 @@ export default function ProjectDetailPage() {
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  const handleFindRelatedStudies = async () => {
+    if (!project) return;
+    setFindingRelated(true);
+    setRelatedStudiesError(null);
+
+    const res = await findRelatedStudies(project.id);
+    if (res.error || !res.data) {
+      setRelatedStudiesError(res.error || 'Failed to process related studies');
+      setFindingRelated(false);
+      return;
+    }
+
+    setRelatedStudiesResult(res.data);
+    setProject((prev) => (prev ? { ...prev, keywords: res.data?.keywords || [] } : prev));
+    setEditableKeywords(res.data?.keywords || []);
+    setFindingRelated(false);
+  };
+
+  const addKeywordFromInput = () => {
+    const next = keywordInput.trim();
+    if (!next) return;
+    if (editableKeywords.some((item) => item.toLowerCase() === next.toLowerCase())) {
+      setKeywordInput('');
+      return;
+    }
+    setEditableKeywords((prev) => [...prev, next]);
+    setKeywordInput('');
+  };
+
+  const removeKeyword = (keywordToRemove: string) => {
+    setEditableKeywords((prev) => prev.filter((item) => item !== keywordToRemove));
+  };
+
+  const clearKeywords = () => {
+    setEditableKeywords([]);
+    setKeywordInput('');
+  };
+
+  const commitKeywords = async () => {
+    if (!project) return;
+    setSavingKeywords(true);
+    setKeywordsError(null);
+    const res = await updateProjectKeywords(project.id, editableKeywords);
+    if (res.error || !res.data) {
+      setKeywordsError(res.error || 'Failed to save keywords');
+      setSavingKeywords(false);
+      return;
+    }
+    setProject((prev) => (prev ? { ...prev, keywords: res.data?.keywords || [] } : prev));
+    setEditableKeywords(res.data.keywords || []);
+    setSavingKeywords(false);
+  };
+
+  const handleCrossReference = async () => {
+    if (!project) return;
+    setCrossRefLoading(true);
+    setCrossRefError(null);
+
+    const res = await crossReferenceStudies(project.id);
+    if (res.error || !res.data) {
+      setCrossRefError(res.error || 'Failed to fetch cross-referenced studies');
+      setCrossRefLoading(false);
+      return;
+    }
+
+    setCrossRefResult(res.data);
+    setCrossRefLoading(false);
   };
 
   if (loading || !project) {
@@ -206,18 +294,167 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Keywords */}
-        {project.keywords && project.keywords.length > 0 && (
-          <Card>
-            <CardHeader>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>Keywords</CardTitle>
-            </CardHeader>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={findingRelated}
+                  onClick={handleFindRelatedStudies}
+                >
+                  {findingRelated ? 'Running keyword model...' : 'Set Keywords'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={clearKeywords}
+                  disabled={savingKeywords}
+                >
+                  Clear
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={commitKeywords}
+                  disabled={savingKeywords}
+                >
+                  {savingKeywords ? 'Saving...' : 'Commit'}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="text"
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addKeywordFromInput();
+                }
+              }}
+              placeholder="Type keyword then press Enter"
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+            />
+          </div>
+
+          {editableKeywords.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-2">
-              {project.keywords.map((keyword, idx) => (
-                <Badge key={idx} variant="default">{keyword}</Badge>
+              {editableKeywords.map((keyword, idx) => (
+                <span
+                  key={`${keyword}-${idx}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-800"
+                >
+                  {keyword}
+                  <button
+                    type="button"
+                    className="text-neutral-500 hover:text-neutral-700"
+                    onClick={() => removeKeyword(keyword)}
+                    aria-label={`Remove ${keyword}`}
+                  >
+                    <FiX size={14} />
+                  </button>
+                </span>
               ))}
             </div>
-          </Card>
-        )}
+          ) : (
+            <p className="text-sm text-neutral-500">No detected keywords yet.</p>
+          )}
+
+          {relatedStudiesError && (
+            <p className="mt-3 text-sm text-error-700">{relatedStudiesError}</p>
+          )}
+
+          {keywordsError && (
+            <p className="mt-3 text-sm text-error-700">{keywordsError}</p>
+          )}
+
+          {relatedStudiesResult && (
+            <div className="mt-4 space-y-2 text-sm text-neutral-700">
+              <p>
+                Analyzed file: <span className="font-medium">{relatedStudiesResult.latestVersion.file_name}</span>
+              </p>
+              {relatedStudiesResult.vectorization?.shape && (
+                <p>
+                  Vector shape: {relatedStudiesResult.vectorization.shape.join(' x ')} |
+                  Non-zero: {relatedStudiesResult.vectorization.non_zero ?? 0}
+                </p>
+              )}
+              {relatedStudiesResult.vectorization?.message && (
+                <p>{relatedStudiesResult.vectorization.message}</p>
+              )}
+            </div>
+          )}
+
+          <div className="mt-6 border-t pt-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-semibold text-neutral-900">Cross-referencing</h3>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={handleCrossReference}
+                disabled={crossRefLoading}
+              >
+                {crossRefLoading ? 'Searching...' : 'Cross-reference 20 Studies'}
+              </Button>
+            </div>
+
+            {crossRefError && (
+              <p className="mt-2 text-sm text-error-700">{crossRefError}</p>
+            )}
+
+            {crossRefResult && (
+              <div className="mt-3 space-y-3">
+                <p className="text-sm text-neutral-600">
+                  Query: <span className="font-medium">{crossRefResult.query}</span> ·
+                  Results: {crossRefResult.total}
+                </p>
+                {crossRefResult.studies.length > 0 ? (
+                  <div className="space-y-2">
+                    {crossRefResult.studies.map((study, index) => {
+                      const authorNames = (study.authorships || [])
+                        .map((a) => a?.author?.display_name)
+                        .filter(Boolean)
+                        .slice(0, 3)
+                        .join(', ');
+                      const doiUrl = study.doi
+                        ? (study.doi.startsWith('http') ? study.doi : `https://doi.org/${study.doi.replace(/^https?:\/\/doi.org\//, '')}`)
+                        : null;
+
+                      return (
+                        <div key={`${study.display_name}-${index}`} className="rounded-md border border-neutral-200 p-3">
+                          <p className="font-medium text-sm text-neutral-900">{study.display_name}</p>
+                          <p className="text-xs text-neutral-600 mt-1">
+                            {authorNames || 'Unknown authors'}
+                            {study.publication_date ? ` · ${study.publication_date}` : ''}
+                            {study.primary_location?.source?.display_name ? ` · ${study.primary_location.source.display_name}` : ''}
+                          </p>
+                          {doiUrl && (
+                            <a
+                              href={doiUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary-600 underline mt-1 inline-block"
+                            >
+                              {doiUrl}
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-neutral-500">No studies found for current keywords.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
 
         {/* Document Reference */}
         {project.document_reference && (
