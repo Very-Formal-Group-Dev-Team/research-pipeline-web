@@ -99,6 +99,40 @@ export interface ScheduleDefenseResult {
   } | null;
 }
 
+export interface RelatedStudiesResult {
+  projectId: string;
+  latestVersion: {
+    id: string;
+    version_number: number;
+    file_name: string;
+    created_at: string;
+  };
+  keywords: string[];
+  vectorization: {
+    shape?: number[];
+    non_zero?: number;
+    top_terms?: Array<{ term: string; value: number }>;
+    message?: string;
+  };
+}
+
+export interface CrossReferenceStudy {
+  display_name: string;
+  authorships?: Array<{ author?: { display_name?: string } }>;
+  publication_date?: string;
+  primary_location?: {
+    source?: { display_name?: string };
+    landing_page_url?: string;
+  };
+  doi?: string;
+}
+
+export interface CrossReferenceResult {
+  query: string;
+  total: number;
+  studies: CrossReferenceStudy[];
+}
+
 // ─── API calls ──────────────────────────────────────────────────────────────
 
 /** Fetch all projects the current user is a member of or created. */
@@ -174,6 +208,21 @@ export function getProjectInvitations(projectId: string) {
 /** Create a defense schedule for a project. */
 export function scheduleProjectDefense(projectId: string, payload: ScheduleDefensePayload) {
   return post<ScheduleDefenseResult>(`/projects/${projectId}/schedule`, payload);
+}
+
+/** Run keyword model against the latest submitted project version. */
+export function findRelatedStudies(projectId: string) {
+  return post<RelatedStudiesResult>(`/projects/${projectId}/find-related-studies`);
+}
+
+/** Save manually edited keywords for a project. */
+export function updateProjectKeywords(projectId: string, keywords: string[]) {
+  return patch<{ success: boolean; keywords: string[] }>(`/projects/${projectId}/keywords`, { keywords });
+}
+
+/** Query OpenAlex for cross-referenced studies using project keywords. */
+export function crossReferenceStudies(projectId: string) {
+  return get<CrossReferenceResult>(`/projects/${projectId}/cross-reference`);
 }
 
 /** Update a project's status (adviser only). */
