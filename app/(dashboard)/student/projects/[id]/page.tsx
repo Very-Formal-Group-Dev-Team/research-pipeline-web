@@ -17,6 +17,7 @@ import {
   findRelatedStudies,
   crossReferenceStudies,
   updateProjectKeywords,
+  updateProjectAbstract,
   type Project,
   type ProjectMember,
   type RelatedStudiesResult,
@@ -49,6 +50,9 @@ export default function ProjectDetailPage() {
   const [editableKeywords, setEditableKeywords] = useState<string[]>([]);
   const [savingKeywords, setSavingKeywords] = useState(false);
   const [keywordsError, setKeywordsError] = useState<string | null>(null);
+  const [abstractInput, setAbstractInput] = useState('');
+  const [savingAbstract, setSavingAbstract] = useState(false);
+  const [abstractError, setAbstractError] = useState<string | null>(null);
   const [crossRefLoading, setCrossRefLoading] = useState(false);
   const [crossRefError, setCrossRefError] = useState<string | null>(null);
   const [crossRefResult, setCrossRefResult] = useState<CrossReferenceResult | null>(null);
@@ -97,6 +101,11 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     setEditableKeywords(project?.keywords || []);
   }, [project?.id, project?.keywords]);
+
+  useEffect(() => {
+    if (!project) return;
+    setAbstractInput(project.description || project.abstract || '');
+  }, [project?.id, project?.description, project?.abstract]);
 
   const copyProjectCode = () => {
     if (project?.project_code) {
@@ -192,6 +201,29 @@ export default function ProjectDetailPage() {
     setProject((prev) => (prev ? { ...prev, keywords: res.data?.keywords || [] } : prev));
     setEditableKeywords(res.data.keywords || []);
     setSavingKeywords(false);
+  };
+
+  const commitAbstract = async () => {
+    if (!project) return;
+    setSavingAbstract(true);
+    setAbstractError(null);
+    const res = await updateProjectAbstract(project.id, abstractInput);
+    if (res.error || !res.data) {
+      setAbstractError(res.error || 'Failed to save abstract');
+      setSavingAbstract(false);
+      return;
+    }
+    const updatedAbstract = res.data.abstract;
+    // Keep both fields in sync (backend updates both).
+    setProject((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        abstract: updatedAbstract,
+        description: updatedAbstract,
+      };
+    });
+    setSavingAbstract(false);
   };
 
   const handleCrossReference = async () => {
@@ -292,6 +324,41 @@ export default function ProjectDetailPage() {
             <p className="mt-4 text-neutral-700">{formatDate(project.created_at)}</p>
           </Card>
         </div>
+
+        {/* Abstract */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>Abstract</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={commitAbstract}
+                  disabled={savingAbstract}
+                >
+                  {savingAbstract ? 'Saving...' : 'Save Abstract'}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <div className="mt-4">
+            <textarea
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
+                abstractError ? 'border-error-500' : 'border-neutral-300'
+              }`}
+              placeholder="Write a concise abstract of your project"
+              rows={6}
+              value={abstractInput}
+              onChange={(e) => setAbstractInput(e.target.value)}
+            />
+
+            {abstractError && (
+              <p className="mt-2 text-sm text-error-700">{abstractError}</p>
+            )}
+          </div>
+        </Card>
 
         {/* Keywords */}
         <Card>
@@ -415,7 +482,10 @@ export default function ProjectDetailPage() {
                   Results: {crossRefResult.total}
                 </p>
                 {crossRefResult.studies.length > 0 ? (
-                  <div className="space-y-2">
+                  <div
+                    className="h-96 overflow-y-auto overscroll-contain rounded-md border border-neutral-200 bg-neutral-50/50 p-2 space-y-2"
+                    aria-label="Cross-referenced studies"
+                  >
                     {crossRefResult.studies.map((study, index) => {
                       const authorNames = (study.authorships || [])
                         .map((a) => a?.author?.display_name)
@@ -427,7 +497,7 @@ export default function ProjectDetailPage() {
                         : null;
 
                       return (
-                        <div key={`${study.display_name}-${index}`} className="rounded-md border border-neutral-200 p-3">
+                        <div key={`${study.display_name}-${index}`} className="rounded-md border border-neutral-200 bg-white p-3">
                           <p className="font-medium text-sm text-neutral-900">{study.display_name}</p>
                           <p className="text-xs text-neutral-600 mt-1">
                             {authorNames || 'Unknown authors'}
@@ -439,7 +509,7 @@ export default function ProjectDetailPage() {
                               href={doiUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-primary-600 underline mt-1 inline-block"
+                              className="text-xs text-primary-600 underline mt-1 inline-block break-all"
                             >
                               {doiUrl}
                             </a>

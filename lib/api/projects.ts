@@ -40,9 +40,9 @@ export interface ProjectMember {
 
 export interface CreateProjectPayload {
   title: string;
-  abstract: string;
-  keywords: string[];
   researchType: string;
+  abstract?: string;
+  keywords?: string[];
   program?: string;
   course?: string;
   section?: string;
@@ -154,8 +154,8 @@ export function getProjectMembers(projectId: string) {
 export async function createProject(payload: CreateProjectPayload) {
   const formData = new FormData();
   formData.append('title', payload.title);
-  formData.append('abstract', payload.abstract);
-  formData.append('keywords', JSON.stringify(payload.keywords));
+  formData.append('abstract', payload.abstract ?? '');
+  formData.append('keywords', JSON.stringify(payload.keywords ?? []));
   formData.append('researchType', payload.researchType);
   if (payload.program) formData.append('program', payload.program);
   if (payload.course) formData.append('course', payload.course);
@@ -218,6 +218,11 @@ export function findRelatedStudies(projectId: string) {
 /** Save manually edited keywords for a project. */
 export function updateProjectKeywords(projectId: string, keywords: string[]) {
   return patch<{ success: boolean; keywords: string[] }>(`/projects/${projectId}/keywords`, { keywords });
+}
+
+/** Save the manually edited abstract for a project. */
+export function updateProjectAbstract(projectId: string, abstract: string) {
+  return patch<{ success: boolean; abstract: string }>(`/projects/${projectId}/abstract`, { abstract });
 }
 
 /** Query OpenAlex for cross-referenced studies using project keywords. */

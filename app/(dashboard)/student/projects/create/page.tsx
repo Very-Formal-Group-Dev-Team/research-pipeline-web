@@ -20,9 +20,6 @@ export default function CreateProjectPage() {
 
   // Form state
   const [title, setTitle] = useState('');
-  const [abstract, setAbstract] = useState('');
-  const [keywords, setKeywords] = useState<string[]>([]);
-  const [keywordInput, setKeywordInput] = useState('');
   const [contributorRole, setContributorRole] = useState('');
   const [program, setProgram] = useState('');
   const [course, setCourse] = useState('');
@@ -41,7 +38,6 @@ export default function CreateProjectPage() {
   // Error state
   const [errors, setErrors] = useState<{
     title?: string;
-    description?: string;
     researchType?: string;
     file?: string;
     general?: string;
@@ -53,14 +49,20 @@ export default function CreateProjectPage() {
     // Automatically mark form as dirty if any important field changes
     useEffect(() => {
       if (
-        title || abstract || keywords.length || program || course || section ||
-        selectedFile || contributors.length > 1 || advisers.length > 0
+        title ||
+        researchType ||
+        program ||
+        course ||
+        section ||
+        selectedFile ||
+        contributors.length > 1 ||
+        advisers.length > 0
       ) {
         setIsDirty(true);
       } else {
         setIsDirty(false);
       }
-    }, [title, abstract, keywords, program, course, section, selectedFile, contributors, advisers]);
+    }, [title, researchType, program, course, section, selectedFile, contributors, advisers]);
 
   useEffect(() => {
     if (user.name && !contributors.find((c) => c.full_name === user.name)) {
@@ -166,61 +168,11 @@ export default function CreateProjectPage() {
     }
   };
 
-  const handleKeywordInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    
-    // Check if user typed a comma
-    if (value.includes(',')) {
-      // Extract all keywords before the comma
-      const newKeywords = value
-        .split(',')
-        .map(k => k.trim())
-        .filter(k => k.length > 0);
-      
-      // Add unique keywords only
-      const uniqueKeywords = newKeywords.filter(k => !keywords.includes(k));
-      if (uniqueKeywords.length > 0) {
-        setKeywords([...keywords, ...uniqueKeywords]);
-      }
-      
-      // Clear input
-      setKeywordInput('');
-    } else {
-      setKeywordInput(value);
-    }
-  };
-
-  const handleKeywordKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Handle backspace on empty input to remove last tag
-    if (e.key === 'Backspace' && keywordInput === '' && keywords.length > 0) {
-      e.preventDefault();
-      setKeywords(keywords.slice(0, -1));
-    }
-    
-    // Handle Enter key to add keyword
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const trimmed = keywordInput.trim();
-      if (trimmed && !keywords.includes(trimmed)) {
-        setKeywords([...keywords, trimmed]);
-        setKeywordInput('');
-      }
-    }
-  };
-
-  const removeKeyword = (index: number) => {
-    setKeywords(keywords.filter((_, i) => i !== index));
-  };
-
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
     if (!title.trim()) {
       newErrors.title = 'Project title is required';
-    }
-
-    if (!abstract.trim()) {
-      newErrors.description = 'Project description is required';
     }
 
     if (!researchType) {
@@ -244,8 +196,6 @@ export default function CreateProjectPage() {
     try {
       const res = await createProject({
         title: title.trim(),
-        abstract: abstract.trim(),
-        keywords,
         researchType,
         program: program.trim() || undefined,
         course: course.trim() || undefined,
@@ -300,68 +250,6 @@ export default function CreateProjectPage() {
               error={errors.title}
               required
             />
-
-            {/* Project Abstract */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Abstract <span className="text-error-500">*</span>
-              </label>
-              <textarea
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
-                  errors.description ? 'border-error-500' : 'border-neutral-300'
-                }`}
-                placeholder="Provide the abstract of your project"
-                rows={5}
-                value={abstract}
-                onChange={(e) => setAbstract(e.target.value)}
-                required
-              />
-              {errors.description && (
-                <p className="mt-1 text-sm text-error-600">{errors.description}</p>
-              )}
-            </div>
-            
-            {/* Project Keywords */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Keywords <span className="text-error-500">*</span>
-              </label>
-              
-              {/* Combined Tag and Input Container */}
-              <div className="w-full min-h-[48px] px-3 py-2 border border-neutral-300 rounded-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 transition-all flex flex-wrap items-center gap-2">
-                {/* Tags */}
-                {keywords.map((keyword, index) => (
-                  <div
-                    key={index}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-medium"
-                  >
-                    <span>{keyword}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeKeyword(index)}
-                      className="ml-0.5 text-primary-600 hover:text-primary-800 hover:bg-primary-200 rounded-full p-0.5 transition-colors"
-                      aria-label={`Remove ${keyword}`}
-                    >
-                      <FiX className="text-xs" />
-                    </button>
-                  </div>
-                ))}
-                
-                {/* Inline Input */}
-                <input
-                  type="text"
-                  className="flex-1 min-w-[120px] outline-none border-none focus:ring-0 px-1 py-1 text-sm"
-                  placeholder={keywords.length === 0 ? "Type keywords and press comma or Enter" : ""}
-                  value={keywordInput}
-                  onChange={handleKeywordInput}
-                  onKeyDown={handleKeywordKeyDown}
-                />
-              </div>
-              
-              <p className="mt-1 text-xs text-neutral-500">
-                Press comma (,) or Enter to add keywords. Backspace to remove last tag.
-              </p>
-            </div>
             
             {/* Contributors and Roles */}
             <div>
