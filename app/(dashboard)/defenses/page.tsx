@@ -124,6 +124,7 @@ export default function MeetingSchedule() {
   });
 
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [projectLookupLoading, setProjectLookupLoading] = useState(false);
 
   //Clear Modal States
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false); 
@@ -204,7 +205,31 @@ export default function MeetingSchedule() {
     setForm(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      ...(name === 'projectCode' ? { projectId: '' } : {}),
     }));
+  };
+
+  const resolveProjectIdFromCode = async (projectCode: string) => {
+    if (!projectCode?.trim()) return null;
+    setProjectLookupLoading(true);
+    try {
+      const res = await fetch(
+        `/api/projects/code/${encodeURIComponent(projectCode.trim())}`,
+        { credentials: 'include' }
+      );
+      const data = await res.json();
+      if (!res.ok) return null;
+      if (data?.id) {
+        setForm(prev => ({ ...prev, projectId: data.id }));
+        return data.id;
+      }
+      return null;
+    } catch (err) {
+      console.error('Project lookup failed:', err);
+      return null;
+    } finally {
+      setProjectLookupLoading(false);
+    }
   };
 
   async function refreshDefenses() {
@@ -259,8 +284,18 @@ export default function MeetingSchedule() {
 
   const handleSubmit = async () => {
     try {
+      let projectId = form.projectId;
+      if (!projectId && form.projectCode?.trim()) {
+        projectId = await resolveProjectIdFromCode(form.projectCode);
+      }
+
+      if (!projectId) {
+        showToast('Please enter a valid project code before booking the meeting.', 'error');
+        return;
+      }
+
       const payload = {
-        project_id: form.projectId,
+        project_id: projectId,
         defense_type: form.defenseType === 'Finals'
             ? 'final'
             : form.defenseType.toLowerCase(),
@@ -377,8 +412,8 @@ export default function MeetingSchedule() {
               <Card className="border border-neutral-300 p-6">
                 <h1 className="text-xl font-semibold text-neutral-700 mb-6">Book a Meeting</h1>
 
-                {/* Project Code and Project Title and Section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {/* Project Code */}
+                <div className="grid grid-cols-1 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Project Code</label>
                     <input
@@ -387,59 +422,13 @@ export default function MeetingSchedule() {
                       value={form.projectCode || ''}
                       onChange={handleChange}
                       placeholder="Project Code"
-                      className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Project Title</label>
-                    <input
-                      type="text"
-                      name="projectTitle"
-                      value={form.projectTitle || ''}
-                      onChange={handleChange}
-                      placeholder="Project Title"
-                      className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Section</label>
-                    <input
-                      type="text"
-                      name="section"
-                      value={form.section || ''}
-                      onChange={handleChange}
-                      placeholder="Section"
-                      className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Team Members - read-only */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Team Members</label>
-                  <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3">
-                    {projectMembers.length > 0 ? (
-                      <div className="space-y-2">
-                        {projectMembers.map((member) => (
-                          <div key={member.id} className="flex justify-between items-center text-sm">
-                            <div>
-                              <p className="text-neutral-700 font-medium">{member.users?.full_name || 'Unknown'}</p>
-                              <p className="text-neutral-500 text-xs">{member.users?.email || 'No email'}</p>
-                            </div>
-                            <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded capitalize">
-                              {member.role}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-neutral-400">No members loaded</p>
-                    )}
                   </div>
                 </div>
 
                 {/* Time Range & Date */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Start Time</label>
                     <input
@@ -447,7 +436,7 @@ export default function MeetingSchedule() {
                       name="startTime"
                       value={form.startTime || ''}
                       onChange={handleChange}
-                      className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -457,7 +446,7 @@ export default function MeetingSchedule() {
                       name="endTime"
                       value={form.endTime || ''}
                       onChange={handleChange}
-                      className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -467,30 +456,31 @@ export default function MeetingSchedule() {
                       name="date"
                       value={form.date || ''}
                       onChange={handleChange}
-                      className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                 </div>
 
-                {/* Meeting Type & Defense Type */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-700 mb-2">Meeting Type</p>
-                    <div className="space-y-1">
-                      {['Online', 'Face-to-Face'].map(type => (
-                        <label key={type} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="meetingType"
-                            value={type}
-                            checked={form.meetingType === type}
-                            onChange={handleChange}
-                            className="accent-primary-500"
-                          />
-                          <span className="text-sm text-neutral-700">{type}</span>
-                        </label>
-                      ))}
-                    </div>
+                {/* Meeting Type */}
+                <div className="space-y-3 mb-4">
+                  <p className="text-sm font-medium text-neutral-700">Meeting Type</p>
+                  <div className="flex flex-wrap gap-8">
+                    {['Online', 'Face-to-Face'].map(type => (
+                      <label
+                        key={type}
+                        className="flex items-center gap-2 text-sm transition hover:border-primary-400 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name="meetingType"
+                          value={type}
+                          checked={form.meetingType === type}
+                          onChange={handleChange}
+                          className="accent-primary-500"
+                        />
+                        <span className="text-neutral-700">{type}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
