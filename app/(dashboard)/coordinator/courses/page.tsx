@@ -1,66 +1,66 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Modal from '@/components/ui/Modal';
-import { FiPlus, FiEdit2, FiTrash2, FiCalendar } from 'react-icons/fi';
+import {
+  FiPlus,
+  FiEdit2,
+  FiTrash2,
+  FiUserPlus,
+  FiSearch,
+  FiChevronDown,
+  FiChevronRight,
+} from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   getCourses,
   createCourse,
   updateCourse,
   deleteCourse,
-  createDefenseForCourse,
+  addAdviserToInstitution,
+  removeAdviserFromCourse,
   type Course,
-  type CourseDefenseConflict,
-  type CreateCourseDefensePayload,
+  type CourseAdviser,
 } from '@/lib/api/coordinator';
-
-function formatMinutes(minutes: number) {
-  const safe = Math.max(0, Math.round(minutes));
-  const h = Math.floor(safe / 60);
-  const m = safe % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-}
+import { useUserSearch } from '@/lib/hooks/useUserSearch';
+import type { SearchUserResult } from '@/lib/api/users';
 
 export default function CoordinatorCoursesPage() {
   const { user, handleLogout } = useDashboardUser('Coordinator');
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  // Form modal
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [formData, setFormData] = useState({ courseName: '', code: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Defense scheduling modal
-  const [defenseTarget, setDefenseTarget] = useState<Course | null>(null);
-  const [defenseForm, setDefenseForm] = useState({
-    defenseType: 'proposal' as 'proposal' | 'midterm' | 'final',
-    date: '',
-    startTime: '',
-    endTime: '',
-    location: '',
-    venue: '',
-  });
-  const [defenseSubmitting, setDefenseSubmitting] = useState(false);
-  const [defenseError, setDefenseError] = useState('');
-  const [defenseSuccess, setDefenseSuccess] = useState('');
+  const [addAdviserCourse, setAddAdviserCourse] = useState<Course | null>(null);
+  const { query, setQuery, results, isLoading: searching, error: searchError, reset: resetSearch } =
+    useUserSearch({ role: 'adviser' });
+  const [selectedUser, setSelectedUser] = useState<SearchUserResult | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [addError, setAddError] = useState('');
 
-  // Conflict resolution state
-  const [conflictData, setConflictData] = useState<CourseDefenseConflict | null>(null);
-  const [pendingPayload, setPendingPayload] = useState<CreateCourseDefensePayload | null>(null);
-  const [conflictAction, setConflictAction] = useState<'hold' | 'confirm' | null>(null);
+  const [removeAdviserTarget, setRemoveAdviserTarget] = useState<{
+    course: Course;
+    adviser: CourseAdviser;
+  } | null>(null);
+  const [removingAdviser, setRemovingAdviser] = useState(false);
+
+  const suggestions = useMemo(() => {
+    if (!addAdviserCourse) return results;
+    const courseAdviserIds = new Set((addAdviserCourse.advisers || []).map((a) => a.id));
+    return results.filter((u) => !courseAdviserIds.has(u.id));
+  }, [results, addAdviserCourse]);
 
   async function loadCourses() {
     setLoading(true);
@@ -75,6 +75,15 @@ export default function CoordinatorCoursesPage() {
     return () => { cancelled = true; };
   }, []);
 
+  function toggleExpanded(courseId: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(courseId)) next.delete(courseId);
+      else next.add(courseId);
+      return next;
+    });
+  }
+
   function openCreate() {
     setEditingCourse(null);
     setFormData({ courseName: '', code: '', description: '' });
@@ -84,7 +93,11 @@ export default function CoordinatorCoursesPage() {
 
   function openEdit(course: Course) {
     setEditingCourse(course);
-    setFormData({ courseName: course.course_name, code: course.code, description: course.description || '' });
+    setFormData({
+      courseName: course.course_name,
+      code: course.code,
+      description: course.description || '',
+    });
     setFormError('');
     setIsFormOpen(true);
   }
@@ -104,10 +117,18 @@ export default function CoordinatorCoursesPage() {
     setFormError('');
     if (editingCourse) {
       const res = await updateCourse(editingCourse.id, formData);
-      if (res.error) { setFormError(res.error); } else { closeForm(); await loadCourses(); }
+      if (res.error) setFormError(res.error);
+      else {
+        closeForm();
+        await loadCourses();
+      }
     } else {
       const res = await createCourse(formData);
-      if (res.error) { setFormError(res.error); } else { closeForm(); await loadCourses(); }
+      if (res.error) setFormError(res.error);
+      else {
+        closeForm();
+        await loadCourses();
+      }
     }
     setSubmitting(false);
   }
@@ -116,90 +137,66 @@ export default function CoordinatorCoursesPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     const res = await deleteCourse(deleteTarget.id);
-    if (!res.error) { setDeleteTarget(null); await loadCourses(); }
+    if (!res.error) {
+      setDeleteTarget(null);
+      await loadCourses();
+    }
     setDeleting(false);
   }
 
-  function openDefenseModal(course: Course) {
-    setDefenseTarget(course);
-    setDefenseForm({ defenseType: 'proposal', date: '', startTime: '', endTime: '', location: '', venue: '' });
-    setDefenseError('');
-    setDefenseSuccess('');
-    setConflictData(null);
-    setPendingPayload(null);
+  function openAddAdviser(course: Course) {
+    setAddAdviserCourse(course);
+    setSelectedUser(null);
+    setAddError('');
+    resetSearch();
+    setExpandedIds((prev) => new Set(prev).add(course.id));
   }
 
-  function closeDefenseModal() {
-    setDefenseTarget(null);
-    setDefenseError('');
-    setDefenseSuccess('');
-    setConflictData(null);
-    setPendingPayload(null);
-    setConflictAction(null);
+  function closeAddAdviser() {
+    setAddAdviserCourse(null);
+    setSelectedUser(null);
+    setAddError('');
+    resetSearch();
   }
 
-  async function submitDefense(payload: CreateCourseDefensePayload) {
-    if (!defenseTarget) return;
-    setDefenseSubmitting(true);
-    setDefenseError('');
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    setSelectedUser(null);
+    setAddError('');
+  }
 
-    const res = await createDefenseForCourse(defenseTarget.id, payload);
+  function handleSelectUser(u: SearchUserResult) {
+    setSelectedUser(u);
+    setQuery(u.full_name || u.email);
+  }
 
-    if (res.data && 'conflict' in res.data && res.data.conflict) {
-      setConflictData(res.data as CourseDefenseConflict);
-      setPendingPayload(payload);
-      setDefenseSubmitting(false);
-      return;
-    }
-
+  async function handleAddAdviser() {
+    if (!addAdviserCourse || !selectedUser) return;
+    setAddingId(selectedUser.id);
+    setAddError('');
+    const res = await addAdviserToInstitution(selectedUser.id, addAdviserCourse.id);
     if (res.error) {
-      setDefenseError(res.error);
-      setDefenseSubmitting(false);
-      return;
+      setAddError(res.error);
+    } else {
+      closeAddAdviser();
+      await loadCourses();
     }
-
-    const result = res.data as { count: number; status: string };
-    const label = result?.status === 'pending' ? 'queued' : 'scheduled';
-    setDefenseSuccess(`Successfully ${label} ${result?.count ?? 0} defense(s) for all projects in this institution.`);
-    setConflictData(null);
-    setPendingPayload(null);
-    setDefenseSubmitting(false);
+    setAddingId(null);
   }
 
-  async function handleScheduleDefense() {
-    if (!defenseTarget) return;
-    if (!defenseForm.date || !defenseForm.startTime || !defenseForm.endTime || !defenseForm.location.trim()) {
-      setDefenseError('Date, start time, end time, and location are required.');
-      return;
+  async function handleRemoveAdviser() {
+    if (!removeAdviserTarget) return;
+    setRemovingAdviser(true);
+    const res = await removeAdviserFromCourse(
+      removeAdviserTarget.course.id,
+      removeAdviserTarget.adviser.id,
+    );
+    if (!res.error) {
+      setRemoveAdviserTarget(null);
+      await loadCourses();
     }
-    if (defenseForm.endTime <= defenseForm.startTime) {
-      setDefenseError('End time must be after start time.');
-      return;
-    }
-    await submitDefense({
-      defenseType: defenseForm.defenseType,
-      date: defenseForm.date,
-      startTime: defenseForm.startTime,
-      endTime: defenseForm.endTime,
-      location: defenseForm.location.trim(),
-      venue: defenseForm.venue.trim() || undefined,
-    });
+    setRemovingAdviser(false);
   }
-
-  async function handleConflictResolution(action: 'hold' | 'confirm') {
-    if (!pendingPayload) return;
-    setConflictAction(action);
-    await submitDefense({
-      ...pendingPayload,
-      holdDefense: action === 'hold',
-      forceSchedule: action === 'confirm',
-    });
-    setConflictAction(null);
-  }
-
-  const uniqueConflicts = conflictData
-    ? Array.from(new Map(conflictData.conflicts.map((c) => [c.defense_id, c])).values())
-    : [];
 
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
@@ -207,7 +204,9 @@ export default function CoordinatorCoursesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Courses</h1>
-            <p className="text-neutral-600 mt-1">Manage courses for your institution</p>
+            <p className="text-neutral-600 mt-1">
+              Manage courses and assign faculty advisers to each course
+            </p>
           </div>
           <Button variant="primary" onClick={openCreate}>
             <FiPlus className="mr-2" /> New Course
@@ -221,206 +220,288 @@ export default function CoordinatorCoursesPage() {
         ) : courses.length === 0 ? (
           <Card>
             <div className="text-center py-8 text-neutral-500">
-              No courses created yet. Create your first course to get started.
+              No courses created yet. Create your first course, then add advisers to it.
             </div>
           </Card>
         ) : (
-          <div className="overflow-x-auto">
-            <Card padding="none">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-neutral-50 border-b border-neutral-200">
-                  <tr>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Course Name</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Code</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Description</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {courses.map((course) => (
-                    <tr key={course.id} className="hover:bg-neutral-50">
-                      <td className="px-4 py-3 font-medium text-neutral-800">{course.course_name}</td>
-                      <td className="px-4 py-3 text-neutral-600">{course.code}</td>
-                      <td className="px-4 py-3 text-neutral-600 truncate max-w-xs">{course.description || '—'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openDefenseModal(course)}
-                            className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                            title="Schedule defense"
-                          >
-                            <FiCalendar />
-                          </button>
-                          <button
-                            onClick={() => openEdit(course)}
-                            className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                            title="Edit course"
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(course)}
-                            className="p-2 text-neutral-400 hover:text-error-500 hover:bg-error-50 rounded-lg transition-colors"
-                            title="Delete course"
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          </div>
+          <Card padding="none">
+            <ul className="divide-y divide-neutral-100">
+              {courses.map((course) => {
+                const expanded = expandedIds.has(course.id);
+                const advisers = course.advisers || [];
+                return (
+                  <li key={course.id}>
+                    <div className="flex items-center gap-2 px-4 py-3 hover:bg-neutral-50">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(course.id)}
+                        className="p-1 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-darkSlateBlue"
+                        aria-expanded={expanded}
+                        aria-label={expanded ? 'Collapse advisers' : 'Expand advisers'}
+                      >
+                        {expanded ? <FiChevronDown /> : <FiChevronRight />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(course.id)}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <p className="font-medium text-neutral-800 truncate">
+                          {course.course_name}
+                          <span className="ml-2 text-sm font-normal text-neutral-500">
+                            ({course.code})
+                          </span>
+                        </p>
+                        {course.description && (
+                          <p className="text-sm text-neutral-500 truncate">{course.description}</p>
+                        )}
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                          {advisers.length} adviser{advisers.length === 1 ? '' : 's'}
+                        </p>
+                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => openAddAdviser(course)}
+                          className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                          title="Add adviser to course"
+                        >
+                          <FiUserPlus />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(course)}
+                          className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                          title="Edit course"
+                        >
+                          <FiEdit2 />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(course)}
+                          className="p-2 text-neutral-400 hover:text-error-500 hover:bg-error-50 rounded-lg transition-colors"
+                          title="Delete course"
+                        >
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    </div>
+
+                    {expanded && (
+                      <div className="border-t border-neutral-100 bg-neutral-50/80 px-4 py-3 pl-12">
+                        {advisers.length === 0 ? (
+                          <p className="text-sm text-neutral-500">
+                            No advisers assigned yet. Use the add user icon to invite one.
+                          </p>
+                        ) : (
+                          <ul className="space-y-2">
+                            {advisers.map((adviser) => (
+                              <li
+                                key={adviser.id}
+                                className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2"
+                              >
+                                <div className="w-9 h-9 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                                  {adviser.full_name?.charAt(0)?.toUpperCase() || '?'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-neutral-800 truncate">
+                                    {adviser.full_name || 'Unknown'}
+                                  </p>
+                                  <p className="text-xs text-neutral-500 truncate">{adviser.email}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setRemoveAdviserTarget({ course, adviser })
+                                  }
+                                  className="p-2 text-neutral-400 hover:text-error-500 hover:bg-error-50 rounded-lg transition-colors"
+                                  title="Remove adviser from course"
+                                >
+                                  <FiTrash2 />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
         )}
       </div>
 
-      {/* Create / Edit Course Modal */}
       <Modal isOpen={isFormOpen} onClose={closeForm} title={editingCourse ? 'Edit Course' : 'New Course'}>
         <div className="p-6 space-y-4">
-          {formError && <div className="p-3 bg-error-50 text-error-700 text-sm rounded-lg">{formError}</div>}
+          {formError && (
+            <div className="p-3 bg-error-50 text-error-700 text-sm rounded-lg">{formError}</div>
+          )}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">Course Name</label>
-            <input type="text" value={formData.courseName} onChange={(e) => setFormData((p) => ({ ...p, courseName: e.target.value }))} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g. Information Technology" />
+            <input
+              type="text"
+              value={formData.courseName}
+              onChange={(e) => setFormData((p) => ({ ...p, courseName: e.target.value }))}
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="e.g. Information Technology"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">Code</label>
-            <input type="text" value={formData.code} onChange={(e) => setFormData((p) => ({ ...p, code: e.target.value }))} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g. BSIT" />
+            <input
+              type="text"
+              value={formData.code}
+              onChange={(e) => setFormData((p) => ({ ...p, code: e.target.value }))}
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="e.g. BSIT"
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Description (optional)</label>
-            <textarea value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} rows={3} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Brief description of the course..." />
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+              rows={3}
+              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="Brief description of the course..."
+            />
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={closeForm}>Cancel</Button>
-            <Button variant="primary" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Saving...' : editingCourse ? 'Update' : 'Create'}</Button>
+            <Button variant="outline" onClick={closeForm}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'Saving...' : editingCourse ? 'Update' : 'Create'}
+            </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Course">
         <div className="p-6 space-y-4">
           <p className="text-sm text-neutral-600">
-            Are you sure you want to delete <strong>{deleteTarget?.course_name}</strong> ({deleteTarget?.code})? This action cannot be undone.
+            Are you sure you want to delete <strong>{deleteTarget?.course_name}</strong> (
+            {deleteTarget?.code})? This action cannot be undone.
           </p>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="error" onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting...' : 'Delete'}</Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Schedule Defense Modal */}
-      <Modal isOpen={!!defenseTarget && !conflictData} onClose={closeDefenseModal} title={`Schedule Defense — ${defenseTarget?.course_name || ''}`}>
-        <div className="p-6 space-y-4">
-          {defenseError && <div className="p-3 bg-error-50 text-error-700 text-sm rounded-lg">{defenseError}</div>}
-          {defenseSuccess ? (
-            <>
-              <div className="p-3 bg-success-50 text-success-700 text-sm rounded-lg">{defenseSuccess}</div>
-              <div className="flex justify-end">
-                <Button variant="primary" onClick={closeDefenseModal}>Done</Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-neutral-600">
-                This will create a defense schedule for <strong>all projects</strong> in this institution and notify all members.
-              </p>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Defense Type</label>
-                <select value={defenseForm.defenseType} onChange={(e) => setDefenseForm((p) => ({ ...p, defenseType: e.target.value as 'proposal' | 'midterm' | 'final' }))} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-                  <option value="proposal">Proposal</option>
-                  <option value="midterm">Midterm</option>
-                  <option value="final">Final</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
-                <input type="date" value={defenseForm.date} onChange={(e) => setDefenseForm((p) => ({ ...p, date: e.target.value }))} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Start Time</label>
-                  <input type="time" value={defenseForm.startTime} onChange={(e) => setDefenseForm((p) => ({ ...p, startTime: e.target.value }))} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">End Time</label>
-                  <input type="time" value={defenseForm.endTime} onChange={(e) => setDefenseForm((p) => ({ ...p, endTime: e.target.value }))} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Location</label>
-                <input type="text" value={defenseForm.location} onChange={(e) => setDefenseForm((p) => ({ ...p, location: e.target.value }))} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g. Room 301, Building A" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Venue (optional)</label>
-                <input type="text" value={defenseForm.venue} onChange={(e) => setDefenseForm((p) => ({ ...p, venue: e.target.value }))} className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g. Conference Hall" />
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={closeDefenseModal}>Cancel</Button>
-                <Button variant="primary" onClick={handleScheduleDefense} disabled={defenseSubmitting}>
-                  {defenseSubmitting ? 'Scheduling...' : 'Schedule Defenses'}
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
-
-      {/* Conflict Resolution Modal */}
-      <Modal isOpen={!!conflictData} onClose={() => { setConflictData(null); setPendingPayload(null); }} title="Schedule Conflict Found">
-        <div className="p-6 space-y-4">
-          <p className="text-sm text-neutral-600">
-            This time slot overlaps with existing confirmed schedules. Choose how to proceed:
-          </p>
-
-          {conflictData && (
-            <>
-              <div className="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-sm text-warning-800">
-                {uniqueConflicts.length} overlapping schedule{uniqueConflicts.length === 1 ? '' : 's'} detected.
-              </div>
-
-              <div className="rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-sm text-warning-800 space-y-1">
-                <p>Requested total time: <strong>{formatMinutes(conflictData.candidate_total_minutes)}</strong></p>
-                <p>Overlap: <strong>{formatMinutes(conflictData.max_overlap_minutes)}</strong></p>
-                <p>Time left if you proceed: <strong>{formatMinutes(conflictData.effective_minutes)}</strong></p>
-              </div>
-
-              {uniqueConflicts.length > 0 && (
-                <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 mb-2">Overlapping time slots</p>
-                  <ul className="space-y-1 text-sm text-neutral-700">
-                    {uniqueConflicts.map((c) => (
-                      <li key={c.defense_id}>{c.start_time} – {c.end_time}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          )}
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-neutral-700 space-y-2">
-            <div>
-              <p className="font-medium text-blue-900 mb-1">Option 1: Hold Defense</p>
-              <p className="text-blue-800 text-xs">Queue all defenses as pending. They will be scheduled automatically when the conflicting slot becomes available.</p>
-            </div>
-            <div>
-              <p className="font-medium text-blue-900 mb-1">Option 2: Confirm</p>
-              <p className="text-blue-800 text-xs">Schedule all defenses regardless of the conflict. Both will run at their requested times.</p>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => { setConflictData(null); setPendingPayload(null); setConflictAction(null); }}>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={() => handleConflictResolution('hold')} disabled={defenseSubmitting}>
-              {defenseSubmitting && conflictAction === 'hold' ? 'Processing...' : 'Hold Defense'}
+            <Button variant="error" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting...' : 'Delete'}
             </Button>
-            <Button variant="error" onClick={() => handleConflictResolution('confirm')} disabled={defenseSubmitting}>
-              {defenseSubmitting && conflictAction === 'confirm' ? 'Confirming...' : 'Confirm'}
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!addAdviserCourse}
+        onClose={closeAddAdviser}
+        title={addAdviserCourse ? `Add Adviser — ${addAdviserCourse.course_name}` : 'Add Adviser'}
+      >
+        <div className="p-6 space-y-4">
+          {addError && (
+            <div className="p-3 bg-error-50 text-error-700 text-sm rounded-lg">{addError}</div>
+          )}
+          {searchError && (
+            <div className="p-3 bg-error-50 text-error-700 text-sm rounded-lg">{searchError}</div>
+          )}
+          <p className="text-sm text-neutral-600">
+            Search for an adviser to assign to projects in{' '}
+            <strong>{addAdviserCourse?.course_name}</strong> ({addAdviserCourse?.code}).
+          </p>
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              className="w-full border border-neutral-300 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="Search by name or email..."
+              autoFocus
+            />
+            {searching && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+
+            {!selectedUser && suggestions.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-neutral-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                {suggestions.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleSelectUser(u)}
+                    className="w-full text-left px-4 py-3 hover:bg-primary-50 flex items-center gap-3 transition-colors border-b border-neutral-50 last:border-0"
+                  >
+                    <div className="w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0">
+                      {u.full_name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-neutral-800 truncate">
+                        {u.full_name || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-neutral-500 truncate">{u.email}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!selectedUser && !searching && suggestions.length === 0 && query.trim().length >= 2 && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-neutral-200 rounded-lg shadow-lg px-4 py-3">
+                <p className="text-sm text-neutral-500">No advisers found matching your search.</p>
+              </div>
+            )}
+          </div>
+
+          {selectedUser && (
+            <div className="flex items-center justify-between p-3 bg-primary-50 border border-primary-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-semibold text-sm">
+                  {selectedUser.full_name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div>
+                  <p className="font-medium text-neutral-800 text-sm">
+                    {selectedUser.full_name || 'Unknown'}
+                  </p>
+                  <p className="text-xs text-neutral-500">{selectedUser.email}</p>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                onClick={handleAddAdviser}
+                disabled={addingId === selectedUser.id}
+              >
+                {addingId === selectedUser.id ? 'Adding...' : 'Add'}
+              </Button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!removeAdviserTarget}
+        onClose={() => setRemoveAdviserTarget(null)}
+        title="Remove adviser from course"
+      >
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-neutral-600">
+            Remove <strong>{removeAdviserTarget?.adviser.full_name}</strong> from{' '}
+            <strong>{removeAdviserTarget?.course.course_name}</strong> ({removeAdviserTarget?.course.code})?
+            They will no longer be assigned as adviser on projects in this course.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setRemoveAdviserTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="error" onClick={handleRemoveAdviser} disabled={removingAdviser}>
+              {removingAdviser ? 'Removing...' : 'Remove'}
             </Button>
           </div>
         </div>

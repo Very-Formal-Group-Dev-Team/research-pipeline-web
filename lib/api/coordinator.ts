@@ -23,6 +23,13 @@ export interface InstitutionAdviser {
   role_assigned_at: string;
 }
 
+export interface CourseAdviser {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url: string | null;
+}
+
 export interface Course {
   id: string;
   institution_id: string;
@@ -31,6 +38,7 @@ export interface Course {
   description: string | null;
   created_at: string;
   updated_at: string;
+  advisers?: CourseAdviser[];
 }
 
 export interface CoordinatorStats {
@@ -48,7 +56,7 @@ export interface DashboardData {
 export interface Defense {
   id: string;
   project_id: string;
-  adviser_id: string;
+  adviser_id?: string;
   defense_type: string;
   start_time: string;
   end_time: string | null;
@@ -102,6 +110,12 @@ export function addAdviserToInstitution(adviserId: string, courseId: string) {
 
 export function removeAdviserFromInstitution(adviserId: string) {
   return del<{ success: boolean }>(`/coordinator/institution/advisers/${adviserId}`);
+}
+
+export function removeAdviserFromCourse(courseId: string, adviserId: string) {
+  return del<{ success: boolean; removed_assignments: number }>(
+    `/coordinator/courses/${courseId}/advisers/${adviserId}`,
+  );
 }
 
 // ─── Courses ────────────────────────────────────────────────────────────────
@@ -184,6 +198,110 @@ export interface CourseDefenseResult {
 
 export function createDefenseForCourse(courseId: string, payload: CreateCourseDefensePayload) {
   return post<CourseDefenseResult | CourseDefenseConflict>(`/coordinator/courses/${courseId}/defenses`, payload);
+}
+
+export type DefenseType = 'proposal' | 'midterm' | 'final';
+
+export interface RubricCriterion {
+  id?: string;
+  rubric_id?: string;
+  criterion_name: string;
+  weight: number;
+  description?: string | null;
+  max_score?: number;
+  order?: number;
+}
+
+export interface CoordinatorRubric {
+  id: string;
+  name: string;
+  description: string;
+  defense_type: DefenseType;
+  role?: 'coordinator' | 'adviser';
+  created_at: string;
+  criteria_count?: number;
+  total_weight?: number;
+  criteria?: RubricCriterion[];
+}
+
+export interface RubricCriterionInput {
+  criterionName: string;
+  weight: number;
+  description?: string | null;
+}
+
+export interface SaveCoordinatorRubricPayload {
+  name: string;
+  description: string;
+  defenseType: DefenseType;
+  criteria: RubricCriterionInput[];
+}
+
+export const SAMPLE_COORDINATOR_RUBRIC: SaveCoordinatorRubricPayload = {
+  name: 'Proposal Defense Rubric',
+  description:
+    'Standard rubric for proposal defenses. Evaluates delivery, technical depth, documentation quality, and Q&A performance.',
+  defenseType: 'proposal',
+  criteria: [
+    {
+      criterionName: 'Presentation',
+      weight: 20,
+      description: 'Clarity, organization, and professionalism of the oral presentation.',
+    },
+    {
+      criterionName: 'Technical Content',
+      weight: 30,
+      description: 'Depth and accuracy of methodology, analysis, and findings.',
+    },
+    {
+      criterionName: 'Documentation',
+      weight: 20,
+      description: 'Quality and completeness of written materials submitted.',
+    },
+    {
+      criterionName: 'Question and Answer',
+      weight: 30,
+      description: 'Ability to respond thoughtfully to panel questions.',
+    },
+  ],
+};
+
+export interface BookDefenseSchedulePayload {
+  courseId: string;
+  projectId?: string;
+  rubricId?: string;
+  defenseType: 'proposal' | 'midterm' | 'final';
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  venue?: string;
+  modality?: string;
+  forceApprove?: boolean;
+}
+
+export function getCoordinatorRubrics() {
+  return get<CoordinatorRubric[]>('/coordinator/rubrics');
+}
+
+export function getCoordinatorRubric(rubricId: string) {
+  return get<CoordinatorRubric>(`/coordinator/rubrics/${rubricId}`);
+}
+
+export function createCoordinatorRubric(payload: SaveCoordinatorRubricPayload) {
+  return post<CoordinatorRubric>('/coordinator/rubrics', payload);
+}
+
+export function updateCoordinatorRubric(rubricId: string, payload: SaveCoordinatorRubricPayload) {
+  return put<CoordinatorRubric>(`/coordinator/rubrics/${rubricId}`, payload);
+}
+
+export function deleteCoordinatorRubric(rubricId: string) {
+  return del<{ success: boolean }>(`/coordinator/rubrics/${rubricId}`);
+}
+
+export function bookDefenseSchedule(payload: BookDefenseSchedulePayload) {
+  return post<Defense | VerifyDefenseConflict>('/coordinator/defenses/book', payload);
 }
 
 // ─── Projects ───────────────────────────────────────────────────────────────

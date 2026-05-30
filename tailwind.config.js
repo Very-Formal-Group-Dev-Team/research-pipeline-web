@@ -106,6 +106,12 @@ module.exports = {
           800: '#92400e',
           900: '#78350f',
         },
+        coordinator: {
+          navy: '#2C3E6B',
+          rose: '#9B4455',
+          ink: '#2E2A2B',
+          cream: '#F0ECEC',
+        },
         neutral: {
           50: '#FEFBF5', // ivory
           100: '#f5f5f5',

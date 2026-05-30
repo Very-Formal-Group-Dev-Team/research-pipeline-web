@@ -76,3 +76,100 @@
 .animate-modal-in {
   animation: modal-in 0.2s ease-out forwards;
 }
+
+@keyframes notification-focus-grow {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.025);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-notification-focus-grow {
+  animation: notification-focus-grow 0.45s ease-out;
+}
+
+/* Coordinator role theme — scoped to .coordinator-theme wrapper only */
+.coordinator-theme {
+  color: #2e2a2b;
+}
+
+.coordinator-theme .coordinator-main-bg,
+.coordinator-theme.bg-neutral-50 {
+  background-color: #f0ecec !important;
+}
+
+.coordinator-theme aside.coordinator-sidebar {
+  background-color: #2c3e6b;
+  border-color: #243456;
+}
+
+.coordinator-theme aside.coordinator-sidebar nav a {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.coordinator-theme aside.coordinator-sidebar nav a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.coordinator-theme aside.coordinator-sidebar nav a.coordinator-nav-active {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.coordinator-theme aside.coordinator-sidebar nav a span:first-child {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.coordinator-theme aside.coordinator-sidebar nav a.coordinator-nav-active span:first-child {
+  color: #ffffff;
+}
+
+.coordinator-theme .coordinator-heading,
+.coordinator-theme h1.text-primary-700,
+.coordinator-theme h2.text-primary-700,
+.coordinator-theme h3.text-primary-700 {
+  color: #2e2a2b !important;
+}
+
+.coordinator-theme .coordinator-text-muted,
+.coordinator-theme .text-neutral-600 {
+  color: #5a5556;
+}
+
+.coordinator-theme .coordinator-btn-primary.bg-darkSlateBlue,
+.coordinator-theme button.coordinator-btn-primary {
+  background-color: #9b4455 !important;
+  color: #ffffff !important;
+}
+
+.coordinator-theme .coordinator-btn-primary.bg-darkSlateBlue:hover,
+.coordinator-theme button.coordinator-btn-primary:hover {
+  background-color: #87404f !important;
+}
+
+.coordinator-theme button.border-2.border-darkSlateBlue,
+.coordinator-theme .coordinator-btn-secondary {
+  border-color: #2c3e6b !important;
+  color: #2c3e6b !important;
+}
+
+.coordinator-theme button.border-2.border-darkSlateBlue:hover,
+.coordinator-theme .coordinator-btn-secondary:hover {
+  background-color: rgba(44, 62, 107, 0.08) !important;
+}
+
+.coordinator-theme .coordinator-tab-active {
+  border-color: #9b4455 !important;
+  color: #2e2a2b !important;
+}
+
+.coordinator-theme .coordinator-spinner {
+  border-color: #9b4455;
+}

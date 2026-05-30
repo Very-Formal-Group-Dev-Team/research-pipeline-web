@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { FiCalendar, FiMapPin, FiPlus, FiX } from 'react-icons/fi';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { FiCalendar, FiMapPin, FiPlus, FiX, FiShield } from 'react-icons/fi';
 
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
+import CoordinatorDefenseSections from '@/components/coordinator/CoordinatorDefenseSections';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   cancelCoordinatorEvent,
@@ -15,7 +17,20 @@ import {
   getCoordinatorEvents,
   type InstitutionEvent,
 } from '@/lib/api/events';
+import {
+  bookDefenseSchedule,
+  getCoordinatorRubrics,
+  getCourses,
+  getMyInstitution,
+  getPendingDefenses,
+  type Course,
+  type Institution,
+  type CoordinatorRubric,
+} from '@/lib/api/coordinator';
 import { formatStatusLabel } from '@/lib/utils/formatStatus';
+
+type PageTab = 'events' | 'pending' | 'approved';
+type ScheduleKind = 'event' | 'defense' | null;
 
 function formatDateTime(iso?: string | null) {
   if (!iso) return '-';
@@ -33,26 +48,33 @@ function formatDateTime(iso?: string | null) {
 
 function statusVariant(status: string): 'success' | 'warning' | 'error' | 'default' {
   switch (status) {
-    case 'scheduled':
-      return 'default';
-    case 'completed':
-      return 'success';
-    case 'cancelled':
-      return 'error';
-    default:
-      return 'warning';
+    case 'scheduled': return 'default';
+    case 'completed': return 'success';
+    case 'cancelled': return 'error';
+    default: return 'warning';
   }
 }
 
 export default function CoordinatorEventsPage() {
+  const searchParams = useSearchParams();
   const { user, handleLogout } = useDashboardUser('Coordinator');
+
+  const initialTab = (searchParams.get('tab') as PageTab) || 'events';
+  const [activeTab, setActiveTab] = useState<PageTab>(initialTab);
   const [events, setEvents] = useState<InstitutionEvent[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
+  const [institution, setInstitution] = useState<Institution | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [rubrics, setRubrics] = useState<CoordinatorRubric[]>([]);
+
+  const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
     date: '',
@@ -62,32 +84,114 @@ export default function CoordinatorEventsPage() {
     modality: 'Online' as 'Online' | 'In-Person' | 'Hybrid',
   });
 
+  const [defenseForm, setDefenseForm] = useState({
+    courseId: '',
+    rubricId: '',
+    defenseType: 'proposal' as 'proposal' | 'midterm' | 'final',
+    date: '',
+    startTime: '',
+    endTime: '',
+    location: '',
+    venue: '',
+    modality: 'Online',
+  });
+
   async function loadEvents() {
-    setLoading(true);
-    const res = await getCoordinatorEvents();
-    if (res.data) setEvents(res.data);
-    setLoading(false);
+    const [eventsRes, pendingRes] = await Promise.all([
+      getCoordinatorEvents(),
+      getPendingDefenses(),
+    ]);
+    if (eventsRes.data) setEvents(eventsRes.data);
+    if (pendingRes.data) setPendingCount(pendingRes.data.length);
+  }
+
+  async function loadScheduleOptions() {
+    const [instRes, coursesRes, rubricRes] = await Promise.all([
+      getMyInstitution(),
+      getCourses(),
+      getCoordinatorRubrics(),
+    ]);
+    if (instRes.data) setInstitution(instRes.data);
+    if (coursesRes.data) setCourses(coursesRes.data);
+    if (rubricRes.data) setRubrics(rubricRes.data);
   }
 
   useEffect(() => {
-    loadEvents();
+    async function load() {
+      setLoading(true);
+      await loadEvents();
+      setLoading(false);
+    }
+    load();
   }, []);
 
-  async function handleCreate(e: React.FormEvent) {
+  useEffect(() => {
+    const tab = searchParams.get('tab') as PageTab | null;
+    if (tab && ['events', 'pending', 'approved'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const filteredRubrics = useMemo(
+    () => rubrics.filter((r) => r.defense_type === defenseForm.defenseType),
+    [rubrics, defenseForm.defenseType],
+  );
+
+  function openScheduleModal() {
+    setShowScheduleModal(true);
+    setScheduleKind(null);
+    setError(null);
+    loadScheduleOptions();
+  }
+
+  function closeScheduleModal() {
+    setShowScheduleModal(false);
+    setScheduleKind(null);
+    setError(null);
+  }
+
+  async function handleCreateEvent(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
 
-    const start_time = `${form.date}T${form.startTime}:00`;
-    const end_time = `${form.date}T${form.endTime}:00`;
-
     const res = await createCoordinatorEvent({
-      title: form.title.trim(),
-      description: form.description.trim() || undefined,
-      start_time,
-      end_time,
-      location: form.location.trim(),
-      modality: form.modality,
+      title: eventForm.title.trim(),
+      description: eventForm.description.trim() || undefined,
+      start_time: `${eventForm.date}T${eventForm.startTime}:00`,
+      end_time: `${eventForm.date}T${eventForm.endTime}:00`,
+      location: eventForm.location.trim(),
+      modality: eventForm.modality,
+    });
+
+    setSubmitting(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+
+    closeScheduleModal();
+    setEventForm({
+      title: '', description: '', date: '', startTime: '', endTime: '', location: '', modality: 'Online',
+    });
+    await loadEvents();
+  }
+
+  async function handleCreateDefense(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    const res = await bookDefenseSchedule({
+      courseId: defenseForm.courseId,
+      rubricId: defenseForm.rubricId || undefined,
+      defenseType: defenseForm.defenseType,
+      date: defenseForm.date,
+      startTime: defenseForm.startTime,
+      endTime: defenseForm.endTime,
+      location: defenseForm.location.trim(),
+      venue: defenseForm.venue.trim() || undefined,
+      modality: defenseForm.modality,
     });
 
     setSubmitting(false);
@@ -97,17 +201,24 @@ export default function CoordinatorEventsPage() {
       return;
     }
 
-    setShowModal(false);
-    setForm({
-      title: '',
-      description: '',
-      date: '',
-      startTime: '',
-      endTime: '',
-      location: '',
-      modality: 'Online',
+    if (res.data && 'conflict' in res.data && res.data.conflict) {
+      const count = res.data.conflicts?.length ?? 0;
+      const domains = [...new Set((res.data.conflicts || []).map((c) => c.domain))].join(', ');
+      setError(
+        count
+          ? `Schedule conflict (${count} overlap${count === 1 ? '' : 's'}${domains ? `: ${domains}` : ''}). Use a different time or location.`
+          : 'Schedule conflict detected. Use a different time or location.',
+      );
+      return;
+    }
+
+    closeScheduleModal();
+    setDefenseForm({
+      courseId: '', rubricId: '', defenseType: 'proposal',
+      date: '', startTime: '', endTime: '', location: '', venue: '', modality: 'Online',
     });
     await loadEvents();
+    setActiveTab('approved');
   }
 
   async function handleCancel(eventId: string) {
@@ -115,170 +226,252 @@ export default function CoordinatorEventsPage() {
     if (!res.error) await loadEvents();
   }
 
+  const tabClass = (tab: PageTab) =>
+    `px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+      activeTab === tab
+        ? 'coordinator-tab-active border-coordinator-rose text-coordinator-ink'
+        : 'border-transparent text-neutral-500 hover:text-coordinator-ink'
+    }`;
+
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-primary-700">Institution Events</h1>
-            <p className="text-neutral-600 mt-1">
-              Schedule workshops, deadlines, and other institution-wide events
+            <h1 className="text-3xl font-bold coordinator-heading">Events & Defenses</h1>
+            <p className="coordinator-text-muted mt-1">
+              Institution events, pending defense requests, and approved schedules
             </p>
           </div>
-          <Button onClick={() => setShowModal(true)}>
-            <FiPlus className="mr-1" /> Create Event
+          <Button onClick={openScheduleModal}>
+            <FiPlus className="mr-1" /> Schedule
           </Button>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
-        ) : events.length === 0 ? (
-          <Card>
-            <p className="text-sm text-neutral-600">No events scheduled yet.</p>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {events.map((event) => (
-              <Card key={event.id}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-lg text-primary-700">{event.title}</h3>
-                      <Badge variant={statusVariant(event.status)}>
-                        {formatStatusLabel(event.status)}
-                      </Badge>
+        <div className="flex gap-2 border-b border-neutral-200 pb-0">
+          <button type="button" onClick={() => setActiveTab('events')} className={tabClass('events')}>
+            Institution Events
+          </button>
+          <button type="button" onClick={() => setActiveTab('pending')} className={tabClass('pending')}>
+            Pending
+            {pendingCount > 0 && (
+              <span className="ml-2 px-2 py-0.5 text-xs bg-coordinator-rose/15 text-coordinator-rose rounded-full">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+          <button type="button" onClick={() => setActiveTab('approved')} className={tabClass('approved')}>
+            Approved
+          </button>
+        </div>
+
+        {activeTab === 'events' && (
+          loading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 coordinator-spinner" />
+            </div>
+          ) : events.length === 0 ? (
+            <Card><p className="text-sm text-neutral-600">No events scheduled yet.</p></Card>
+          ) : (
+            <div className="space-y-3">
+              {events.map((event) => (
+                <Card key={event.id}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-lg coordinator-heading">{event.title}</h3>
+                        <Badge variant={statusVariant(event.status)}>
+                          {formatStatusLabel(event.status)}
+                        </Badge>
+                      </div>
+                      {event.description ? (
+                        <p className="text-sm text-neutral-600 mb-2">{event.description}</p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-4 text-sm text-neutral-600">
+                        <span className="inline-flex items-center gap-1">
+                          <FiCalendar /> {formatDateTime(event.start_time)} – {formatDateTime(event.end_time)}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <FiMapPin /> {event.location}
+                        </span>
+                        <span>{event.modality}</span>
+                      </div>
                     </div>
-                    {event.description ? (
-                      <p className="text-sm text-neutral-600 mb-2">{event.description}</p>
-                    ) : null}
-                    <div className="flex flex-wrap gap-4 text-sm text-neutral-600">
-                      <span className="inline-flex items-center gap-1">
-                        <FiCalendar /> {formatDateTime(event.start_time)} – {formatDateTime(event.end_time)}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <FiMapPin /> {event.location}
-                      </span>
-                      <span>{event.modality}</span>
-                    </div>
-                    {event.created_by_name ? (
-                      <p className="text-xs text-neutral-500 mt-1">Created by {event.created_by_name}</p>
+                    {event.status === 'scheduled' ? (
+                      <Button variant="outline" size="sm" onClick={() => handleCancel(event.id)}>
+                        <FiX className="mr-1" /> Cancel
+                      </Button>
                     ) : null}
                   </div>
-                  {event.status === 'scheduled' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCancel(event.id)}
-                    >
-                      <FiX className="mr-1" /> Cancel
-                    </Button>
-                  ) : null}
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )
+        )}
+
+        {activeTab === 'pending' && (
+          <CoordinatorDefenseSections section="pending" onDataChange={loadEvents} />
+        )}
+
+        {activeTab === 'approved' && (
+          <CoordinatorDefenseSections section="approved" onDataChange={loadEvents} />
         )}
       </div>
 
       <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Create Institution Event"
+        isOpen={showScheduleModal}
+        onClose={closeScheduleModal}
+        title={scheduleKind === null ? 'What would you like to schedule?' : scheduleKind === 'event' ? 'Schedule Institution Event' : 'Schedule Defense'}
         size="md"
       >
-        <form onSubmit={handleCreate} className="space-y-4">
-          {error ? (
-            <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p>
-          ) : null}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Title</label>
-            <input
-              required
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              placeholder="e.g. Research Workshop"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              rows={3}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
-              <input
-                type="date"
-                required
-                value={form.date}
-                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Start</label>
-              <input
-                type="time"
-                required
-                value={form.startTime}
-                onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">End</label>
-              <input
-                type="time"
-                required
-                value={form.endTime}
-                onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Location</label>
-            <input
-              required
-              value={form.location}
-              onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              placeholder="Room or online link"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Modality</label>
-            <select
-              value={form.modality}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  modality: e.target.value as 'Online' | 'In-Person' | 'Hybrid',
-                }))
-              }
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        {scheduleKind === null ? (
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setScheduleKind('event')}
+              className="rounded-xl border-2 border-coordinator-navy/30 p-6 text-left hover:border-coordinator-navy hover:bg-coordinator-navy/5 transition-colors"
             >
-              <option value="Online">Online</option>
-              <option value="In-Person">In-Person</option>
-              <option value="Hybrid">Hybrid</option>
-            </select>
+              <FiCalendar className="text-2xl text-coordinator-navy mb-2" />
+              <h3 className="font-semibold text-coordinator-ink">Event</h3>
+              <p className="text-sm text-neutral-600 mt-1">Workshops, deadlines, and institution-wide activities</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setScheduleKind('defense')}
+              className="rounded-xl border-2 border-coordinator-rose/30 p-6 text-left hover:border-coordinator-rose hover:bg-coordinator-rose/5 transition-colors"
+            >
+              <FiShield className="text-2xl text-coordinator-rose mb-2" />
+              <h3 className="font-semibold text-coordinator-ink">Defense</h3>
+              <p className="text-sm text-neutral-600 mt-1">Proposal, midterm, or final defense for a course</p>
+            </button>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Saving…' : 'Create Event'}
-            </Button>
-          </div>
-        </form>
+        ) : scheduleKind === 'event' ? (
+          <form onSubmit={handleCreateEvent} className="space-y-4 p-1">
+            {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Title</label>
+              <input required value={eventForm.title} onChange={(e) => setEventForm((f) => ({ ...f, title: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" placeholder="Event title" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">
+                Institution <span className="font-normal text-neutral-500">(optional)</span>
+              </label>
+              <input
+                readOnly
+                value={institution?.name || ''}
+                placeholder="Uses your institution by default"
+                className="w-full rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm text-neutral-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
+              <textarea value={eventForm.description} onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" rows={2} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
+                <input type="date" required value={eventForm.date} onChange={(e) => setEventForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Start</label>
+                <input type="time" required value={eventForm.startTime} onChange={(e) => setEventForm((f) => ({ ...f, startTime: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">End</label>
+                <input type="time" required value={eventForm.endTime} onChange={(e) => setEventForm((f) => ({ ...f, endTime: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Location</label>
+              <input required value={eventForm.location} onChange={(e) => setEventForm((f) => ({ ...f, location: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Modality</label>
+              <select value={eventForm.modality} onChange={(e) => setEventForm((f) => ({ ...f, modality: e.target.value as typeof f.modality }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
+                <option value="Online">Online</option>
+                <option value="In-Person">In-Person</option>
+                <option value="Hybrid">Hybrid</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setScheduleKind(null)}>Back</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Create Event'}</Button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleCreateDefense} className="space-y-4 p-1">
+            {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Course</label>
+              <select
+                required
+                value={defenseForm.courseId}
+                onChange={(e) => setDefenseForm((f) => ({ ...f, courseId: e.target.value }))}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              >
+                <option value="">Select course</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.course_name} ({c.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Defense Type</label>
+                <select
+                  value={defenseForm.defenseType}
+                  onChange={(e) => setDefenseForm((f) => ({
+                    ...f,
+                    defenseType: e.target.value as typeof f.defenseType,
+                    rubricId: '',
+                  }))}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                >
+                  <option value="proposal">Proposal</option>
+                  <option value="midterm">Midterm</option>
+                  <option value="final">Final</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Rubric</label>
+                <select
+                  value={defenseForm.rubricId}
+                  onChange={(e) => setDefenseForm((f) => ({ ...f, rubricId: e.target.value }))}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Optional</option>
+                  {filteredRubrics.map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
+                <input type="date" required value={defenseForm.date} onChange={(e) => setDefenseForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Start</label>
+                <input type="time" required value={defenseForm.startTime} onChange={(e) => setDefenseForm((f) => ({ ...f, startTime: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">End</label>
+                <input type="time" required value={defenseForm.endTime} onChange={(e) => setDefenseForm((f) => ({ ...f, endTime: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">Location</label>
+              <input required value={defenseForm.location} onChange={(e) => setDefenseForm((f) => ({ ...f, location: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setScheduleKind(null)}>Back</Button>
+              <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Schedule Defense'}</Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </DashboardLayout>
   );

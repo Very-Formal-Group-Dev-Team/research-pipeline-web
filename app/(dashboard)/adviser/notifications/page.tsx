@@ -25,6 +25,8 @@ import {
   markAllNotificationsRead,
   type NotificationItem,
 } from '@/lib/api/notifications';
+import { useNotificationFocusScroll } from '@/lib/hooks/useNotificationFocusScroll';
+import { notificationDomId } from '@/lib/notifications/navigation';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -87,6 +89,8 @@ export default function AdviserNotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
+  useNotificationFocusScroll(loading, notifications.length);
+
   return (
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
@@ -113,6 +117,7 @@ export default function AdviserNotificationsPage() {
             {notifications.map((notification) => (
               <Card
                 key={notification.id}
+                id={notificationDomId(notification.id)}
                 className={!notification.is_read ? 'border-l-4 border-l-primary-500' : ''}
               >
                 <div className="flex items-start gap-4">

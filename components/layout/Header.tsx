@@ -25,6 +25,10 @@ import {
   type NotificationItem,
 } from '@/lib/api/notifications';
 import {
+  getRoleNotificationsPath,
+  notificationFocusQuery,
+} from '@/lib/notifications/navigation';
+import {
   getMyInvitations,
   respondToInvitation,
   type Invitation,
@@ -111,6 +115,15 @@ export default function Header({ user, onLogout }: HeaderProps) {
     await loadData();
   }
 
+  async function handleNotificationClick(notification: NotificationItem) {
+    setBellOpen(false);
+    if (!notification.is_read) {
+      await markNotificationRead(notification.id);
+    }
+    const base = getRoleNotificationsPath(user?.role || 'student');
+    router.push(`${base}${notificationFocusQuery(notification.id)}`);
+  }
+
   async function handleMarkAllRead() {
     await markAllNotificationsRead();
     await loadData();
@@ -159,30 +172,16 @@ export default function Header({ user, onLogout }: HeaderProps) {
   ];
 
   return (
-    <header className="flex justify-between items-center px-7 bg-white border-b border-neutral-200 sticky top-0 z-40 flex-shrink-0 h-20">
-      {/* LEFT: Hamburger + Logo */}
+    <header className="flex justify-between items-center px-7 bg-coordinator-cream border-b border-[#E5DFDF] sticky top-0 z-40 flex-shrink-0 h-20">
+      {/* LEFT: Hamburger (mobile — branding lives in sidebar) */}
       <div className="flex items-center gap-2">
-        {/* Hamburger menu - mobile only */}
         <button
           onClick={toggle}
-          className="p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-darkSlateBlue transition-colors lg:hidden"
+          className="p-2 rounded-lg text-neutral-500 hover:bg-[#E8E4E4] hover:text-darkSlateBlue transition-colors lg:hidden"
           aria-label="Toggle sidebar"
         >
           <FiMenu className="text-xl" />
         </button>
-
-        {/* Logo section - tablet/desktop only */}
-        <div className="flex items-center gap-2 invisible sm:visible">
-          <div className="w-8 h-8 bg-crimsonRed rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-darkSlateBlue whitespace-nowrap">Student Research</h2>
-            <p className="text-xs text-neutral-500 capitalize whitespace-nowrap">{user?.role || 'Guest'}</p>
-          </div>
-        </div>
       </div>
 
       {/* RIGHT: Notifications + User */}
@@ -191,7 +190,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
           <div ref={bellRef} className="relative">
               <button
                 type="button"
-                className="relative rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-darkSlateBlue"
+                className="relative rounded-lg p-2 text-neutral-500 transition-colors hover:bg-[#E8E4E4] hover:text-darkSlateBlue"
                 aria-label="Notifications"
                 title="Notifications"
                 onClick={() => {
@@ -275,7 +274,8 @@ export default function Header({ user, onLogout }: HeaderProps) {
                         className={`px-4 py-3 border-b border-neutral-50 last:border-b-0 flex items-start gap-3 cursor-pointer hover:bg-neutral-50 ${
                           n.is_read ? 'opacity-60' : ''
                         }`}
-                        onClick={() => !n.is_read && handleMarkRead(n.id)}
+                        onClick={() => handleNotificationClick(n)}
+                        role="link"
                       >
                         <div className="mt-0.5">
                           {n.type === 'defense_approved' && (
