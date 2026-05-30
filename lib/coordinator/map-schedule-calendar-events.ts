@@ -1,10 +1,11 @@
 import type { Defense } from '@/lib/api/coordinator';
 import type { InstitutionEvent } from '@/lib/api/events';
-import {
-  buildScheduleCalendarUser,
-  mapMyScheduleToCalendarEvents,
-} from '@/lib/calendar/map-schedule-to-events';
+import { buildScheduleCalendarUser } from '@/lib/calendar/map-schedule-to-events';
 import type { IEvent, IUser } from '@/features/calendar/interfaces';
+import {
+  buildMergedScheduleItems,
+  mergedScheduleItemsToCalendarEvents,
+} from '@/lib/coordinator/merged-schedule';
 
 export function buildCoordinatorCalendarUser(
   userId: string,
@@ -18,10 +19,8 @@ export function mergeCoordinatorCalendarEvents(
   institutionEvents: InstitutionEvent[],
   user: IUser,
 ): IEvent[] {
-  return mapMyScheduleToCalendarEvents(
-    defenses as unknown as Parameters<typeof mapMyScheduleToCalendarEvents>[0],
-    [],
-    institutionEvents,
-    user,
-  );
+  const items = buildMergedScheduleItems(defenses, institutionEvents);
+  return mergedScheduleItemsToCalendarEvents(items, defenses, user);
 }
+
+export { buildMergedScheduleItems, type MergedScheduleItem, type MergedScheduleKind } from '@/lib/coordinator/merged-schedule';

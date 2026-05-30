@@ -1,43 +1,41 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Modal from '@/components/ui/Modal';
-import { FiPlus, FiEdit2, FiTrash2, FiCalendar } from 'react-icons/fi';
+import RubricEditorModal from '@/components/coordinator/RubricEditorModal';
+import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
-  getCourses,
-  createCourse,
-  updateCourse,
-  deleteCourse,
-  createDefenseForCourse,
-  type Course,
-  type CourseDefenseConflict,
-  type CreateCourseDefensePayload,
+  getCoordinatorRubrics,
+  deleteCoordinatorRubric,
+  type CoordinatorRubric,
+  type DefenseType,
 } from '@/lib/api/coordinator';
-import Link from 'next/dist/client/link';
+
+const DEFENSE_LABELS: Record<DefenseType, string> = {
+  proposal: 'Proposal',
+  midterm: 'Midterm',
+  final: 'Final',
+};
 
 export default function CoordinatorRubricPage() {
   const { user, handleLogout } = useDashboardUser('Coordinator');
-  const [rubrics, setRubrics] = useState<Course[]>([]);
+  const [rubrics, setRubrics] = useState<CoordinatorRubric[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Form modal
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingRubric, setEditingRubric] = useState<Course | null>(null);
-  const [formData, setFormData] = useState({ rubricName: '', code: '', description: '' });
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Delete confirmation
-  const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CoordinatorRubric | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   async function loadRubrics() {
     setLoading(true);
-    const res = await getCourses();
+    const res = await getCoordinatorRubrics();
     if (res.data) setRubrics(res.data);
     setLoading(false);
   }
@@ -49,69 +47,32 @@ export default function CoordinatorRubricPage() {
   }, []);
 
   function openCreate() {
-    setEditingRubric(null);
-    setFormData({ rubricName: '', code: '', description: '' });
-    setFormError('');
-    setIsFormOpen(true);
+    setEditingId(null);
+    setEditorOpen(true);
   }
 
-  function openEdit(rubric: Course) {
-    setEditingRubric(rubric);
-    setFormData({ rubricName: rubric.course_name, code: rubric.code, description: rubric.description || '' });
-    setFormError('');
-    setIsFormOpen(true);
+  function openEdit(rubric: CoordinatorRubric) {
+    setEditingId(rubric.id);
+    setEditorOpen(true);
   }
 
-  function closeForm() {
-    setIsFormOpen(false);
-    setEditingRubric(null);
-    setFormError('');
-  }
-
-  async function handleSubmit() {
-    if (!formData.rubricName.trim() || !formData.code.trim()) {
-      setFormError('Rubric name and code are required.');
-      return;
-    }
-    setSubmitting(true);
-    setFormError('');
-
-    const payload = {
-      courseName: formData.rubricName,
-      code: formData.code,
-      description: formData.description,
-    };
-
-    if (editingRubric) {
-      const res = await updateCourse(editingRubric.id, payload);
-      if (res.error) {
-        setFormError(res.error);
-      } else {
-        closeForm();
-        await loadRubrics();
-      }
-    } else {
-      const res = await createCourse(payload);
-      if (res.error) {
-        setFormError(res.error);
-      } else {
-        closeForm();
-        await loadRubrics();
-      }
-    }
-
-    setSubmitting(false);
+  function closeEditor() {
+    setEditorOpen(false);
+    setEditingId(null);
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const res = await deleteCourse(deleteTarget.id);
-    if (!res.error) {
-      setDeleteTarget(null);
-      await loadRubrics();
-    }
+    setDeleteError('');
+    const res = await deleteCoordinatorRubric(deleteTarget.id);
     setDeleting(false);
+    if (res.error) {
+      setDeleteError(res.error);
+      return;
+    }
+    setDeleteTarget(null);
+    await loadRubrics();
   }
 
   return (
@@ -120,13 +81,13 @@ export default function CoordinatorRubricPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Rubrics</h1>
-            <p className="text-neutral-600 mt-1">Manage rubrics for your institution</p>
+            <p className="text-neutral-600 mt-1">
+              Define defense rubrics with weighted criteria (total must equal 100%)
+            </p>
           </div>
-          <Link href="/coordinator/rubrics/rubric-creation">
-            <Button variant="primary">
-              <FiPlus className="mr-2" /> New Rubric
-            </Button>
-          </Link>
+          <Button variant="primary" onClick={openCreate}>
+            <FiPlus className="mr-2" /> New Rubric
+          </Button>
         </div>
 
         {loading ? (
@@ -145,38 +106,61 @@ export default function CoordinatorRubricPage() {
               <table className="w-full text-sm text-left">
                 <thead className="bg-neutral-50 border-b border-neutral-200">
                   <tr>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Rubric Name</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Group</th>
+                    <th className="px-4 py-3 font-medium text-neutral-600">Rubric name</th>
                     <th className="px-4 py-3 font-medium text-neutral-600">Description</th>
+                    <th className="px-4 py-3 font-medium text-neutral-600">Defense type</th>
+                    <th className="px-4 py-3 font-medium text-neutral-600">Criteria</th>
+                    <th className="px-4 py-3 font-medium text-neutral-600">Total weight</th>
                     <th className="px-4 py-3 font-medium text-neutral-600 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
-                  {rubrics.map((rubric) => (
-                    <tr key={rubric.id} className="hover:bg-neutral-50">
-                      <td className="px-4 py-3 font-medium text-neutral-800">{rubric.course_name}</td>
-                      <td className="px-4 py-3 text-neutral-600">{rubric.code}</td>
-                      <td className="px-4 py-3 text-neutral-600 truncate max-w-xs">{rubric.description || '—'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openEdit(rubric)}
-                            className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                            title="Edit rubric"
-                          >
-                            <FiEdit2 />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(rubric)}
-                            className="p-2 text-neutral-400 hover:text-error-500 hover:bg-error-50 rounded-lg transition-colors"
-                            title="Delete rubric"
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {rubrics.map((rubric) => {
+                    const total = Number(rubric.total_weight ?? 0);
+                    const weightOk = Math.abs(total - 100) < 0.01;
+                    return (
+                      <tr key={rubric.id} className="hover:bg-neutral-50">
+                        <td className="px-4 py-3 font-medium text-neutral-800">{rubric.name}</td>
+                        <td className="px-4 py-3 text-neutral-600 max-w-xs truncate" title={rubric.description}>
+                          {rubric.description || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-neutral-600 capitalize">
+                          {DEFENSE_LABELS[rubric.defense_type] || rubric.defense_type}
+                        </td>
+                        <td className="px-4 py-3 text-neutral-600">
+                          {rubric.criteria_count ?? 0}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={weightOk ? 'text-green-700' : 'text-amber-700'}>
+                            {Math.round(total * 100) / 100}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(rubric)}
+                              className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                              title="Edit rubric"
+                            >
+                              <FiEdit2 />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteError('');
+                                setDeleteTarget(rubric);
+                              }}
+                              className="p-2 text-neutral-400 hover:text-error-500 hover:bg-error-50 rounded-lg transition-colors"
+                              title="Delete rubric"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </Card>
@@ -184,6 +168,46 @@ export default function CoordinatorRubricPage() {
         )}
       </div>
 
+      <RubricEditorModal
+        isOpen={editorOpen}
+        onClose={closeEditor}
+        rubricId={editingId}
+        onSaved={loadRubrics}
+      />
+
+      <Modal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => {
+          setDeleteTarget(null);
+          setDeleteError('');
+        }}
+        title="Delete rubric"
+        size="sm"
+      >
+        <div className="space-y-4 p-6 pt-0">
+          <p className="text-neutral-600">
+            Delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
+          </p>
+          {deleteError && (
+            <p className="rounded-lg bg-error-50 px-3 py-2 text-sm text-error-700">{deleteError}</p>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDeleteTarget(null);
+                setDeleteError('');
+              }}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button variant="error" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </DashboardLayout>
   );
 }

@@ -2,6 +2,7 @@ import React from 'react';
 
 export interface CardProps {
   children: React.ReactNode;
+  id?: string;
   className?: string;
   padding?: 'none' | 'sm' | 'md' | 'lg';
   shadow?: 'none' | 'soft' | 'medium' | 'hard';
@@ -24,7 +25,8 @@ const shadowStyles = {
 };
 
 export default function Card({ 
-  children, 
+  children,
+  id,
   className = '', 
   padding = 'md', 
   shadow = 'soft',
@@ -33,6 +35,7 @@ export default function Card({
 }: CardProps) {
   return (
     <div
+      id={id}
       className={`
         bg-white border border-neutral-200 rounded-xl
         ${paddingStyles[padding]}

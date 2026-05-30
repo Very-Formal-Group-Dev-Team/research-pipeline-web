@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -53,10 +54,8 @@ const menuItems: Record<string, MenuItem[]> = {
   ],
   coordinator: [
     { label: 'Dashboard', href: '/coordinator', icon: <FiHome /> },
-    { label: 'Manage Defenses', href: '/coordinator/defenses', icon: <FiCheckSquare />, tooltip: 'Coordinator: manage course-wide defense schedules' },
-    { label: 'Events', href: '/coordinator/events', icon: <FiCalendar />, tooltip: 'Institution-wide events and workshops' },
+    { label: 'Events', href: '/coordinator/events', icon: <FiCalendar />, tooltip: 'Institution events and defense schedules' },
     { label: 'Notifications', href: '/coordinator/notifications', icon: <FiBell />, tooltip: 'Defense and schedule notifications' },
-    { label: 'Advisers', href: '/coordinator/advisers', icon: <FiUsers /> },
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
     { label: 'Rubrics', href: '/coordinator/rubrics', icon: <FiClipboard /> },
@@ -67,8 +66,10 @@ export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const items = menuItems[role] || [];
   const { isOpen, setOpen } = useSidebar();
+  const isCoordinator = role === 'coordinator';
 
   const closeSidebar = () => setOpen(false);
+  const homeHref = `/${role}`;
 
   return (
     <>
@@ -80,32 +81,61 @@ export default function Sidebar({ role }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — full-height left rail, overlays header on desktop */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 w-64
-          bg-white border-r border-neutral-200 h-screen flex flex-col
+          fixed top-0 left-0 z-50 w-64 h-screen flex flex-col
+          ${isCoordinator ? 'coordinator-sidebar border-r border-[#243456]' : 'bg-white border-r border-neutral-200'}
           transition-transform duration-300 ease-in-out
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:static lg:-translate-x-0 lg:h-auto lg:overflow-y-auto
         `}
       >
-        {/* Header */}
-        
-          
-
-          {/* Close button - only on mobile */}
-          <button
+        <div className="flex items-center justify-between gap-2 px-5 py-6 shrink-0">
+          <Link
+            href={homeHref}
             onClick={closeSidebar}
-            className="m-4 p-2 rounded-lg text-neutral-400 hover:text-darkSlateBlue transition-colors lg:hidden"
+            className="flex items-center gap-3.5 min-w-0"
+          >
+            <Image
+              src="/archivum.svg"
+              alt="Archivum"
+              width={52}
+              height={52}
+              className="h-[52px] w-[52px] flex-shrink-0 object-contain"
+              priority
+            />
+            <div className="min-w-0 text-left">
+              <p
+                className={`text-lg font-semibold leading-tight truncate ${
+                  isCoordinator ? 'text-white' : 'text-darkSlateBlue'
+                }`}
+              >
+                Archivum
+              </p>
+              <p
+                className={`text-sm leading-snug truncate ${
+                  isCoordinator ? 'text-white/75' : 'text-neutral-500'
+                }`}
+              >
+                Research Portal
+              </p>
+            </div>
+          </Link>
+          <button
+            type="button"
+            onClick={closeSidebar}
+            className={`p-2 rounded-lg transition-colors lg:hidden flex-shrink-0 ${
+              isCoordinator
+                ? 'text-white/70 hover:text-white hover:bg-white/10'
+                : 'text-neutral-400 hover:text-darkSlateBlue hover:bg-neutral-100'
+            }`}
             aria-label="Close sidebar"
           >
             <FiX className="text-lg" />
           </button>
-        
+        </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-3 overflow-y-auto overflow-x-hidden">
           <ul className="space-y-1">
             {items.map((item) => {
@@ -120,12 +150,18 @@ export default function Sidebar({ role }: SidebarProps) {
                       flex items-center gap-3 rounded-lg
                       transition-all duration-200 group text-sm px-4 py-2.5 relative
                       ${isActive
-                        ? 'bg-neutral-100 text-darkSlateBlue font-medium'
-                        : 'text-neutral-600 hover:bg-neutral-50 hover:text-darkSlateBlue'
+                        ? (isCoordinator ? 'coordinator-nav-active' : 'bg-neutral-100 text-darkSlateBlue font-medium')
+                        : (isCoordinator ? '' : 'text-neutral-600 hover:bg-neutral-50 hover:text-darkSlateBlue')
                       }
                     `}
                   >
-                    <span className={`text-lg flex-shrink-0 ${isActive ? 'text-darkSlateBlue' : 'text-neutral-400 group-hover:text-darkSlateBlue'}`}>
+                    <span
+                      className={`text-lg flex-shrink-0 ${
+                        isActive
+                          ? (isCoordinator ? 'text-white' : 'text-darkSlateBlue')
+                          : (isCoordinator ? 'text-white/60 group-hover:text-white' : 'text-neutral-400 group-hover:text-darkSlateBlue')
+                      }`}
+                    >
                       {item.icon}
                     </span>
                     <span className="flex-1 overflow-hidden">
