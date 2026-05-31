@@ -8,6 +8,8 @@ import { FiCalendar, FiClock, FiMapPin, FiUser } from 'react-icons/fi';
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { getMyProjectDefenses, type Defense } from '@/lib/api/defenses';
+import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
+import { isOnlineModality } from '@/lib/meetings/jitsi';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -104,6 +106,15 @@ export default function StudentDefensesPage() {
                     <div className="flex items-center gap-3">
                       <FiUser className="text-accent-500 flex-shrink-0" />
                       <span>Scheduled by {defense.created_by_name}</span>
+                    </div>
+                  )}
+                  {isOnlineModality(defense.modality) && (
+                    <div className="pt-2">
+                      <JoinMeetingButton
+                        meeting_url={defense.meeting_url}
+                        meeting_room={defense.meeting_room}
+                        label="Join Defense"
+                      />
                     </div>
                   )}
                 </div>

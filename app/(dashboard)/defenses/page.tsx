@@ -8,6 +8,7 @@ import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { type ProjectMember } from '@/lib/api/projects';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
+import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { createPortal } from 'react-dom';
 
 interface ScheduledDefense {
@@ -22,6 +23,8 @@ interface ScheduledDefense {
   modality: string;
   status: string;
   status_label: string;
+  meeting_url?: string | null;
+  meeting_room?: string | null;
 }
 
 interface OverlapConflict {
@@ -595,6 +598,13 @@ export default function MeetingSchedule() {
                     <p className="text-sm text-neutral-500 mb-4">
                       {formatDateTime(selectedDefense.start_time)} — {formatDateTime(selectedDefense.end_time)}
                     </p>
+                    <div className="mb-4">
+                      <JoinMeetingButton
+                        meeting_url={selectedDefense.meeting_url}
+                        meeting_room={selectedDefense.meeting_room}
+                        label="Join Meeting"
+                      />
+                    </div>
                     <div className="space-y-2">
                       <button
                         onClick={() => setCancelConfirmId(selectedDefense.id)}

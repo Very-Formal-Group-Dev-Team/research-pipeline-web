@@ -24,6 +24,8 @@ import {
   deleteDefense,
   type Defense,
 } from '@/lib/api/coordinator';
+import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
+import { isOnlineModality } from '@/lib/meetings/jitsi';
 
 function formatDateTime(iso?: string | null) {
   if (!iso) return '-';
@@ -367,6 +369,15 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
                   <div><span className="font-medium text-neutral-500">Location:</span> {defense.venue || defense.location || 'Not set'}</div>
                   {defense.adviser_name && (
                     <div><span className="font-medium text-neutral-500">Adviser:</span> {defense.adviser_name}</div>
+                  )}
+                  {isOnlineModality(defense.modality) && (
+                    <div className="md:col-span-2">
+                      <JoinMeetingButton
+                        meeting_url={defense.meeting_url}
+                        meeting_room={defense.meeting_room}
+                        label="Join Defense"
+                      />
+                    </div>
                   )}
                 </div>
               )}
