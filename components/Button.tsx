@@ -32,7 +32,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 const variantStyles: Record<ButtonVariant, string> = {
   primary: 'bg-oxfordBlue text-white hover:bg-oxfordBlue/90 focus:ring-oxfordBlue/30 disabled:bg-oxfordBlue/50',
   secondary: 'bg-neutral-200 text-neutral-900 hover:bg-neutral-300 focus:ring-neutral-300 disabled:bg-neutral-100',
-  outline: 'border-2 border-oxfordBlue text-oxfordBlue hover:bg-oxfordBlue/5 focus:ring-oxfordBlue/30 disabled:border-neutral-300 disabled:text-neutral-400',
+  outline: 'border-2 border-oxfordBlue text-oxfordBlue hover:bg-oxfordBlue hover:text-snow focus:ring-oxfordBlue/30 disabled:border-neutral-300 disabled:text-neutral-400 disabled:hover:bg-transparent disabled:hover:text-neutral-400',
   ghost: 'text-oxfordBlue hover:bg-neutral-100 focus:ring-neutral-300 disabled:text-neutral-400',
   success: 'bg-deepSeaGreen text-white hover:bg-deepSeaGreen/90 focus:ring-deepSeaGreen/30 disabled:bg-deepSeaGreen/50',
   error: 'bg-archivumRed text-white hover:bg-archivumRed/90 focus:ring-archivumRed/30 disabled:bg-archivumRed/50',
@@ -69,7 +69,7 @@ export default function Button({
   const shadowColor = {
     primary: 'hover:shadow-[0_4px_12px_rgba(44,62,107,0.2)] active:shadow-[0_2px_8px_rgba(44,62,107,0.3)]',
     secondary: 'hover:shadow-[0_4px_12px_rgba(229,231,235,0.4)] active:shadow-[0_2px_8px_rgba(229,231,235,0.5)]',
-    outline: 'hover:shadow-[0_4px_12px_rgba(44,62,107,0.2)] active:shadow-[0_2px_8px_rgba(44,62,107,0.3)]',
+    outline: '',
     ghost: 'hover:shadow-[0_4px_12px_rgba(229,231,235,0.4)] active:shadow-[0_2px_8px_rgba(229,231,235,0.5)]',
     success: 'hover:shadow-[0_4px_12px_rgba(73,118,108,0.2)] active:shadow-[0_2px_8px_rgba(73,118,108,0.3)]',
     error: 'hover:shadow-[0_4px_12px_rgba(194,58,70,0.2)] active:shadow-[0_2px_8px_rgba(194,58,70,0.3)]',
