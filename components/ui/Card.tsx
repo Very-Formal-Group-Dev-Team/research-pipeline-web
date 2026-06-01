@@ -37,7 +37,7 @@ export default function Card({
     <div
       id={id}
       className={`
-        bg-white border border-neutral-200 rounded-xl
+        bg-white border border-neutral-200 rounded-md
         ${paddingStyles[padding]}
         ${shadowStyles[shadow]}
         ${hover ? 'hover:shadow-lg hover:border-neutral-300 transition-all cursor-pointer' : ''}

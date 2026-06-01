@@ -71,7 +71,7 @@ export default function Modal({
       />
       
       {/* Modal */}
-      <div className={`relative bg-white rounded-2xl shadow-hard ${sizeStyles[size]} w-full mx-4 transition-all duration-200 ${
+      <div className={`relative bg-white rounded-lg shadow-hard ${sizeStyles[size]} w-full mx-4 transition-all duration-200 ${
         isClosing ? 'opacity-0 scale-95 translate-y-4' : 'animate-slide-up'
       }`}>
         {/* Header */}

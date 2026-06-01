@@ -24,7 +24,7 @@ export default function DashboardLayout({ children, role, user, onLogout }: Dash
   return (
     <SidebarProvider>
       <div
-        className={`min-h-screen overflow-x-hidden flex flex-col ${
+        className={`dashboard-ui min-h-screen overflow-x-hidden flex flex-col ${
           usesPortalChrome ? 'coordinator-theme coordinator-main-bg' : 'bg-neutral-50'
         }`}
       >
@@ -35,7 +35,7 @@ export default function DashboardLayout({ children, role, user, onLogout }: Dash
 
           <div className="flex min-w-0 flex-1 flex-col min-h-0">
             <main className="flex flex-1 flex-col min-h-0 overflow-y-auto coordinator-main-bg">
-              <div className="flex-1 p-6">
+              <div className="flex-1 px-6 pb-6 pt-10">
                 <div className="max-w-7xl mx-auto">
                   {children}
                 </div>
