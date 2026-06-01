@@ -6,11 +6,12 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { type ProjectMember } from '@/lib/api/projects';
-import Card from '@/components/ui/Card';
+import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import Modal from '@/components/ui/Modal';
 import Button from '@/components/Button';
-import { formLabelClassName } from '@/lib/utils/formControls';
+import { formControlTextSizeClassName, formLabelClassName } from '@/lib/utils/formControls';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { createPortal } from 'react-dom';
 
@@ -413,106 +414,124 @@ export default function MeetingSchedule() {
               <p className="text-neutral-600 mt-1">Manage your meeting availability and scheduled sessions</p>
             </div>
 
-            {/* Book a Meeting Form */}
-            <div>
-              <Card>
-                <h1 className="text-xl font-semibold text-neutral-700 mb-6">Book a Meeting</h1>
+            <Card>
+              <CardHeader>
+                <CardTitle>Book a Meeting</CardTitle>
+                <CardDescription>
+                  Enter a project code and time slot to schedule a session with your advisee group
+                </CardDescription>
+              </CardHeader>
 
-                <div className="space-y-4 mb-4">
+              <form
+                className="mt-4 space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleSubmit();
+                }}
+              >
+                <Input
+                  label="Project Code"
+                  type="text"
+                  name="projectCode"
+                  value={form.projectCode || ''}
+                  onChange={handleChange}
+                  placeholder="Enter project code"
+                  responsiveText
+                  fullWidth
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Input
-                    label="Project Code"
-                    type="text"
-                    name="projectCode"
-                    value={form.projectCode || ''}
+                    label="Date"
+                    type="date"
+                    name="date"
+                    value={form.date || ''}
                     onChange={handleChange}
-                    placeholder="Project Code"
                     responsiveText
                     fullWidth
                   />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Input
-                      label="Start Time"
-                      type="time"
-                      name="startTime"
-                      value={form.startTime || ''}
-                      onChange={handleChange}
-                      responsiveText
-                      fullWidth
-                    />
-                    <Input
-                      label="End Time"
-                      type="time"
-                      name="endTime"
-                      value={form.endTime || ''}
-                      onChange={handleChange}
-                      responsiveText
-                      fullWidth
-                    />
-                    <Input
-                      label="Date"
-                      type="date"
-                      name="date"
-                      value={form.date || ''}
-                      onChange={handleChange}
-                      responsiveText
-                      fullWidth
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <p className={formLabelClassName}>Meeting Type</p>
-                    <div className="flex flex-wrap gap-8">
-                      {['Online', 'Face-to-Face'].map((type) => (
-                        <label
-                          key={type}
-                          className="flex items-center gap-2 text-sm md:text-base text-neutral-700 cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            name="meetingType"
-                            value={type}
-                            checked={form.meetingType === type}
-                            onChange={handleChange}
-                            className="accent-primary-500"
-                          />
-                          <span>{type}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {form.meetingType === 'Face-to-Face' ? (
-                    <Select
-                      label="Room Option"
-                      name="roomOption"
-                      placeholder="Select a room"
-                      value={form.roomOption || ''}
-                      onChange={handleChange}
-                      responsiveText
-                      fullWidth
-                      options={[
-                        { value: 'room1', label: 'Room 1' },
-                        { value: 'room2', label: 'Room 2' },
-                        { value: 'room3', label: 'Room 3' },
-                      ]}
-                    />
-                  ) : null}
+                  <Input
+                    label="Start Time"
+                    type="time"
+                    name="startTime"
+                    value={form.startTime || ''}
+                    onChange={handleChange}
+                    responsiveText
+                    fullWidth
+                  />
+                  <Input
+                    label="End Time"
+                    type="time"
+                    name="endTime"
+                    value={form.endTime || ''}
+                    onChange={handleChange}
+                    responsiveText
+                    fullWidth
+                  />
                 </div>
 
-                {/* Buttons */}
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                  <Button variant="primary" onClick={handleSubmit} disabled={projectLookupLoading}>
-                    Book Meeting
-                  </Button>
-                  {/* Changed: Clear button calls handleClearClick (modal aware) */}
-                  <Button variant="outline" onClick={handleClearClick}>
-                    Clear
-                  </Button>
+                <div className="space-y-3">
+                  <p className={formLabelClassName}>Meeting Type</p>
+                  <div className="flex flex-wrap gap-6">
+                    {['Online', 'Face-to-Face'].map((type) => (
+                      <label
+                        key={type}
+                        className={`flex items-center gap-2 cursor-pointer text-neutral-700 ${formControlTextSizeClassName}`}
+                      >
+                        <input
+                          type="radio"
+                          name="meetingType"
+                          value={type}
+                          checked={form.meetingType === type}
+                          onChange={handleChange}
+                          className="accent-primary-500"
+                        />
+                        <span>{type}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
-              </Card>
-            </div>
+                {form.meetingType === 'Face-to-Face' ? (
+                  <Select
+                    label="Room"
+                    name="roomOption"
+                    placeholder="Select a room"
+                    value={form.roomOption || ''}
+                    onChange={handleChange}
+                    responsiveText
+                    fullWidth
+                    options={[
+                      { value: 'room1', label: 'Room 1' },
+                      { value: 'room2', label: 'Room 2' },
+                      { value: 'room3', label: 'Room 3' },
+                    ]}
+                  />
+                ) : null}
+
+                <div className="flex justify-start pt-2">
+                  <div className="inline-grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full min-w-[8.5rem]"
+                      onClick={handleClearClick}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="w-full min-w-[8.5rem]"
+                      disabled={projectLookupLoading}
+                      loading={projectLookupLoading}
+                    >
+                      Book Meeting
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </Card>
 
             {/* Scheduled Meetings Table */}
             <div className="pt-6">
@@ -744,41 +763,31 @@ export default function MeetingSchedule() {
                 document.body
               )}
 
-            {/*  Clear Confirmation Modal */}
-            {isCancelModalOpen &&
-              typeof document !== 'undefined' &&
-              createPortal(
-                <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-40 transition-opacity duration-200 ease-out">
-                  <div className="bg-white rounded-lg shadow-lg p-6 transform transition-all duration-200 ease-out scale-95 opacity-0 animate-modal-in">
-                    <h2 className="text-lg font-semibold text-neutral-800 mb-2">
-                      Discard Changes?
-                    </h2>
-                    <p className="text-sm text-neutral-600 mb-4">
-                      You have unsaved changes. Are you sure you want to clear the form? All progress will be lost.
-                    </p>
-                    <div className="flex justify-end space-x-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsCancelModalOpen(false)}
-                      >
-                        Continue Editing
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        onClick={() => {
-                          setIsCancelModalOpen(false);
-                          handleClear();
-                        }}
-                      >
-                        Clear Form
-                      </Button>
-                    </div>
-                  </div>
-                </div>,
-                document.body
-              )}  
+            <Modal
+              isOpen={isCancelModalOpen}
+              onClose={() => setIsCancelModalOpen(false)}
+              title="Discard changes?"
+              size="sm"
+            >
+              <p className="text-sm text-neutral-600">
+                You have unsaved changes. Are you sure you want to clear the form? All progress will be lost.
+              </p>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6">
+                <Button type="button" variant="outline" onClick={() => setIsCancelModalOpen(false)}>
+                  Continue Editing
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => {
+                    setIsCancelModalOpen(false);
+                    handleClear();
+                  }}
+                >
+                  Clear Form
+                </Button>
+              </div>
+            </Modal>
 
           </>
         )}

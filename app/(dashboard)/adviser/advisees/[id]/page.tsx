@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import Card, { CardHeader, CardTitle } from '@/components/ui/Card';
+import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
-import { FiArrowLeft, FiCalendar, FiClock, FiUsers, FiFileText, FiMapPin, FiVideo } from 'react-icons/fi';
+import { FiCheck, FiClock, FiCopy, FiFileText } from 'react-icons/fi';
+import { LuLink } from 'react-icons/lu';
 import { useRouter, useParams } from 'next/navigation';
-import StatusIcon from '@/components/StatusIcon';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { getProject, getProjectMembers, type Project, type ProjectMember } from '@/lib/api/projects';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
@@ -34,6 +34,14 @@ function formatMeetingTime(iso: string) {
   });
 }
 
+function formatProjectDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 function formatModalityLabel(modality?: string | null) {
   if (!modality) return 'Not specified';
   const normalized = modality.trim().toLowerCase();
@@ -42,6 +50,16 @@ function formatModalityLabel(modality?: string | null) {
   if (normalized === 'hybrid') return 'Hybrid';
   return modality;
 }
+
+function statusBadgeVariant(status: string): 'primary' | 'warning' | 'success' | 'default' {
+  const s = status.toLowerCase();
+  if (s === 'draft') return 'warning';
+  if (s === 'active') return 'primary';
+  if (s === 'completed' || s === 'archived') return 'success';
+  return 'default';
+}
+
+const summaryDetailTextClass = 'text-sm md:text-md text-neutral-700';
 
 export default function AdviserProjectDetailPage() {
   const router = useRouter();
@@ -57,6 +75,7 @@ export default function AdviserProjectDetailPage() {
   const [meetings, setMeetings] = useState<Defense[]>([]);
   const [meetingsLoading, setMeetingsLoading] = useState(true);
   const [meetingsError, setMeetingsError] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const loadMeetings = async () => {
     setMeetingsLoading(true);
@@ -107,6 +126,14 @@ export default function AdviserProjectDetailPage() {
     fetchData();
   }, [projectId]);
 
+  const copyProjectCode = () => {
+    if (project?.project_code) {
+      navigator.clipboard.writeText(project.project_code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    }
+  };
+
   const loadPaperVersions = async () => {
     setVersionsLoading(true);
     try {
@@ -143,8 +170,8 @@ export default function AdviserProjectDetailPage() {
   if (loading) {
     return (
       <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-neutral-500">Loading project details...</p>
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
         </div>
       </DashboardLayout>
     );
@@ -153,268 +180,301 @@ export default function AdviserProjectDetailPage() {
   if (!project) {
     return (
       <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-red-600">Project not found</p>
-        </div>
+        <EmptyState
+          title="Project not found"
+          description="This project may have been removed or you no longer have access."
+          action={{
+            label: 'Back to My Advisees',
+            onClick: () => router.push('/adviser/advisees'),
+          }}
+        />
       </DashboardLayout>
     );
   }
 
+  const abstractText = project.abstract || project.description || '';
+  const studentMembers = members.filter((m) => m.role === 'leader' || m.role === 'member');
+
   return (
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col justify-between gap-4 lg:flex-row">
-          <div className="flex items-left gap-5 flex-col lg:items-center lg:gap-12 lg:flex-row">
-            <button
-              onClick={() => router.push('/adviser/advisees')}
-              className="flex gap-2 items-center font-medium rounded-lg
-                      transition-all duration-200
-                      focus:outline-none hover:shadow-[0_4px_12px_rgba(229,231,235,0.4)] active:shadow-[0_2px_8px_rgba(229,231,235,0.5)]
-                      disabled:cursor-not-allowed disabled:opacity-60
-                      text-oxfordBlue hover:bg-neutral-100 focus:ring-neutral-300 disabled:text-neutral-400
-                      py-2.5 text-base"
-            >
-              <FiArrowLeft /> Back
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-primary-700">{project.title}</h1>
-              <p className="text-neutral-600 mt-1">Project Details</p>
+        {/* Page header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold text-primary-700 break-words sm:text-3xl">
+                {project.title}
+              </h1>
+              <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
+                {project.status}
+              </Badge>
             </div>
+            <p className="text-neutral-600 line-clamp-3">
+              {abstractText || 'No description provided'}
+            </p>
           </div>
-          <div className="flex items-left flex-col lg:items-center lg:flex-row gap-4">
-            <StatusIcon status={project.status} />
-            <Button
-              onClick={
-                handleBookMeeting}
-              className="bg-navy hover:bg-navy/10 text-white"
-            >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:shrink-0">
+            <Button variant="outline" onClick={() => router.push('/adviser/advisees')}>
+              Back to Advisees
+            </Button>
+            <Button variant="primary" onClick={handleBookMeeting}>
               Book a Meeting
             </Button>
           </div>
         </div>
 
-        {/* Project Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Description</CardTitle>
-              </CardHeader>
-              <p className="mt-4 text-neutral-700">
-                {project.description || 'No description provided'}
-              </p>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FiUsers /> Team Members
-                </CardTitle>
-              </CardHeader>
-              <div className="mt-4 space-y-4">
-                  {members.length > 0 ? (
-                    members.map((member) => (
-                      <div 
-                        key={member.id} 
-                        className={`flex items-center justify-between p-3 rounded-lg ${
-                          member.role === 'leader' ? 'bg-primary-50 border-2 border-primary-200' : 'bg-neutral-100 border border-neutral-200'
-                        }`}
-                      >
-                        <div className="w-full flex items-center gap-3">
-                          <Avatar 
-                            src={member.users?.avatar_url || undefined} 
-                            name={member.users?.full_name || 'Unknown'} 
-                            size="md"
-                          />
-                          <div className='flex flex-1 flex-col lg:flex-row lg:items-center lg:justify-between'>
-                            <div>
-                              <p className={`font-medium ${member.role === 'leader' ? 'font-semibold text-primary-900' : 'text-neutral-900'}`}>
-                                {member.users?.full_name || 'Unknown'}
-                              </p>
-                              <p className={`text-sm ${member.role === 'leader' ? 'text-primary-700' : 'text-neutral-600'}`}>
-                                {member.users?.email}
-                              </p>
-                            </div>
-                            <div className='mt-2 lg:mt-0'>
-                              <Badge variant="default" className="capitalize">
-                                {member.role}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-neutral-600 text-center py-4">
-                      No team members found
-                    </p>
-                  )}
-                </div>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FiCalendar /> Meetings
-                </CardTitle>
-              </CardHeader>
-              <div className="mt-4">
-                {meetingsLoading ? (
-                  <p className="text-neutral-600 text-center py-4">Loading meetings...</p>
-                ) : meetingsError ? (
-                  <p className="text-red-600 text-center py-4 text-sm">{meetingsError}</p>
-                ) : meetings.length > 0 ? (
-                  <div className="space-y-4">
-                    {meetings.map((meeting) => {
-                      const online = isOnlineModality(meeting.modality);
-                      const joinUrl = normalizeJitsiJoinUrl(
-                        meeting.meeting_url,
-                        meeting.meeting_room,
-                      );
-                      const venue = meeting.venue?.trim() || meeting.location?.trim();
-
-                      return (
-                        <div
-                          key={meeting.id}
-                          className="rounded-lg border border-neutral-200 bg-neutral-100 p-4 space-y-3"
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div>
-                              <p className="font-semibold text-primary-800 capitalize">
-                                {meeting.defense_type} meeting
-                              </p>
-                              <p className="text-sm text-neutral-600 mt-0.5">
-                                {formatModalityLabel(meeting.modality)}
-                              </p>
-                            </div>
-                            <Badge
-                              variant={meeting.status === 'cancelled' ? 'default' : 'primary'}
-                              className="capitalize"
-                            >
-                              {meeting.status_label || meeting.status}
-                            </Badge>
-                          </div>
-
-                          <div className="space-y-2 text-sm text-neutral-700">
-                            <div className="flex items-center gap-2">
-                              <FiCalendar className="text-accent-500 flex-shrink-0" />
-                              <span>{formatMeetingDate(meeting.start_time)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <FiClock className="text-accent-500 flex-shrink-0" />
-                              <span>
-                                {formatMeetingTime(meeting.start_time)}
-                                {meeting.end_time
-                                  ? ` – ${formatMeetingTime(meeting.end_time)}`
-                                  : ''}
-                              </span>
-                            </div>
-                          </div>
-
-                          {online ? (
-                            <div className="space-y-2 pt-1">
-                              <div className="flex items-start gap-2 text-sm text-neutral-700">
-                                <FiVideo className="text-accent-500 flex-shrink-0 mt-0.5" />
-                                <div className="min-w-0">
-                                  <p className="font-medium text-neutral-800">Meeting link</p>
-                                  {joinUrl ? (
-                                    <a
-                                      href={joinUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-primary-700 break-all hover:underline"
-                                    >
-                                      {joinUrl}
-                                    </a>
-                                  ) : (
-                                    <p className="text-neutral-500">
-                                      Link will be available once the meeting is confirmed.
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <JoinMeetingButton
-                                meeting_url={meeting.meeting_url}
-                                meeting_room={meeting.meeting_room}
-                                label="Join Meeting"
-                                size="sm"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex items-start gap-2 text-sm text-neutral-700 pt-1">
-                              <FiMapPin className="text-accent-500 flex-shrink-0 mt-0.5" />
-                              <div>
-                                <p className="font-medium text-neutral-800">Venue</p>
-                                <p>{venue || 'Venue not specified'}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+        {/* Summary cards */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <LuLink className="mb-2 text-2xl text-primary-500" aria-hidden />
+              <CardTitle>Project Code</CardTitle>
+              <CardDescription>Reference for this research group</CardDescription>
+            </CardHeader>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <code className="flex-1 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-sm text-primary-700">
+                {project.project_code}
+              </code>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={copyProjectCode}
+                aria-label={codeCopied ? 'Copied to clipboard' : 'Copy project code'}
+              >
+                {codeCopied ? (
+                  <FiCheck className="text-success-600" aria-hidden />
                 ) : (
-                  <EmptyState
-                    icon={<FiCalendar />}
-                    title="No meetings scheduled"
-                    description="Book a meeting to see it listed here for this project."
-                  />
+                  <FiCopy aria-hidden />
                 )}
-              </div>
-            </Card>
-          </div>
+              </Button>
+            </div>
+          </Card>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FiFileText /> Project Details
-                </CardTitle>
-              </CardHeader>
-              <div className="mt-4 space-y-3">
-                <div>
-                  <p className="text-sm text-neutral-600">Project Code</p>
-                  <p className="font-mono font-semibold text-primary-700">{project.project_code}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-600">Type</p>
-                  <p className="font-medium capitalize">{project.project_type}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-600">Status</p>
-                  <p className="font-medium capitalize">{project.status}</p>
-                </div>
-              </div>
-            </Card>
+          <Card>
+            <CardHeader>
+              <FiFileText className="mb-2 text-2xl text-primary-500" aria-hidden />
+              <CardTitle>Project Details</CardTitle>
+            </CardHeader>
+            <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
+              <p>
+                <span className="font-medium text-neutral-900">Type:</span>{' '}
+                <span className="capitalize">{project.project_type}</span>
+              </p>
+              <p>
+                <span className="font-medium text-neutral-900">Paper standard:</span>{' '}
+                <span className="uppercase">{project.paper_standard}</span>
+              </p>
+              {project.program ? (
+                <p>
+                  <span className="font-medium text-neutral-900">Program:</span> {project.program}
+                </p>
+              ) : null}
+              {project.course ? (
+                <p>
+                  <span className="font-medium text-neutral-900">Course:</span> {project.course}
+                </p>
+              ) : null}
+              {project.section ? (
+                <p>
+                  <span className="font-medium text-neutral-900">Section:</span> {project.section}
+                </p>
+              ) : null}
+            </div>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FiClock /> Timeline
-                </CardTitle>
-              </CardHeader>
-              <div className="mt-4 space-y-3">
-                <div>
-                  <p className="text-sm text-neutral-600">Created</p>
-                  <p className="font-medium">
-                    {new Date(project.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-neutral-600">Last Updated</p>
-                  <p className="font-medium">
-                    {new Date(project.updated_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <FiClock className="mb-2 text-2xl text-primary-500" aria-hidden />
+              <CardTitle>Timeline</CardTitle>
+            </CardHeader>
+            <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
+              <p>
+                <span className="font-medium text-neutral-900">Created:</span>{' '}
+                {formatProjectDate(project.created_at)}
+              </p>
+              <p>
+                <span className="font-medium text-neutral-900">Last updated:</span>{' '}
+                {formatProjectDate(project.updated_at)}
+              </p>
+            </div>
+          </Card>
         </div>
 
-        {/* Paper Version Control - Full Width */}
+        {/* Abstract */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Abstract</CardTitle>
+            <CardDescription>Project summary from the student team</CardDescription>
+          </CardHeader>
+          <p className="text-neutral-700 whitespace-pre-wrap">
+            {abstractText || 'No abstract provided'}
+          </p>
+        </Card>
+
+        {/* Team members */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Team Members</CardTitle>
+            <CardDescription>
+              {studentMembers.length > 0
+                ? `${studentMembers.length} ${studentMembers.length === 1 ? 'member' : 'members'} on this project`
+                : 'No student members yet'}
+            </CardDescription>
+          </CardHeader>
+          {members.length > 0 ? (
+            <div className="space-y-3">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className={`flex items-center gap-4 rounded-lg border p-3 transition-colors ${
+                    member.role === 'leader'
+                      ? 'border-primary-300 bg-primary-50/50'
+                      : member.role === 'adviser'
+                        ? 'border-neutral-200 bg-neutral-50'
+                        : 'border-neutral-200 hover:bg-neutral-50'
+                  }`}
+                >
+                  <Avatar
+                    src={member.users?.avatar_url || undefined}
+                    name={member.users?.full_name || 'Unknown'}
+                    size="md"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="font-semibold text-neutral-900 truncate">
+                        {member.users?.full_name || 'Unknown'}
+                      </h4>
+                      {member.role === 'leader' ? (
+                        <span className="text-xs font-medium text-primary-600 whitespace-nowrap">
+                          (Leader)
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-0.5 text-sm text-neutral-600 break-all">{member.users?.email}</p>
+                  </div>
+                  <Badge
+                    variant={
+                      member.role === 'leader'
+                        ? 'primary'
+                        : member.role === 'adviser'
+                          ? 'success'
+                          : 'default'
+                    }
+                    className="capitalize shrink-0"
+                  >
+                    {member.role}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-500 py-4 text-center">No team members found</p>
+          )}
+        </Card>
+
+        {/* Meetings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Meetings</CardTitle>
+            <CardDescription>Scheduled sessions for this project</CardDescription>
+          </CardHeader>
+          {meetingsLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
+            </div>
+          ) : meetingsError ? (
+            <p className="text-sm text-archivumRed py-4 text-center">{meetingsError}</p>
+          ) : meetings.length > 0 ? (
+            <div className="space-y-3">
+              {meetings.map((meeting) => {
+                const online = isOnlineModality(meeting.modality);
+                const joinUrl = normalizeJitsiJoinUrl(
+                  meeting.meeting_url,
+                  meeting.meeting_room,
+                );
+                const venue = meeting.venue?.trim() || meeting.location?.trim();
+
+                return (
+                  <div
+                    key={meeting.id}
+                    className="rounded-lg border border-neutral-300 bg-white p-4 space-y-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-serif text-lg font-semibold text-eerieBlack capitalize">
+                          {meeting.defense_type} meeting
+                        </p>
+                        <p className="text-sm text-neutral-600 mt-0.5">
+                          {formatModalityLabel(meeting.modality)}
+                        </p>
+                      </div>
+                      <Badge variant="default" className="capitalize shrink-0">
+                        {meeting.status_label || meeting.status}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2 text-sm text-neutral-700">
+                      <p>
+                        <span className="font-medium text-neutral-900">Date:</span>{' '}
+                        {formatMeetingDate(meeting.start_time)}
+                      </p>
+                      <p>
+                        <span className="font-medium text-neutral-900">Time:</span>{' '}
+                        {formatMeetingTime(meeting.start_time)}
+                        {meeting.end_time ? ` – ${formatMeetingTime(meeting.end_time)}` : ''}
+                      </p>
+                    </div>
+
+                    {online ? (
+                      <div className="space-y-2 border-t border-neutral-200 pt-3 text-sm text-neutral-700">
+                        <div>
+                          <p className="font-medium text-neutral-900">Meeting link</p>
+                          {joinUrl ? (
+                            <a
+                              href={joinUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-oxfordBlue break-all hover:underline"
+                            >
+                              {joinUrl}
+                            </a>
+                          ) : (
+                            <p className="text-neutral-500">
+                              Link will be available once the meeting is confirmed.
+                            </p>
+                          )}
+                        </div>
+                        <JoinMeetingButton
+                          meeting_url={meeting.meeting_url}
+                          meeting_room={meeting.meeting_room}
+                          label="Join Meeting"
+                          size="sm"
+                        />
+                      </div>
+                    ) : (
+                      <div className="border-t border-neutral-200 pt-3 text-sm text-neutral-700">
+                        <p className="font-medium text-neutral-900">Venue</p>
+                        <p>{venue || 'Venue not specified'}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              title="No meetings scheduled"
+              description="Book a meeting to see it listed here for this project."
+              action={{
+                label: 'Book a Meeting',
+                onClick: handleBookMeeting,
+              }}
+            />
+          )}
+        </Card>
+
+        {/* Paper versions — timeline includes its own section header */}
         <Card>
           <PaperVersionTimeline
             projectId={project.id}
