@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import Card from '@/components/ui/Card';
+import Card, { CARD_BODY_FLUSH_CLASS, CARD_HEADER_SECTION_CLASS } from '@/components/ui/Card';
 import CardIconHeader from '@/components/ui/CardIconHeader';
 import JoinGroupCard from '@/components/ui/JoinGroupCard';
 import AdviserFullCalendar from '@/components/adviser/AdviserFullCalendar';
@@ -119,7 +119,7 @@ export default function AdviserDashboardPage() {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               {stats.map((stat, idx) => (
-                <Card key={idx} padding="none" className="p-3 sm:p-6">
+                <Card key={idx}>
                   <div className="flex items-center gap-3 sm:gap-4">
                     <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center shrink-0 ${stat.color}`}>
                       <div className="text-xl sm:text-2xl">{stat.icon}</div>
@@ -162,7 +162,7 @@ export default function AdviserDashboardPage() {
             </div>
 
             <Card padding="none" className="overflow-hidden">
-              <div className="border-b border-neutral-300 px-6 py-4">
+              <div className={CARD_HEADER_SECTION_CLASS}>
                 <CardIconHeader
                   className="mb-0"
                   title="Schedule Calendar"
@@ -170,7 +170,7 @@ export default function AdviserDashboardPage() {
                   icon={<FiCalendar className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
                 />
               </div>
-              <div className="p-3 pt-0 sm:p-4">
+              <div className={CARD_BODY_FLUSH_CLASS}>
                 <AdviserFullCalendar
                   defenses={defenses}
                   meetings={meetings}

@@ -675,8 +675,8 @@ export default function ProjectDetailPage() {
         />
 
         {/* Paper Version Control */}
-        <Card className="p-4 sm:p-6">
-          <div className="p-4 sm:p-6 overflow-x-auto">
+        <Card>
+          <div className="overflow-x-auto">
             <PaperVersionTimeline
               projectId={project.id}
               paperStandard={project.paper_standard}

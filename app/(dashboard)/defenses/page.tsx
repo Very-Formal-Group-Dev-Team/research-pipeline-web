@@ -415,7 +415,7 @@ export default function MeetingSchedule() {
 
             {/* Book a Meeting Form */}
             <div>
-              <Card className="border border-neutral-300 p-6">
+              <Card>
                 <h1 className="text-xl font-semibold text-neutral-700 mb-6">Book a Meeting</h1>
 
                 <div className="space-y-4 mb-4">

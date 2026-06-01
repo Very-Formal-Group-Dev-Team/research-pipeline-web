@@ -13,11 +13,20 @@ export interface CardProps {
   onClick?: () => void;
 }
 
+/** Default card content padding — use for split sections when padding="none". */
+export const CARD_PADDING_CLASS = 'p-4 sm:p-6';
+export const CARD_HEADER_SECTION_CLASS =
+  'border-b border-neutral-300 px-4 py-4 sm:px-6 sm:py-5';
+/** Body flush under a header divider (e.g. calendars). */
+export const CARD_BODY_FLUSH_CLASS = 'px-4 pb-4 pt-0 sm:px-6 sm:pb-6 sm:pt-0';
+/** Horizontal inset for table rows / list rows inside padding="none" cards. */
+export const CARD_INSET_X_CLASS = 'px-4 sm:px-6';
+
 const paddingStyles = {
   none: '',
   sm: 'p-4',
-  md: 'p-6',
-  lg: 'p-8',
+  md: CARD_PADDING_CLASS,
+  lg: 'p-6 sm:p-8',
 };
 
 const shadowStyles = {

@@ -233,7 +233,7 @@ export default function CoordinatorCoursesPage() {
                 const advisers = course.advisers || [];
                 return (
                   <li key={course.id}>
-                    <div className="flex items-center gap-2 px-4 py-3 hover:bg-neutral-50">
+                    <div className="flex items-center gap-2 px-4 py-3 sm:px-6 hover:bg-neutral-50">
                       <button
                         type="button"
                         onClick={() => toggleExpanded(course.id)}

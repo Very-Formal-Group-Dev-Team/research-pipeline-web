@@ -11,7 +11,7 @@ import {
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { RiMegaphoneLine } from 'react-icons/ri';
 
-import Card from '@/components/ui/Card';
+import Card, { CARD_HEADER_SECTION_CLASS, CARD_PADDING_CLASS } from '@/components/ui/Card';
 import CardIconHeader from '@/components/ui/CardIconHeader';
 import type { Defense } from '@/lib/api/defenses';
 import type { InstitutionEvent } from '@/lib/api/events';
@@ -81,7 +81,7 @@ export default function StudentAnnouncementsPanel({
 
   return (
     <Card padding="none" className="overflow-hidden">
-      <div className="border-b border-neutral-300 px-4 py-4 sm:px-6">
+      <div className={CARD_HEADER_SECTION_CLASS}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardIconHeader
             className="mb-0"
@@ -131,7 +131,7 @@ export default function StudentAnnouncementsPanel({
         </div>
       </div>
 
-      <div className="p-4 sm:p-6">
+      <div className={CARD_PADDING_CLASS}>
         {loading ? (
           <div className="flex h-40 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
