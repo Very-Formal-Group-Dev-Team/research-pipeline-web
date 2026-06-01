@@ -19,15 +19,21 @@ export interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, role, user, onLogout }: DashboardLayoutProps) {
+  const isCoordinator = role === 'coordinator';
+
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-neutral-50 flex flex-col overflow-x-hidden">
-        <Header user={user} onLogout={onLogout} />
+      <div
+        className={`min-h-screen overflow-x-hidden ${
+          isCoordinator ? 'coordinator-theme coordinator-main-bg' : 'bg-neutral-50'
+        }`}
+      >
+        <Sidebar role={role} />
 
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden lg:min-h-0">
-          <Sidebar role={role} />
+        <div className="flex min-h-screen flex-col lg:pl-64">
+          <Header user={user} onLogout={onLogout} />
 
-          <main className="flex-1 flex flex-col min-w-0 lg:min-h-0 lg:overflow-y-auto">
+          <main className="flex flex-1 flex-col min-w-0 coordinator-main-bg">
             <div className="flex-1 p-6">
               <div className="max-w-7xl mx-auto">
                 {children}

@@ -47,9 +47,9 @@ export default function CoordinatorDashboardPage() {
   const statCards = stats
     ? [
         { icon: <FiFolder />, label: 'Total Projects', value: String(stats.totalProjects), color: 'bg-primary-100 text-primary-600', href: '/coordinator/projects' },
-        { icon: <FiUsers />, label: 'Faculty Advisers', value: String(stats.totalAdvisers), color: 'bg-accent-100 text-accent-600', href: '/coordinator/advisers' },
-        { icon: <FiCalendar />, label: 'Pending Defenses', value: String(stats.pendingDefenses), color: 'bg-warning-100 text-warning-600', href: '/coordinator/defenses' },
+        { icon: <FiCalendar />, label: 'Pending Defenses', value: String(stats.pendingDefenses), color: 'bg-warning-100 text-warning-600', href: '/coordinator/events?tab=pending' },
         { icon: <FiBookOpen />, label: 'Courses', value: String(stats.totalCourses), color: 'bg-success-100 text-success-600', href: '/coordinator/courses' },
+        { icon: <FiUsers />, label: 'Faculty Advisers', value: String(stats.totalAdvisers), color: 'bg-accent-100 text-accent-600', href: '/coordinator/courses' },
       ]
     : [];
 
@@ -86,7 +86,7 @@ export default function CoordinatorDashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card hover onClick={() => router.push('/coordinator/defenses')}>
+              <Card hover onClick={() => router.push('/coordinator/events?tab=pending')}>
                 <CardTitle>Defense Verification</CardTitle>
                 <CardDescription>Review and approve defense schedules proposed by advisers</CardDescription>
                 <div className="mt-4">
@@ -101,11 +101,15 @@ export default function CoordinatorDashboardPage() {
               </Card>
 
               <Card hover onClick={() => router.push('/coordinator/courses')}>
-                <CardTitle>Course Management</CardTitle>
-                <CardDescription>Create and manage courses for your institution</CardDescription>
+                <CardTitle>Courses</CardTitle>
+                <CardDescription>
+                  Manage courses and assign faculty advisers to each course
+                </CardDescription>
                 <div className="mt-4">
                   <span className="text-sm text-neutral-500">
-                    {stats ? `${stats.totalCourses} courses` : '0 courses'}
+                    {stats
+                      ? `${stats.totalCourses} courses · ${stats.totalAdvisers} advisers`
+                      : '0 courses'}
                   </span>
                 </div>
               </Card>

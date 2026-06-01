@@ -32,6 +32,8 @@ import {
   getNotificationTypeLabel,
   getNotificationVariant,
 } from '@/lib/notifications/display';
+import { useNotificationFocusScroll } from '@/lib/hooks/useNotificationFocusScroll';
+import { notificationDomId } from '@/lib/notifications/navigation';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -106,6 +108,8 @@ export default function StudentNotificationsPage() {
   }
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  useNotificationFocusScroll(loading, notifications.length);
 
   return (
     <DashboardLayout role="student" user={user} onLogout={handleLogout}>
@@ -193,6 +197,7 @@ export default function StudentNotificationsPage() {
                 {notifications.map((notification) => (
               <Card
                 key={notification.id}
+                id={notificationDomId(notification.id)}
                 className={!notification.is_read ? 'border-l-4 border-l-primary-500' : ''}
               >
                 <div className="flex items-start gap-4">

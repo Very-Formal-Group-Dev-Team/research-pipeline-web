@@ -22,6 +22,10 @@ export interface Defense {
   status_label?: string;
   scheduled_at?: string;
   created_at: string;
+  meeting_room?: string | null;
+  meeting_url?: string | null;
+  meeting_provider?: string | null;
+  schedule_source?: 'defense' | 'meeting';
 }
 
 export interface CreateDefensePayload {
@@ -41,6 +45,32 @@ export function getMyDefenses() {
 /** Fetch defense schedules for all projects the current user is a member of. */
 export function getMyProjectDefenses() {
   return get<Defense[]>('/defenses/my-projects');
+}
+
+/** Fetch adviser meetings booked for a specific project. */
+export async function getProjectMeetings(projectId: string) {
+  const primary = await get<Defense[]>(`/defenses/project/${projectId}`);
+  if (primary.data && primary.data.length > 0) {
+    return primary;
+  }
+  if (!primary.error) {
+    return primary;
+  }
+
+  return get<Defense[]>(`/projects/${projectId}/meetings`);
+}
+
+/** Normalize API rows that may use scheduled_at instead of start_time. */
+export function normalizeDefenseSchedule<T extends Defense & { scheduled_at?: string }>(
+  row: T,
+): Defense {
+  const start = row.start_time || row.scheduled_at || '';
+  return {
+    ...row,
+    start_time: start,
+    end_time: row.end_time || start || null,
+    venue: row.venue || row.location || null,
+  };
 }
 
 /** Create a new defense schedule. */
