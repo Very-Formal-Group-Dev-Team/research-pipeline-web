@@ -56,8 +56,8 @@ export default function StudentDashboardPage() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-darkSlateBlue">Welcome, {user.name}!</h1>
-                <p className="text-sm text-neutral-600 mt-1">View your assigned research and classes</p>
+                <h1 className="font-serif text-2xl font-bold text-darkSlateBlue">Welcome, {user.name}!</h1>
+                <p className="font-sans text-sm text-neutral-600 mt-1">View your assigned research and classes</p>
               </div>
             </div>
           </div>
@@ -80,7 +80,7 @@ export default function StudentDashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-darkSlateBlue">Pending Invitations</h2>
+              <h2 className="font-serif text-lg font-semibold text-darkSlateBlue">Pending Invitations</h2>
             </div>
 
             <div className="space-y-3">
@@ -97,10 +97,10 @@ export default function StudentDashboardPage() {
                       <h3 className="font-semibold text-darkSlateBlue text-sm mb-0.5">
                         {invitation.projectTitle}
                       </h3>
-                      <p className="text-xs text-neutral-600 mb-2">
+                      <p className="font-sans text-xs text-neutral-600 mb-2">
                         Invited by {invitation.from}
                       </p>
-                      <p className="text-xs text-neutral-500 line-clamp-2">
+                      <p className="font-sans text-xs text-neutral-500 line-clamp-2">
                         {invitation.description}
                       </p>
                     </div>

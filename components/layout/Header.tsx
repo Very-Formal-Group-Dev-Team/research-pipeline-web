@@ -58,8 +58,8 @@ function ArchivumBrand({ compact = false }: { compact?: boolean }) {
       />
       {!compact && (
         <div className="min-w-0 text-left hidden sm:block">
-          <p className="text-lg font-semibold leading-tight truncate text-snow">Archivum</p>
-          <p className="text-sm leading-snug truncate text-white/75">Research Portal</p>
+          <p className="font-serif text-2xl leading-tight truncate text-snow">Archivum</p>
+          <p className="font-sans text-xs font-light leading-snug truncate text-white/75">Research Portal</p>
         </div>
       )}
     </>
@@ -319,7 +319,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
       trigger={
         <div className="flex cursor-pointer items-center rounded-lg transition-colors hover:bg-white/10 p-1 lg:gap-3 lg:px-3 lg:py-2">
           <div className="hidden text-right lg:block">
-            <div className="text-sm font-medium text-snow">{user.name}</div>
+            <div className="font-serif text-lg font-medium text-snow">{user.name}</div>
             <div className="text-xs text-gray-400">({user.role})</div>
           </div>
           <Avatar src={user.avatar} name={user.name} size="md" />
@@ -336,7 +336,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
   );
 
   return (
-    <header className="sticky top-0 z-50 flex h-20 w-full flex-shrink-0 items-center bg-deepSpaceBlue px-4 lg:px-7">
+    <header className="sticky top-0 z-50 flex h-20 w-full flex-shrink-0 items-center bg-oxfordBlue px-4 lg:px-7">
       {/* Mobile: hamburger | logo (center) | profile */}
       <div className="grid h-full w-full grid-cols-3 items-center lg:hidden">
         <button
