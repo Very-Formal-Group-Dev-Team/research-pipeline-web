@@ -18,7 +18,7 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
   options: SelectOption[];
   placeholder?: string;
   fullWidth?: boolean;
-  /** text-sm below md, text-base from md up */
+  /** text-sm below md, text-md from md up */
   responsiveText?: boolean;
 }
 

@@ -4,7 +4,7 @@ export interface CardIconHeaderProps {
   title: string;
   description?: string;
   icon: React.ReactNode;
-  /** Tailwind color class for the icon, e.g. text-oxfordBlue */
+  /** Tailwind color class for the icon, e.g. text-archivumRed */
   iconClassName?: string;
   className?: string;
 }
@@ -13,7 +13,7 @@ export default function CardIconHeader({
   title,
   description,
   icon,
-  iconClassName = 'text-oxfordBlue',
+  iconClassName = 'text-archivumRed',
   className = 'mb-4',
 }: CardIconHeaderProps) {
   return (

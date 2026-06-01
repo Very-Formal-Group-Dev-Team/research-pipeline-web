@@ -72,7 +72,6 @@ export default function PendingInvitationsCard() {
             ? `${invitations.length} pending ${invitations.length === 1 ? 'invitation' : 'invitations'}`
             : undefined
         }
-        iconClassName="text-archivumRed"
         icon={<FiMail className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
       />
 

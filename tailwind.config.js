@@ -148,6 +148,7 @@ module.exports = {
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],
         'sm': ['0.875rem', { lineHeight: '1.25rem' }],
+        'md': ['0.9375rem', { lineHeight: '1.375rem' }],
         'base': ['1rem', { lineHeight: '1.5rem' }],
         'lg': ['1.125rem', { lineHeight: '1.75rem' }],
         'xl': ['1.25rem', { lineHeight: '1.75rem' }],
@@ -172,9 +173,12 @@ module.exports = {
         '3xl': '2rem',
       },
       boxShadow: {
-        'soft': '0 2px 15px rgba(0, 0, 0, 0.08)',
-        'medium': '0 4px 25px rgba(0, 0, 0, 0.12)',
-        'hard': '0 10px 40px rgba(0, 0, 0, 0.15)',
+        sm: '0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.06)',
+        md: '0 4px 10px -1px rgba(0, 0, 0, 0.12), 0 2px 6px -2px rgba(0, 0, 0, 0.08)',
+        lg: '0 10px 22px -3px rgba(0, 0, 0, 0.14), 0 4px 10px -4px rgba(0, 0, 0, 0.08)',
+        'soft': '0 2px 15px rgba(0, 0, 0, 0.11)',
+        'medium': '0 4px 25px rgba(0, 0, 0, 0.15)',
+        'hard': '0 10px 40px rgba(0, 0, 0, 0.19)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

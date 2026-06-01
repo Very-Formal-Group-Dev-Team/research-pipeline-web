@@ -12,7 +12,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
-  /** text-sm below md, text-base from md up */
+  /** text-sm below md, text-md from md up */
   responsiveText?: boolean;
 }
 
