@@ -190,6 +190,71 @@ export function getAdvisedProjects() {
   return get<Project[]>('/projects/advised');
 }
 
+export interface AdviserDashboardStats {
+  totalAdvisees: number;
+  activeProjects: number;
+  completedProjects: number;
+  upcomingEvents: number;
+}
+
+export interface AdvisedProjectsWithStats {
+  projects: Project[];
+  stats: AdviserDashboardStats;
+}
+
+/** Advised projects plus dashboard stats (single request). */
+export function getAdvisedProjectsWithStats() {
+  return get<AdvisedProjectsWithStats>('/projects/advised?includeStats=1');
+}
+
+/** Adviser dashboard analytics (distinct advisees, project statuses, upcoming schedule). */
+export function getAdviserDashboardStats() {
+  return get<AdviserDashboardStats>('/projects/advised/stats');
+}
+
+/** Derive active/completed counts from advised project rows. */
+export function deriveAdviserProjectStats(projects: Project[]) {
+  let activeProjects = 0;
+  let completedProjects = 0;
+  for (const project of projects) {
+    const status = String(project.status || 'draft').toLowerCase();
+    if (status === 'completed' || status === 'archived') {
+      completedProjects += 1;
+    } else {
+      activeProjects += 1;
+    }
+  }
+  return { activeProjects, completedProjects };
+}
+
+/**
+ * Prefer API stats when present; fill project counts from the advised list when missing or zero.
+ */
+export function resolveAdviserDashboardStats(
+  stats: AdviserDashboardStats | null | undefined,
+  projects: Project[],
+  upcomingEventsFallback = 0,
+): AdviserDashboardStats {
+  const derived = deriveAdviserProjectStats(projects);
+  const base: AdviserDashboardStats = stats ?? {
+    totalAdvisees: 0,
+    activeProjects: derived.activeProjects,
+    completedProjects: derived.completedProjects,
+    upcomingEvents: upcomingEventsFallback,
+  };
+
+  const missingProjectCounts =
+    projects.length > 0 && base.activeProjects === 0 && base.completedProjects === 0;
+
+  return {
+    totalAdvisees: base.totalAdvisees,
+    activeProjects: missingProjectCounts ? derived.activeProjects : base.activeProjects,
+    completedProjects: missingProjectCounts ? derived.completedProjects : base.completedProjects,
+    upcomingEvents:
+      base.upcomingEvents > 0 ? base.upcomingEvents : upcomingEventsFallback,
+  };
+}
+
 /** Fetch project owner / creator profile. */
 export function getProjectOwner(projectId: string) {
   return get<{ id: string; full_name: string; email: string; avatar_url?: string }>(

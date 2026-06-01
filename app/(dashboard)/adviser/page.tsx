@@ -8,10 +8,32 @@ import JoinGroupCard from '@/components/ui/JoinGroupCard';
 import AdviserFullCalendar from '@/components/adviser/AdviserFullCalendar';
 import { FiUsers, FiFolder, FiCalendar, FiTrendingUp, FiActivity, FiFileText } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
-import { MOCK_ADVISER_STATS } from '@/lib/mock-data';
+import {
+  getAdvisedProjectsWithStats,
+  getAdviserDashboardStats,
+  resolveAdviserDashboardStats,
+  type AdviserDashboardStats,
+  type Project,
+} from '@/lib/api/projects';
 import type { Defense } from '@/lib/api/defenses';
 import type { InstitutionEvent } from '@/lib/api/events';
-import { getMySchedule } from '@/lib/api/schedule';
+import { getMySchedule, type MySchedule } from '@/lib/api/schedule';
+
+function countUpcomingScheduleItems(schedule: MySchedule): number {
+  const now = new Date();
+  const inactive = new Set(['cancelled', 'rejected', 'completed']);
+  const rows = [...schedule.defenses, ...schedule.meetings, ...schedule.events];
+  let count = 0;
+  for (const row of rows) {
+    const status = String(row.status || '').toLowerCase();
+    if (inactive.has(status)) continue;
+    const raw = row.start_time || (row as { scheduled_at?: string }).scheduled_at;
+    if (!raw) continue;
+    const start = new Date(String(raw).replace(/Z$/i, ''));
+    if (!Number.isNaN(start.getTime()) && start >= now) count += 1;
+  }
+  return count;
+}
 
 export default function AdviserDashboardPage() {
   const { user, isLoading, handleLogout } = useDashboardUser('Adviser');
@@ -19,32 +41,66 @@ export default function AdviserDashboardPage() {
   const [meetings, setMeetings] = useState<Defense[]>([]);
   const [institutionEvents, setInstitutionEvents] = useState<InstitutionEvent[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalAdvisees: 0,
+    activeProjects: 0,
+    completedProjects: 0,
+    upcomingEvents: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSchedule() {
-      const res = await getMySchedule();
-      if (!cancelled && res.data) {
-        setDefenses(res.data.defenses);
-        setMeetings(res.data.meetings);
-        setInstitutionEvents(res.data.events);
+    async function loadDashboard() {
+      const [scheduleRes, advisedRes, statsRes] = await Promise.all([
+        getMySchedule(),
+        getAdvisedProjectsWithStats(),
+        getAdviserDashboardStats(),
+      ]);
+
+      if (cancelled) return;
+
+      const schedule = scheduleRes.data;
+      if (schedule) {
+        setDefenses(schedule.defenses);
+        setMeetings(schedule.meetings);
+        setInstitutionEvents(schedule.events);
       }
-      if (!cancelled) setScheduleLoading(false);
+
+      const advisedPayload = advisedRes.data;
+      let advisedProjects: Project[] = [];
+      let statsFromAdvised: AdviserDashboardStats | undefined;
+
+      if (Array.isArray(advisedPayload)) {
+        advisedProjects = advisedPayload;
+      } else if (advisedPayload?.projects) {
+        advisedProjects = advisedPayload.projects;
+        statsFromAdvised = advisedPayload.stats;
+      }
+
+      const upcomingFallback = schedule ? countUpcomingScheduleItems(schedule) : 0;
+      const statsFromEndpoint = statsRes.data ?? statsFromAdvised ?? null;
+
+      setDashboardStats(
+        resolveAdviserDashboardStats(statsFromEndpoint, advisedProjects, upcomingFallback),
+      );
+
+      setScheduleLoading(false);
+      setStatsLoading(false);
     }
 
-    loadSchedule();
+    loadDashboard();
     return () => { cancelled = true; };
   }, []);
 
-  const loading = isLoading || scheduleLoading;
-  const scheduleCount = defenses.length + meetings.length + institutionEvents.length;
+  const loading = isLoading || scheduleLoading || statsLoading;
 
   const stats = [
-    { icon: <FiUsers />, label: 'Total Advisees', value: String(MOCK_ADVISER_STATS.totalAdvisees), color: 'bg-accent-100 text-accent-600' },
-    { icon: <FiFolder />, label: 'Active Projects', value: String(MOCK_ADVISER_STATS.activeProjects), color: 'bg-success-100 text-success-600' },
-    { icon: <FiCalendar />, label: 'Upcoming Events', value: String(scheduleCount), color: 'bg-warning-100 text-warning-600', href: '/adviser/meetings' },
-    { icon: <FiTrendingUp />, label: 'Completed Projects', value: String(MOCK_ADVISER_STATS.completedProjects), color: 'bg-primary-100 text-primary-600' },
+    { icon: <FiUsers />, label: 'Total Advisees', value: String(dashboardStats.totalAdvisees), color: 'bg-accent-100 text-accent-600' },
+    { icon: <FiFolder />, label: 'Active Projects', value: String(dashboardStats.activeProjects), color: 'bg-success-100 text-success-600' },
+    { icon: <FiCalendar />, label: 'Upcoming Events', value: String(dashboardStats.upcomingEvents), color: 'bg-warning-100 text-warning-600', href: '/adviser/meetings' },
+    { icon: <FiTrendingUp />, label: 'Completed Projects', value: String(dashboardStats.completedProjects), color: 'bg-primary-100 text-primary-600' },
   ];
 
   return (
