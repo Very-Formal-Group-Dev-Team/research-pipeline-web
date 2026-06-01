@@ -164,8 +164,8 @@ function AuthForm({ mode }: { mode: Mode }) {
           {message && (
             <div className={`p-3 rounded-lg text-sm font-medium border ${
               message.includes('error') || message.includes('Failed') || message.includes('failed')
-                ? 'bg-crimsonRed/10 text-crimsonRed border-crimsonRed/30'
-                : 'bg-mutedGreen/10 text-mutedGreen border-mutedGreen/30'
+                ? 'bg-archivumRed/10 text-archivumRed border-archivumRed/30'
+                : 'bg-deepSeaGreen/10 text-deepSeaGreen border-deepSeaGreen/30'
             }`}>
               {message}
             </div>
@@ -244,7 +244,7 @@ function AuthForm({ mode }: { mode: Mode }) {
           </div>
 
           {message && (
-            <div className={`p-3 rounded text-sm mt-4 text-center font-medium border ${message.includes('error') || message.includes('Failed') || message.includes('invalid') || message.includes('already') ? 'bg-[rgba(236,30,36,0.08)] text-[#EC1E24] border-[rgba(236,30,36,0.12)]' : 'bg-[rgba(118,212,116,0.08)] text-[#76D474] border-[rgba(118,212,116,0.12)]'}`}>
+            <div className={`p-3 rounded text-sm mt-4 text-center font-medium border ${message.includes('error') || message.includes('Failed') || message.includes('invalid') || message.includes('already') ? 'bg-archivumRed/10 text-archivumRed border-archivumRed/20' : 'bg-deepSeaGreen/10 text-deepSeaGreen border-deepSeaGreen/20'}`}>
               {message}
             </div>
           )}

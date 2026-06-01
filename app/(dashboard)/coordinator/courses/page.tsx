@@ -235,7 +235,7 @@ export default function CoordinatorCoursesPage() {
                       <button
                         type="button"
                         onClick={() => toggleExpanded(course.id)}
-                        className="p-1 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-darkSlateBlue"
+                        className="p-1 rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-oxfordBlue"
                         aria-expanded={expanded}
                         aria-label={expanded ? 'Collapse advisers' : 'Expand advisers'}
                       >

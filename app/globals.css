@@ -27,7 +27,7 @@
   }
 
   body {
-    @apply bg-ivory text-neutral-900;
+    @apply bg-snow text-eerieBlack;
   }
 
   /* Headings only — section/page/card titles */
@@ -195,24 +195,28 @@
   color: #5a5556;
 }
 
-.coordinator-theme .coordinator-btn-primary.bg-darkSlateBlue,
+.coordinator-theme .coordinator-btn-primary.bg-oxfordBlue,
+.coordinator-theme .coordinator-btn-primary.bg-oxfordBlue,
 .coordinator-theme button.coordinator-btn-primary {
   background-color: #9b4455 !important;
   color: #ffffff !important;
 }
 
-.coordinator-theme .coordinator-btn-primary.bg-darkSlateBlue:hover,
+.coordinator-theme .coordinator-btn-primary.bg-oxfordBlue:hover,
+.coordinator-theme .coordinator-btn-primary.bg-oxfordBlue:hover,
 .coordinator-theme button.coordinator-btn-primary:hover {
   background-color: #87404f !important;
 }
 
-.coordinator-theme button.border-2.border-darkSlateBlue,
+.coordinator-theme button.border-2.border-oxfordBlue,
+.coordinator-theme button.border-2.border-oxfordBlue,
 .coordinator-theme .coordinator-btn-secondary {
   border-color: #2c3e6b !important;
   color: #2c3e6b !important;
 }
 
-.coordinator-theme button.border-2.border-darkSlateBlue:hover,
+.coordinator-theme button.border-2.border-oxfordBlue:hover,
+.coordinator-theme button.border-2.border-oxfordBlue:hover,
 .coordinator-theme .coordinator-btn-secondary:hover {
   background-color: rgba(44, 62, 107, 0.08) !important;
 }

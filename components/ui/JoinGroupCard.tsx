@@ -44,15 +44,15 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-skyBlue/10 to-skyBlue/5 border-skyBlue/20">
+    <Card>
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-12 h-12 bg-skyBlue/20 rounded-lg flex items-center justify-center">
-          <svg className="w-6 h-6 text-skyBlue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex-shrink-0 w-12 h-12 bg-oxfordBlue/20 rounded-lg flex items-center justify-center">
+          <svg className="w-6 h-6 text-oxfordBlue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </div>
         <div className="flex-1">
-          <h3 className="font-serif text-lg font-semibold text-darkSlateBlue mb-1">Join a Project</h3>
+          <h3 className="font-serif text-lg font-semibold text-eerieBlack mb-1">Join a Project</h3>
           <p className="font-sans text-sm text-neutral-600 mb-4">
             Enter the project code provided by the team leader to join a research project
           </p>
@@ -90,7 +90,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
                 placeholder="Enter project code"
                 disabled={isLoading}
                 className="font-sans w-full px-4 py-2.5 border border-neutral-300 rounded-lg 
-                         focus:outline-none focus:shadow-[0_0_12px_rgba(236,30,36,0.15)]
+                         focus:outline-none focus:shadow-[0_0_12px_rgba(194,58,70,0.15)]
                          text-sm placeholder:text-neutral-400
                          disabled:bg-neutral-100 disabled:cursor-not-allowed"
               />
@@ -102,7 +102,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
               onClick={handleJoinGroup}
               disabled={isLoading}
               loading={isLoading}
-              className="bg-darkSlateBlue hover:bg-darkSlateBlue/90"
+              className="bg-oxfordBlue hover:bg-oxfordBlue/90"
             >
               {!isLoading && (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

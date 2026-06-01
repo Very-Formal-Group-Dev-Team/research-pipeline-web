@@ -107,7 +107,7 @@ export default function Sidebar({ role }: SidebarProps) {
             className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
               usesPortalSidebar
                 ? 'text-white/70 hover:text-white hover:bg-white/10'
-                : 'text-neutral-400 hover:text-darkSlateBlue hover:bg-neutral-100'
+                : 'text-neutral-400 hover:text-oxfordBlue hover:bg-neutral-100'
             }`}
             aria-label="Close sidebar"
           >
@@ -129,16 +129,16 @@ export default function Sidebar({ role }: SidebarProps) {
                       flex items-center gap-3 rounded-lg
                       transition-all duration-200 group text-sm px-4 py-2.5 relative
                       ${isActive
-                        ? (usesPortalSidebar ? 'coordinator-nav-active' : 'bg-neutral-100 text-darkSlateBlue font-medium')
-                        : (usesPortalSidebar ? '' : 'text-neutral-600 hover:bg-neutral-50 hover:text-darkSlateBlue')
+                        ? (usesPortalSidebar ? 'coordinator-nav-active' : 'bg-neutral-100 text-oxfordBlue font-medium')
+                        : (usesPortalSidebar ? '' : 'text-neutral-600 hover:bg-neutral-50 hover:text-oxfordBlue')
                       }
                     `}
                   >
                     <span
                       className={`text-lg flex-shrink-0 ${
                         isActive
-                          ? (usesPortalSidebar ? 'text-white' : 'text-darkSlateBlue')
-                          : (usesPortalSidebar ? 'text-white/60 group-hover:text-white' : 'text-neutral-400 group-hover:text-darkSlateBlue')
+                          ? (usesPortalSidebar ? 'text-white' : 'text-oxfordBlue')
+                          : (usesPortalSidebar ? 'text-white/60 group-hover:text-white' : 'text-neutral-400 group-hover:text-oxfordBlue')
                       }`}
                     >
                       {item.icon}
@@ -147,7 +147,7 @@ export default function Sidebar({ role }: SidebarProps) {
                       {item.label}
                     </span>
                     {item.badge !== undefined && (
-                      <span className="px-2 py-0.5 text-xs bg-crimsonRed text-white rounded-full font-medium">
+                      <span className="px-2 py-0.5 text-xs bg-archivumRed text-white rounded-full font-medium">
                         {item.badge}
                       </span>
                     )}
