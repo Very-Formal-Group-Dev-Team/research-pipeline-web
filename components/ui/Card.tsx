@@ -37,10 +37,10 @@ export default function Card({
     <div
       id={id}
       className={`
-        bg-white border border-neutral-200/80 rounded-md
+        bg-white border border-neutral-300 rounded-md
         ${paddingStyles[padding]}
         ${shadowStyles[shadow]}
-        ${hover ? 'hover:shadow-lg hover:border-neutral-300 transition-all cursor-pointer' : ''}
+        ${hover ? 'hover:shadow-lg hover:border-neutral-400 transition-all cursor-pointer' : ''}
         ${onClick ? 'cursor-pointer' : ''}
         ${className}
       `}
@@ -53,7 +53,7 @@ export default function Card({
 
 export function CardHeader({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`border-b border-neutral-200 pb-4 mb-4 ${className}`}>
+    <div className={`border-b border-neutral-300 pb-4 mb-4 ${className}`}>
       {children}
     </div>
   );
@@ -77,7 +77,7 @@ export function CardDescription({ children, className = '' }: { children: React.
 
 export function CardFooter({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`border-t border-neutral-200 pt-4 mt-4 ${className}`}>
+    <div className={`border-t border-neutral-300 pt-4 mt-4 ${className}`}>
       {children}
     </div>
   );

@@ -99,7 +99,7 @@ export default function AdviserDashboardPage() {
             </div>
 
             <Card padding="none" className="overflow-hidden">
-              <div className="border-b border-neutral-200 px-6 py-4">
+              <div className="border-b border-neutral-300 px-6 py-4">
                 <CardTitle>Schedule Calendar</CardTitle>
                 <CardDescription>
                   Defenses, meetings, and institution events
