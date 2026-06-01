@@ -69,15 +69,15 @@ export default function CoordinatorDashboardPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               {statCards.map((stat, idx) => (
-                <Card key={idx} padding="md" hover onClick={() => router.push(stat.href)}>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color}`}>
-                      <div className="text-2xl">{stat.icon}</div>
+                <Card key={idx} padding="none" className="p-3 sm:p-6" hover onClick={() => router.push(stat.href)}>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center shrink-0 ${stat.color}`}>
+                      <div className="text-xl sm:text-2xl">{stat.icon}</div>
                     </div>
                     <div>
-                      <p className="text-sm text-neutral-600">{stat.label}</p>
+                      <p className="text-xs sm:text-sm text-neutral-600">{stat.label}</p>
                       <p className="text-2xl font-bold text-primary-700">{stat.value}</p>
                     </div>
                   </div>

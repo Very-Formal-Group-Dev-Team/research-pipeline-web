@@ -99,7 +99,7 @@ export default function StudentProjectsPage() {
               {invitations.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center gap-4 p-3 border border-primary-200 bg-primary-50/30 rounded-lg"
+                  className="flex items-center gap-4 p-4 border border-primary-200 bg-primary-50/30 rounded-lg"
                 >
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-neutral-900 truncate">

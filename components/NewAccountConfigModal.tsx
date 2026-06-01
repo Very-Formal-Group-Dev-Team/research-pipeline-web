@@ -35,15 +35,13 @@ interface ValidationErrors {
 export default function NewAccountConfigModal({
   isOpen,
   onClose,
-  userId,
   userEmail,
   googleDisplayName,
-  googlePhotoUrl
+  googlePhotoUrl,
 }: NewAccountConfigModalProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form state
   const [formData, setFormData] = useState<FormData>({
     role: '',
     displayName: googleDisplayName || '',
@@ -52,19 +50,18 @@ export default function NewAccountConfigModal({
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(googlePhotoUrl || null);
-  
-  // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
 
-  // Pre-fill display name and avatar when Google data is available
   useEffect(() => {
-    if (googleDisplayName && !formData.displayName) {
-      setFormData(prev => ({ ...prev, displayName: googleDisplayName }));
+    if (googleDisplayName) {
+      setFormData((prev) =>
+        prev.displayName ? prev : { ...prev, displayName: googleDisplayName }
+      );
     }
-    if (googlePhotoUrl && !avatarPreview) {
-      setAvatarPreview(googlePhotoUrl);
+    if (googlePhotoUrl) {
+      setAvatarPreview((prev) => prev ?? googlePhotoUrl);
     }
   }, [googleDisplayName, googlePhotoUrl]);
 
@@ -92,10 +89,9 @@ export default function NewAccountConfigModal({
   };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error for this field when user starts typing
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field as keyof ValidationErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
     setGeneralError(null);
   };
@@ -108,28 +104,25 @@ export default function NewAccountConfigModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type - only JPG, JPEG, PNG
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(file.type.toLowerCase())) {
       setGeneralError('Please select a valid image file (JPG, JPEG, or PNG only)');
       return;
     }
 
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       setGeneralError('Image size must be less than 10MB');
       return;
     }
 
     setAvatarFile(file);
-    
-    // Create preview URL
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setAvatarPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-    
+
     setGeneralError(null);
   };
 
@@ -143,11 +136,8 @@ export default function NewAccountConfigModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Clear previous errors
     setGeneralError(null);
 
-    // Validate form
     if (!validateForm()) {
       return;
     }
@@ -158,8 +148,8 @@ export default function NewAccountConfigModal({
       displayName: formData.displayName,
       role: formData.role as 'student' | 'teacher' | 'coordinator',
       email: userEmail,
-      avatarFile: avatarFile,
-      googlePhotoUrl: googlePhotoUrl,
+      avatarFile,
+      googlePhotoUrl,
       institutionName: formData.role === 'coordinator' ? formData.institutionName : undefined,
     });
 
@@ -169,16 +159,21 @@ export default function NewAccountConfigModal({
       return;
     }
 
-    const redirectPath = result.redirectPath || (formData.role === 'student' ? '/student' : formData.role === 'coordinator' ? '/coordinator' : '/adviser');
+    const redirectPath =
+      result.redirectPath ||
+      (formData.role === 'student'
+        ? '/student'
+        : formData.role === 'coordinator'
+          ? '/coordinator'
+          : '/adviser');
     onClose();
     router.push(redirectPath);
   };
 
   const roleOptions = [
-    { value: '', label: 'Select your role' },
     { value: 'student', label: 'Student' },
-    { value: 'teacher', label: 'Teacher/Adviser' },
-    { value: 'coordinator', label: 'Coordinator' }
+    { value: 'teacher', label: 'Teacher / Adviser' },
+    { value: 'coordinator', label: 'Coordinator' },
   ];
 
   return (
@@ -191,9 +186,8 @@ export default function NewAccountConfigModal({
       showCloseButton={false}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Avatar Upload Section */}
         <div className="flex flex-col items-center space-y-3">
-          <div 
+          <div
             onClick={handleAvatarClick}
             className="cursor-pointer group relative"
             role="button"
@@ -216,7 +210,7 @@ export default function NewAccountConfigModal({
               </span>
             </div>
           </div>
-          
+
           <input
             ref={fileInputRef}
             type="file"
@@ -225,109 +219,70 @@ export default function NewAccountConfigModal({
             className="hidden"
             aria-label="Upload avatar"
           />
-          
+
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAvatarClick}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={handleAvatarClick}>
               Upload Photo
             </Button>
-            {avatarPreview && avatarPreview !== googlePhotoUrl && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleRemoveAvatar}
-              >
+            {avatarPreview && avatarPreview !== googlePhotoUrl ? (
+              <Button type="button" variant="ghost" size="sm" onClick={handleRemoveAvatar}>
                 Remove
               </Button>
-            )}
+            ) : null}
           </div>
           <p className="text-sm text-neutral-500">
             Optional. Max 10MB. JPG, JPEG, or PNG only
           </p>
         </div>
 
-        {/* Role Selection */}
-        <div>
-          <label htmlFor="role" className="block text-sm font-medium text-neutral-700 mb-2">
-            I am a <span className="text-error-500">*</span>
-          </label>
-          <Select
-            id="role"
-            value={formData.role}
-            onChange={(e) => handleInputChange('role', e.target.value)}
-            options={roleOptions}
-            error={errors.role}
-            required
-          />
-        </div>
+        <Select
+          label="I am a"
+          placeholder="Select your role"
+          value={formData.role}
+          onChange={(e) => handleInputChange('role', e.target.value)}
+          options={roleOptions}
+          error={errors.role}
+          required
+        />
 
-        {formData.role === 'coordinator' && (
-          <div>
-            <label htmlFor="institutionName" className="block text-sm font-medium text-neutral-700 mb-2">
-              Institution Name <span className="text-error-500">*</span>
-            </label>
-            <Input
-              id="institutionName"
-              type="text"
-              value={formData.institutionName}
-              onChange={(e) => handleInputChange('institutionName' as keyof FormData, e.target.value)}
-              placeholder="Enter your institution name"
-              error={errors.institutionName}
-              required
-              maxLength={255}
-            />
-            <p className="text-xs text-neutral-500 mt-1">
-              The institution you will manage as coordinator
-            </p>
-          </div>
-        )}
-
-        {/* Display Name */}
-        <div>
-          <label htmlFor="displayName" className="block text-sm font-medium text-neutral-700 mb-2">
-            Display Name <span className="text-error-500">*</span>
-          </label>
+        {formData.role === 'coordinator' ? (
           <Input
-            id="displayName"
+            id="institutionName"
+            label="Institution name"
             type="text"
-            value={formData.displayName}
-            onChange={(e) => handleInputChange('displayName', e.target.value)}
-            placeholder="Enter your display name"
-            error={errors.displayName}
+            value={formData.institutionName}
+            onChange={(e) => handleInputChange('institutionName', e.target.value)}
+            placeholder="Enter your institution name"
+            error={errors.institutionName}
+            helperText="The institution you will manage as coordinator"
             required
-            maxLength={50}
+            maxLength={255}
           />
-          <p className="text-xs text-neutral-500 mt-1">
-            This is how your name will appear to others
-          </p>
-        </div>
+        ) : null}
 
-        {/* General Error Message */}
-        {generalError && (
-          <div className="p-3 bg-error-50 border border-error-200 rounded-md">
-            <p className="text-sm text-error-700">{generalError}</p>
+        <Input
+          id="displayName"
+          label="Display name"
+          type="text"
+          value={formData.displayName}
+          onChange={(e) => handleInputChange('displayName', e.target.value)}
+          placeholder="Enter your display name"
+          error={errors.displayName}
+          helperText="This is how your name will appear to others"
+          required
+          maxLength={50}
+        />
+
+        {generalError ? (
+          <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-md text-sm">
+            {generalError}
           </div>
-        )}
+        ) : null}
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-4">
-          <Button
-            type="submit"
-            variant="primary"
-            fullWidth
-            loading={isSubmitting}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving...' : 'Complete Setup'}
-          </Button>
-        </div>
+        <Button type="submit" variant="primary" fullWidth loading={isSubmitting} disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : 'Complete Setup'}
+        </Button>
 
-        {/* Required Fields Note */}
         <p className="text-xs text-neutral-500 text-center">
           <span className="text-error-500">*</span> Required fields
         </p>

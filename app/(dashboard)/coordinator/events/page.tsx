@@ -9,6 +9,9 @@ import Button from '@/components/Button';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import { formLabelClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
 import CoordinatorDefenseSections from '@/components/coordinator/CoordinatorDefenseSections';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
@@ -348,51 +351,84 @@ export default function CoordinatorEventsPage() {
         ) : scheduleKind === 'event' ? (
           <form onSubmit={handleCreateEvent} className="space-y-4 p-1">
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
+            <Input
+              label="Title"
+              required
+              value={eventForm.title}
+              onChange={(e) => setEventForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="Event title"
+              responsiveText
+              fullWidth
+            />
+            <Input
+              label="Institution (optional)"
+              readOnly
+              value={institution?.name || ''}
+              placeholder="Uses your institution by default"
+              className="bg-neutral-50 text-neutral-600"
+              responsiveText
+              fullWidth
+            />
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Title</label>
-              <input required value={eventForm.title} onChange={(e) => setEventForm((f) => ({ ...f, title: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" placeholder="Event title" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">
-                Institution <span className="font-normal text-neutral-500">(optional)</span>
-              </label>
-              <input
-                readOnly
-                value={institution?.name || ''}
-                placeholder="Uses your institution by default"
-                className="w-full rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm text-neutral-600"
+              <label className={formLabelClassName}>Description</label>
+              <textarea
+                value={eventForm.description}
+                onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))}
+                className={formTextareaResponsiveClassName}
+                rows={2}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
-              <textarea value={eventForm.description} onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" rows={2} />
-            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
-                <input type="date" required value={eventForm.date} onChange={(e) => setEventForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Start</label>
-                <input type="time" required value={eventForm.startTime} onChange={(e) => setEventForm((f) => ({ ...f, startTime: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">End</label>
-                <input type="time" required value={eventForm.endTime} onChange={(e) => setEventForm((f) => ({ ...f, endTime: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-              </div>
+              <Input
+                label="Date"
+                type="date"
+                required
+                value={eventForm.date}
+                onChange={(e) => setEventForm((f) => ({ ...f, date: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
+              <Input
+                label="Start"
+                type="time"
+                required
+                value={eventForm.startTime}
+                onChange={(e) => setEventForm((f) => ({ ...f, startTime: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
+              <Input
+                label="End"
+                type="time"
+                required
+                value={eventForm.endTime}
+                onChange={(e) => setEventForm((f) => ({ ...f, endTime: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Location</label>
-              <input required value={eventForm.location} onChange={(e) => setEventForm((f) => ({ ...f, location: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Modality</label>
-              <select value={eventForm.modality} onChange={(e) => setEventForm((f) => ({ ...f, modality: e.target.value as typeof f.modality }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
-                <option value="Online">Online</option>
-                <option value="In-Person">In-Person</option>
-                <option value="Hybrid">Hybrid</option>
-              </select>
-            </div>
+            <Input
+              label="Location"
+              required
+              value={eventForm.location}
+              onChange={(e) => setEventForm((f) => ({ ...f, location: e.target.value }))}
+              responsiveText
+              fullWidth
+            />
+            <Select
+              fullWidth
+              responsiveText
+              label="Modality"
+              value={eventForm.modality}
+              onChange={(e) =>
+                setEventForm((f) => ({ ...f, modality: e.target.value as typeof f.modality }))
+              }
+              options={[
+                { value: 'Online', label: 'Online' },
+                { value: 'In-Person', label: 'In-Person' },
+                { value: 'Hybrid', label: 'Hybrid' },
+              ]}
+            />
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setScheduleKind(null)}>Back</Button>
               <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Create Event'}</Button>
@@ -401,71 +437,85 @@ export default function CoordinatorEventsPage() {
         ) : (
           <form onSubmit={handleCreateDefense} className="space-y-4 p-1">
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Course</label>
-              <select
-                required
-                value={defenseForm.courseId}
-                onChange={(e) => setDefenseForm((f) => ({ ...f, courseId: e.target.value }))}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              >
-                <option value="">Select course</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.course_name} ({c.code})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              fullWidth
+              responsiveText
+              label="Course"
+              placeholder="Select course"
+              value={defenseForm.courseId}
+              onChange={(e) => setDefenseForm((f) => ({ ...f, courseId: e.target.value }))}
+              options={courses.map((c) => ({
+                value: c.id,
+                label: `${c.course_name} (${c.code})`,
+              }))}
+              required
+            />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Defense Type</label>
-                <select
-                  value={defenseForm.defenseType}
-                  onChange={(e) => setDefenseForm((f) => ({
+              <Select
+                fullWidth
+                responsiveText
+                label="Defense Type"
+                value={defenseForm.defenseType}
+                onChange={(e) =>
+                  setDefenseForm((f) => ({
                     ...f,
                     defenseType: e.target.value as typeof f.defenseType,
                     rubricId: '',
-                  }))}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-                >
-                  <option value="proposal">Proposal</option>
-                  <option value="midterm">Midterm</option>
-                  <option value="final">Final</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Rubric</label>
-                <select
-                  value={defenseForm.rubricId}
-                  onChange={(e) => setDefenseForm((f) => ({ ...f, rubricId: e.target.value }))}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-                >
-                  <option value="">Optional</option>
-                  {filteredRubrics.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </select>
-              </div>
+                  }))
+                }
+                options={[
+                  { value: 'proposal', label: 'Proposal' },
+                  { value: 'midterm', label: 'Midterm' },
+                  { value: 'final', label: 'Final' },
+                ]}
+              />
+              <Select
+                fullWidth
+                responsiveText
+                label="Rubric"
+                placeholder="Optional"
+                value={defenseForm.rubricId}
+                onChange={(e) => setDefenseForm((f) => ({ ...f, rubricId: e.target.value }))}
+                options={filteredRubrics.map((r) => ({ value: r.id, label: r.name }))}
+              />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
-                <input type="date" required value={defenseForm.date} onChange={(e) => setDefenseForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Start</label>
-                <input type="time" required value={defenseForm.startTime} onChange={(e) => setDefenseForm((f) => ({ ...f, startTime: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">End</label>
-                <input type="time" required value={defenseForm.endTime} onChange={(e) => setDefenseForm((f) => ({ ...f, endTime: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-              </div>
+              <Input
+                label="Date"
+                type="date"
+                required
+                value={defenseForm.date}
+                onChange={(e) => setDefenseForm((f) => ({ ...f, date: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
+              <Input
+                label="Start"
+                type="time"
+                required
+                value={defenseForm.startTime}
+                onChange={(e) => setDefenseForm((f) => ({ ...f, startTime: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
+              <Input
+                label="End"
+                type="time"
+                required
+                value={defenseForm.endTime}
+                onChange={(e) => setDefenseForm((f) => ({ ...f, endTime: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">Location</label>
-              <input required value={defenseForm.location} onChange={(e) => setDefenseForm((f) => ({ ...f, location: e.target.value }))} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-            </div>
+            <Input
+              label="Location"
+              required
+              value={defenseForm.location}
+              onChange={(e) => setDefenseForm((f) => ({ ...f, location: e.target.value }))}
+              responsiveText
+              fullWidth
+            />
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setScheduleKind(null)}>Back</Button>
               <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Schedule Defense'}</Button>

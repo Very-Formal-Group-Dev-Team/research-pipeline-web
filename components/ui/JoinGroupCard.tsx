@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { LuLink } from 'react-icons/lu';
+import { RxEnter } from 'react-icons/rx';
 import Card from './Card';
 import Button from '../Button';
 import { joinProject } from '@/lib/api/projects';
@@ -47,9 +49,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
     <Card>
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0 w-12 h-12 bg-oxfordBlue/20 rounded-lg flex items-center justify-center">
-          <svg className="w-6 h-6 text-oxfordBlue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
+          <LuLink className="h-6 w-6 text-oxfordBlue" aria-hidden />
         </div>
         <div className="flex-1">
           <h3 className="font-serif text-lg font-semibold text-eerieBlack mb-1">Join a Project</h3>
@@ -102,13 +102,16 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
               onClick={handleJoinGroup}
               disabled={isLoading}
               loading={isLoading}
+              leftIcon={
+                !isLoading ? (
+                  <RxEnter
+                    className="h-4 w-4 shrink-0 stroke-current stroke-[0.5px] [paint-order:stroke_fill]"
+                    aria-hidden
+                  />
+                ) : undefined
+              }
               className="bg-oxfordBlue hover:bg-oxfordBlue/90"
             >
-              {!isLoading && (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              )}
               {isLoading ? 'Joining...' : 'Join Group'}
             </Button>
           </div>

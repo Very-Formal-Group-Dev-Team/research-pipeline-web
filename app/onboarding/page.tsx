@@ -11,15 +11,13 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-archivumRed" />
+      <div className="onboarding-ui min-h-screen flex items-center justify-center bg-deepSpaceBlue">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-snow" />
       </div>
     );
   }
 
   if (!user) {
-    // No session — send to login. Client middleware allowed access to login
-    // earlier, so this won't loop with the server middleware.
     router.replace('/login');
     return null;
   }
@@ -29,7 +27,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+    <div className="onboarding-ui min-h-screen flex items-center justify-center bg-deepSpaceBlue px-4 py-8">
       <NewAccountConfigModal
         isOpen={true}
         onClose={handleClose}
@@ -41,4 +39,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-

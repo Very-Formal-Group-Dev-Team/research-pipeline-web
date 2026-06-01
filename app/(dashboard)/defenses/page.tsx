@@ -7,7 +7,10 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { type ProjectMember } from '@/lib/api/projects';
 import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import Button from '@/components/Button';
+import { formLabelClassName } from '@/lib/utils/formControls';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { createPortal } from 'react-dom';
 
@@ -415,95 +418,87 @@ export default function MeetingSchedule() {
               <Card className="border border-neutral-300 p-6">
                 <h1 className="text-xl font-semibold text-neutral-700 mb-6">Book a Meeting</h1>
 
-                {/* Project Code */}
-                <div className="grid grid-cols-1 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Project Code</label>
-                    <input
-                      type="text"
-                      name="projectCode"
-                      value={form.projectCode || ''}
-                      onChange={handleChange}
-                      placeholder="Project Code"
-                      className="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
+                <div className="space-y-4 mb-4">
+                  <Input
+                    label="Project Code"
+                    type="text"
+                    name="projectCode"
+                    value={form.projectCode || ''}
+                    onChange={handleChange}
+                    placeholder="Project Code"
+                    responsiveText
+                    fullWidth
+                  />
 
-                {/* Time Range & Date */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Start Time</label>
-                    <input
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Input
+                      label="Start Time"
                       type="time"
                       name="startTime"
                       value={form.startTime || ''}
                       onChange={handleChange}
-                      className="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      responsiveText
+                      fullWidth
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">End Time</label>
-                    <input
+                    <Input
+                      label="End Time"
                       type="time"
                       name="endTime"
                       value={form.endTime || ''}
                       onChange={handleChange}
-                      className="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      responsiveText
+                      fullWidth
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Date</label>
-                    <input
+                    <Input
+                      label="Date"
                       type="date"
                       name="date"
                       value={form.date || ''}
                       onChange={handleChange}
-                      className="w-full border border-neutral-300 rounded-md px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      responsiveText
+                      fullWidth
                     />
                   </div>
-                </div>
 
-                {/* Meeting Type */}
-                <div className="space-y-3 mb-4">
-                  <p className="text-sm font-medium text-neutral-700">Meeting Type</p>
-                  <div className="flex flex-wrap gap-8">
-                    {['Online', 'Face-to-Face'].map(type => (
-                      <label
-                        key={type}
-                        className="flex items-center gap-2 text-sm transition hover:border-primary-400 cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name="meetingType"
-                          value={type}
-                          checked={form.meetingType === type}
-                          onChange={handleChange}
-                          className="accent-primary-500"
-                        />
-                        <span className="text-neutral-700">{type}</span>
-                      </label>
-                    ))}
+                  <div className="space-y-3">
+                    <p className={formLabelClassName}>Meeting Type</p>
+                    <div className="flex flex-wrap gap-8">
+                      {['Online', 'Face-to-Face'].map((type) => (
+                        <label
+                          key={type}
+                          className="flex items-center gap-2 text-sm md:text-base text-neutral-700 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            name="meetingType"
+                            value={type}
+                            checked={form.meetingType === type}
+                            onChange={handleChange}
+                            className="accent-primary-500"
+                          />
+                          <span>{type}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* Room Option - only for Face-to-Face */}
-                {form.meetingType === 'Face-to-Face' && (
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Room Option</label>
-                    <select
+                  {form.meetingType === 'Face-to-Face' ? (
+                    <Select
+                      label="Room Option"
                       name="roomOption"
+                      placeholder="Select a room"
                       value={form.roomOption || ''}
                       onChange={handleChange}
-                      className="border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="">Select a room</option>
-                      <option value="room1">Room 1</option>
-                      <option value="room2">Room 2</option>
-                      <option value="room3">Room 3</option>
-                    </select>
-                  </div>
-                )}
+                      responsiveText
+                      fullWidth
+                      options={[
+                        { value: 'room1', label: 'Room 1' },
+                        { value: 'room2', label: 'Room 2' },
+                        { value: 'room3', label: 'Room 3' },
+                      ]}
+                    />
+                  ) : null}
+                </div>
 
                 {/* Buttons */}
                 <div className="grid grid-cols-2 gap-4 mt-6">

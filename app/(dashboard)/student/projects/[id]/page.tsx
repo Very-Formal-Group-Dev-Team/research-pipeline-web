@@ -27,6 +27,7 @@ import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
+import { formControlResponsiveClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -262,7 +263,7 @@ export default function ProjectDetailPage() {
 
   return (
     <DashboardLayout role="student" user={user} onLogout={handleLogout}>
-      <div className="space-y-6">
+      <div className="project-detail-forms space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
@@ -356,8 +357,8 @@ export default function ProjectDetailPage() {
 
           <div className="mt-4">
             <textarea
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
-                abstractError ? 'border-error-500' : 'border-neutral-300'
+              className={`${formTextareaResponsiveClassName} focus:ring-2 focus:ring-primary-500 ${
+                abstractError ? 'border-error-500' : ''
               }`}
               placeholder="Write a concise abstract of your project"
               rows={6}
@@ -417,7 +418,7 @@ export default function ProjectDetailPage() {
                 }
               }}
               placeholder="Type keyword then press Enter"
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+              className={`${formControlResponsiveClassName} focus:ring-2 focus:ring-primary-400`}
             />
           </div>
 
@@ -426,7 +427,7 @@ export default function ProjectDetailPage() {
               {editableKeywords.map((keyword, idx) => (
                 <span
                   key={`${keyword}-${idx}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-800"
+                  className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-md text-neutral-800"
                 >
                   {keyword}
                   <button
@@ -471,7 +472,7 @@ export default function ProjectDetailPage() {
 
           <div className="mt-6 border-t pt-4">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="font-semibold text-neutral-900">Cross-referencing</h3>
+              <h3 className="font-semibold text-lg text-neutral-900">Cross-referencing</h3>
               <Button
                 size="sm"
                 variant="primary"
@@ -646,7 +647,7 @@ export default function ProjectDetailPage() {
                           </h4>
                           <p className="text-sm text-neutral-500">{invite.users?.email}</p>
                         </div>
-                        <div className="self-start sm:self-auto">
+                        <div className="flex gap-1.5 self-start sm:self-auto">
                           <Badge variant="warning">pending</Badge>
                           <Badge variant={invite.role === 'adviser' ? 'success' : 'default'}>
                             {invite.role === 'adviser' ? 'adviser' : 'collaborator'}

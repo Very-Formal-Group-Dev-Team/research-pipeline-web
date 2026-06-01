@@ -92,6 +92,48 @@
   }
 }
 
+/* Responsive form control text on student project detail */
+@layer components {
+  .project-detail-forms input:not([type='hidden']):not([type='file']),
+  .project-detail-forms textarea,
+  .project-detail-forms select {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .project-detail-forms input:not([type='hidden']):not([type='file']),
+    .project-detail-forms textarea,
+    .project-detail-forms select {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+  }
+}
+
+/* Tighter corners on onboarding modal — scoped via .onboarding-ui on /onboarding */
+@layer utilities {
+  .onboarding-ui .rounded-xl {
+    border-radius: 0.25rem !important;
+  }
+
+  .onboarding-ui .rounded-lg {
+    border-radius: 0.1875rem !important;
+  }
+
+  .onboarding-ui .rounded-md {
+    border-radius: 0.125rem !important;
+  }
+
+  .onboarding-ui .rounded-sm {
+    border-radius: 0.125rem !important;
+  }
+
+  .onboarding-ui .rounded {
+    border-radius: 0.125rem !important;
+  }
+}
+
 /* Tighter corners in dashboard/app UI — landing page (/) is not wrapped in .dashboard-ui */
 @layer utilities {
   .dashboard-ui .rounded-3xl {

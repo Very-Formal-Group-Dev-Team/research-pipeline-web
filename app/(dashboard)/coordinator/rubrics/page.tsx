@@ -78,7 +78,7 @@ export default function CoordinatorRubricPage() {
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Rubrics</h1>
             <p className="text-neutral-600 mt-1">
