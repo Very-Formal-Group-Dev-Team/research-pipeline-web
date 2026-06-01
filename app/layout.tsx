@@ -16,10 +16,16 @@ const dmSerifText = DM_Serif_Text({
 });
 
 export const metadata: Metadata = {
-  title: "Student Research Portal",
-  description: "A platform to manage and showcase student research projects.",
+  title: {
+    default: "Archivum",
+    template: "%s | Archivum",
+  },
+  description: "Archivum — manage and showcase student research projects.",
+  applicationName: "Archivum",
   icons: {
-    icon: '/favicon.ico?v=0',
+    icon: [{ url: "/archivum.svg", type: "image/svg+xml" }],
+    shortcut: "/archivum.svg",
+    apple: "/archivum.svg",
   },
 };
 

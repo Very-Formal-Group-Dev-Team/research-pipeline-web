@@ -10,8 +10,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FiBook className="text-2xl text-primary-500" />
-              <h1 className="text-xl font-bold text-primary-500">Student Research Portal</h1>
+              <img src="/archivum.svg" alt="" className="h-8 w-8 shrink-0" aria-hidden />
+              <h1 className="text-xl font-bold text-primary-500">Archivum</h1>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/login">
@@ -120,7 +120,7 @@ export default function Home() {
       <footer className="border-t border-neutral-200 bg-white mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-neutral-600">
-            <p>© 2026 Student Research Portal. Built for Mapúa Malayan Colleges Mindanao.</p>
+            <p>© 2026 Archivum. Built for Mapúa Malayan Colleges Mindanao.</p>
           </div>
         </div>
       </footer>
