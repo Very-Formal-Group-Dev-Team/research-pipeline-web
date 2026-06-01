@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-ivory">
+      <body className="bg-coordinator-cream text-coordinator-ink antialiased">
         {children}
         <Toaster position="top-right" richColors />
       </body>
