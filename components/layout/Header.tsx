@@ -336,7 +336,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
   );
 
   return (
-    <header className="sticky top-0 z-50 flex h-20 w-full flex-shrink-0 items-center bg-oxfordBlue px-4 lg:px-7">
+    <header className="sticky top-0 z-50 flex h-20 w-full flex-shrink-0 items-center bg-oxfordBlue px-4 shadow-[0_2px_12px_rgba(0,0,0,0.18)] lg:px-7">
       {/* Mobile: hamburger | logo (center) | profile */}
       <div className="grid h-full w-full grid-cols-3 items-center lg:hidden">
         <button

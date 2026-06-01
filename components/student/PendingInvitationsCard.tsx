@@ -123,9 +123,8 @@ export default function PendingInvitationsCard() {
                   Accept
                 </Button>
                 <Button
-                  variant="error"
+                  variant="outline"
                   size="sm"
-                  className="border-neutral-300 text-neutral-700 hover:bg-neutral-50"
                   leftIcon={<FiX className="text-sm" />}
                   disabled={respondingId !== null}
                   onClick={() => handleRespond(invitation.id, false)}

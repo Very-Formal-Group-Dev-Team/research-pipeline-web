@@ -6,6 +6,7 @@ import { RxEnter } from 'react-icons/rx';
 import Card from './Card';
 import Button from '../Button';
 import { joinProject } from '@/lib/api/projects';
+import { formControlFocusGlowClassName } from '@/lib/utils/formControls';
 
 interface JoinGroupCardProps {
   onJoined?: () => void;
@@ -89,15 +90,12 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
                 }}
                 placeholder="Enter project code"
                 disabled={isLoading}
-                className="font-sans w-full px-4 py-2.5 border border-neutral-300 rounded-lg 
-                         focus:outline-none focus:shadow-[0_0_12px_rgba(194,58,70,0.15)]
-                         text-sm placeholder:text-neutral-400
-                         disabled:bg-neutral-100 disabled:cursor-not-allowed"
+                className={`font-sans w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm placeholder:text-neutral-400 disabled:bg-neutral-100 disabled:cursor-not-allowed ${formControlFocusGlowClassName}`}
               />
             </div>
             
             <Button
-              variant="error"
+              variant="primary"
               fullWidth
               onClick={handleJoinGroup}
               disabled={isLoading}
@@ -110,7 +108,6 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
                   />
                 ) : undefined
               }
-              className="bg-oxfordBlue hover:bg-oxfordBlue/90"
             >
               {isLoading ? 'Joining...' : 'Join Group'}
             </Button>

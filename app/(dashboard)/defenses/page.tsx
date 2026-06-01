@@ -502,7 +502,7 @@ export default function MeetingSchedule() {
 
                 {/* Buttons */}
                 <div className="grid grid-cols-2 gap-4 mt-6">
-                  <Button variant="error" onClick={handleSubmit} className="bg-oxfordBlue hover:bg-oxfordBlue/90" disabled={projectLookupLoading}>
+                  <Button variant="primary" onClick={handleSubmit} disabled={projectLookupLoading}>
                     Book Meeting
                   </Button>
                   {/* Changed: Clear button calls handleClearClick (modal aware) */}

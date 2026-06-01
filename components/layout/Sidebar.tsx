@@ -90,6 +90,7 @@ export default function Sidebar({ role }: SidebarProps) {
           lg:relative lg:top-auto lg:left-auto lg:z-auto
           lg:h-auto lg:min-h-[calc(100vh-5rem)] lg:self-stretch
           lg:translate-x-0
+          shadow-[4px_0_16px_rgba(0,0,0,0.12)] lg:shadow-[4px_0_20px_rgba(0,0,0,0.1)]
           ${usesPortalSidebar ? 'coordinator-theme bg-deepSpaceBlue' : 'bg-white'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
