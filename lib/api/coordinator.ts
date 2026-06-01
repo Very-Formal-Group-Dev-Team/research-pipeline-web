@@ -70,6 +70,9 @@ export interface Defense {
   project_code: string;
   created_by_name: string;
   adviser_name?: string;
+  meeting_room?: string | null;
+  meeting_url?: string | null;
+  meeting_provider?: string | null;
 }
 
 export interface VerifyDefenseConflict {

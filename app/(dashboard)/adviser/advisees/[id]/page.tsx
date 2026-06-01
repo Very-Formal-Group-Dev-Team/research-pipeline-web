@@ -6,13 +6,42 @@ import Card, { CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
-import { FiArrowLeft, FiClock, FiUsers, FiFileText } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiClock, FiUsers, FiFileText, FiMapPin, FiVideo } from 'react-icons/fi';
 import { useRouter, useParams } from 'next/navigation';
 import StatusIcon from '@/components/StatusIcon';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { getProject, getProjectMembers, type Project, type ProjectMember } from '@/lib/api/projects';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
+import { getProjectMeetings, getMyDefenses, normalizeDefenseSchedule, type Defense } from '@/lib/api/defenses';
+import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
+import { isOnlineModality, normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
+import EmptyState from '@/components/layout/EmptyState';
+
+function formatMeetingDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatMeetingTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function formatModalityLabel(modality?: string | null) {
+  if (!modality) return 'Not specified';
+  const normalized = modality.trim().toLowerCase();
+  if (normalized === 'face-to-face' || normalized === 'face to face') return 'Face to face';
+  if (normalized === 'online') return 'Online';
+  if (normalized === 'hybrid') return 'Hybrid';
+  return modality;
+}
 
 export default function AdviserProjectDetailPage() {
   const router = useRouter();
@@ -25,6 +54,37 @@ export default function AdviserProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [paperVersions, setPaperVersions] = useState<PaperVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
+  const [meetings, setMeetings] = useState<Defense[]>([]);
+  const [meetingsLoading, setMeetingsLoading] = useState(true);
+  const [meetingsError, setMeetingsError] = useState<string | null>(null);
+
+  const loadMeetings = async () => {
+    setMeetingsLoading(true);
+    setMeetingsError(null);
+    try {
+      const normalizedProjectId = projectId.trim().toLowerCase();
+      const meetingsRes = await getProjectMeetings(projectId);
+      let rows = (meetingsRes.data || []).map(normalizeDefenseSchedule);
+
+      if (!rows.length) {
+        const mineRes = await getMyDefenses();
+        rows = (mineRes.data || [])
+          .filter((row) => String(row.project_id).trim().toLowerCase() === normalizedProjectId)
+          .map(normalizeDefenseSchedule);
+      }
+
+      if (!rows.length && meetingsRes.error) {
+        setMeetingsError(meetingsRes.error);
+      } else {
+        setMeetings(rows);
+      }
+    } catch (err) {
+      console.error('Failed to fetch project meetings:', err);
+      setMeetingsError('Failed to load meetings');
+    } finally {
+      setMeetingsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,8 +95,10 @@ export default function AdviserProjectDetailPage() {
         ]);
         if (projectRes.data) setProject(projectRes.data);
         if (membersRes.data) setMembers(membersRes.data);
+        await loadMeetings();
       } catch (err) {
         console.error('Failed to fetch project data:', err);
+        setMeetingsLoading(false);
       } finally {
         setLoading(false);
       }
@@ -190,6 +252,117 @@ export default function AdviserProjectDetailPage() {
                     </p>
                   )}
                 </div>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FiCalendar /> Meetings
+                </CardTitle>
+              </CardHeader>
+              <div className="mt-4">
+                {meetingsLoading ? (
+                  <p className="text-neutral-600 text-center py-4">Loading meetings...</p>
+                ) : meetingsError ? (
+                  <p className="text-red-600 text-center py-4 text-sm">{meetingsError}</p>
+                ) : meetings.length > 0 ? (
+                  <div className="space-y-4">
+                    {meetings.map((meeting) => {
+                      const online = isOnlineModality(meeting.modality);
+                      const joinUrl = normalizeJitsiJoinUrl(
+                        meeting.meeting_url,
+                        meeting.meeting_room,
+                      );
+                      const venue = meeting.venue?.trim() || meeting.location?.trim();
+
+                      return (
+                        <div
+                          key={meeting.id}
+                          className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-3"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold text-primary-800 capitalize">
+                                {meeting.defense_type} meeting
+                              </p>
+                              <p className="text-sm text-neutral-600 mt-0.5">
+                                {formatModalityLabel(meeting.modality)}
+                              </p>
+                            </div>
+                            <Badge
+                              variant={meeting.status === 'cancelled' ? 'default' : 'primary'}
+                              className="capitalize"
+                            >
+                              {meeting.status_label || meeting.status}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-2 text-sm text-neutral-700">
+                            <div className="flex items-center gap-2">
+                              <FiCalendar className="text-accent-500 flex-shrink-0" />
+                              <span>{formatMeetingDate(meeting.start_time)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <FiClock className="text-accent-500 flex-shrink-0" />
+                              <span>
+                                {formatMeetingTime(meeting.start_time)}
+                                {meeting.end_time
+                                  ? ` – ${formatMeetingTime(meeting.end_time)}`
+                                  : ''}
+                              </span>
+                            </div>
+                          </div>
+
+                          {online ? (
+                            <div className="space-y-2 pt-1">
+                              <div className="flex items-start gap-2 text-sm text-neutral-700">
+                                <FiVideo className="text-accent-500 flex-shrink-0 mt-0.5" />
+                                <div className="min-w-0">
+                                  <p className="font-medium text-neutral-800">Meeting link</p>
+                                  {joinUrl ? (
+                                    <a
+                                      href={joinUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-primary-700 break-all hover:underline"
+                                    >
+                                      {joinUrl}
+                                    </a>
+                                  ) : (
+                                    <p className="text-neutral-500">
+                                      Link will be available once the meeting is confirmed.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <JoinMeetingButton
+                                meeting_url={meeting.meeting_url}
+                                meeting_room={meeting.meeting_room}
+                                label="Join Meeting"
+                                size="sm"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-2 text-sm text-neutral-700 pt-1">
+                              <FiMapPin className="text-accent-500 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <p className="font-medium text-neutral-800">Venue</p>
+                                <p>{venue || 'Venue not specified'}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<FiCalendar />}
+                    title="No meetings scheduled"
+                    description="Book a meeting to see it listed here for this project."
+                  />
+                )}
+              </div>
             </Card>
           </div>
 
