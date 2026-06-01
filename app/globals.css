@@ -69,7 +69,38 @@
   }
 }
 
+/* Tighter corners in dashboard/app UI — landing page (/) is not wrapped in .dashboard-ui */
+@layer utilities {
+  .dashboard-ui .rounded-3xl {
+    border-radius: 0.625rem !important;
+  }
+
+  .dashboard-ui .rounded-2xl {
+    border-radius: 0.5rem !important;
+  }
+
+  .dashboard-ui .rounded-xl {
+    border-radius: 0.375rem !important;
+  }
+
+  .dashboard-ui .rounded-lg {
+    border-radius: 0.25rem !important;
+  }
+
+  .dashboard-ui .rounded-md {
+    border-radius: 0.1875rem !important;
+  }
+
+  .dashboard-ui .rounded-sm {
+    border-radius: 0.125rem !important;
+  }
+}
+
 @layer components {
+  .dashboard-ui {
+    --radius: 0.375rem;
+  }
+
   ::-webkit-scrollbar {
     @apply w-2 h-2;
   }
