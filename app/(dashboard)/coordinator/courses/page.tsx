@@ -5,6 +5,8 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Modal from '@/components/ui/Modal';
+import Input from '@/components/ui/Input';
+import { formLabelClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
 import {
   FiPlus,
   FiEdit2,
@@ -201,7 +203,7 @@ export default function CoordinatorCoursesPage() {
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Courses</h1>
             <p className="text-neutral-600 mt-1">
@@ -338,35 +340,31 @@ export default function CoordinatorCoursesPage() {
           {formError && (
             <div className="p-3 bg-error-50 text-error-700 text-sm rounded-lg">{formError}</div>
           )}
+          <Input
+            label="Course Name"
+            type="text"
+            value={formData.courseName}
+            onChange={(e) => setFormData((p) => ({ ...p, courseName: e.target.value }))}
+            placeholder="e.g. Information Technology"
+            responsiveText
+            fullWidth
+          />
+          <Input
+            label="Code"
+            type="text"
+            value={formData.code}
+            onChange={(e) => setFormData((p) => ({ ...p, code: e.target.value }))}
+            placeholder="e.g. BSIT"
+            responsiveText
+            fullWidth
+          />
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Course Name</label>
-            <input
-              type="text"
-              value={formData.courseName}
-              onChange={(e) => setFormData((p) => ({ ...p, courseName: e.target.value }))}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="e.g. Information Technology"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">Code</label>
-            <input
-              type="text"
-              value={formData.code}
-              onChange={(e) => setFormData((p) => ({ ...p, code: e.target.value }))}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="e.g. BSIT"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              Description (optional)
-            </label>
+            <label className={formLabelClassName}>Description (optional)</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
               rows={3}
-              className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className={formTextareaResponsiveClassName}
               placeholder="Brief description of the course..."
             />
           </div>

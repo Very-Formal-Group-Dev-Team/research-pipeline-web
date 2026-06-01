@@ -43,6 +43,7 @@ interface TeamMemberRowProps {
   subtitle?: string;
   onRemove?: () => void;
   showRemove?: boolean;
+  responsiveRoleSelect?: boolean;
 }
 
 function TeamMemberRow({
@@ -55,6 +56,7 @@ function TeamMemberRow({
   subtitle,
   onRemove,
   showRemove = false,
+  responsiveRoleSelect = false,
 }: TeamMemberRowProps) {
   return (
     <li className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center">
@@ -66,6 +68,7 @@ function TeamMemberRow({
             value={role}
             onChange={(e) => onRoleChange(e.target.value)}
             options={roleOptions}
+            responsiveText={responsiveRoleSelect}
             required
           />
         </div>
@@ -405,6 +408,7 @@ export default function CreateProjectPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 error={errors.title}
+                responsiveText
                 required
               />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -413,18 +417,21 @@ export default function CreateProjectPage() {
                   placeholder="Enter program name"
                   value={program}
                   onChange={(e) => setProgram(e.target.value)}
+                  responsiveText
                 />
                 <Input
                   label="Course"
                   placeholder="Enter course name"
                   value={course}
                   onChange={(e) => setCourse(e.target.value)}
+                  responsiveText
                 />
                 <Input
                   label="Section"
                   placeholder="Enter section"
                   value={section}
                   onChange={(e) => setSection(e.target.value)}
+                  responsiveText
                 />
               </div>
             </div>
@@ -449,6 +456,7 @@ export default function CreateProjectPage() {
                     name={user.name}
                     email={user.email}
                     subtitle="You (project creator)"
+                    responsiveRoleSelect
                   />
                 ) : null}
                 {invitedContributors.map(({ user: contributor, contributorRole }, index) => (
@@ -461,6 +469,7 @@ export default function CreateProjectPage() {
                     name={contributor.full_name}
                     email={contributor.email}
                     showRemove
+                    responsiveRoleSelect
                     onRemove={() => removeContributor(index)}
                   />
                 ))}
