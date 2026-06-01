@@ -192,7 +192,7 @@ function AuthForm({ mode }: { mode: Mode }) {
 
   return (
     <div className="w-full">
-        <form onSubmit={handleSubmit} className="bg-antiFlashWhite px-10 py-12 md:px-12 rounded-sm shadow-medium border border-snow/60">
+        <form onSubmit={handleSubmit} className="bg-antiFlashWhite px-10 py-12 md:px-12 rounded-xl shadow-medium border border-snow/60">
           {/* Logo + Header */}
           <div className="w-full mb-8 sm:mb-6">
             <div className="flex justify-center">

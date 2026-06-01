@@ -116,7 +116,7 @@ export default function Sidebar({ role }: SidebarProps) {
         </div>
 
         <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-5">
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {items.map((item) => {
               const isActive = pathname === item.href;
               return (
