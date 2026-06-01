@@ -66,7 +66,8 @@ export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const items = menuItems[role] || [];
   const { isOpen, setOpen } = useSidebar();
-  const isCoordinator = role === 'coordinator';
+  /** Coordinator-style navy sidebar (student + coordinator only). */
+  const usesPortalSidebar = role === 'coordinator' || role === 'student';
 
   const closeSidebar = () => setOpen(false);
   const homeHref = `/${role}`;
@@ -81,14 +82,20 @@ export default function Sidebar({ role }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar — full-height left rail, overlays header on desktop */}
-      <aside
+      {/* Sidebar — full-height left rail; coordinator-theme wrapper scopes nav styles to this rail only */}
+      <div
         className={`
-          fixed top-0 left-0 z-50 w-64 h-screen flex flex-col
-          ${isCoordinator ? 'coordinator-sidebar border-r border-[#243456]' : 'bg-white border-r border-neutral-200'}
+          fixed top-0 left-0 z-50 h-screen w-64
+          ${usesPortalSidebar ? 'coordinator-theme' : ''}
           transition-transform duration-300 ease-in-out
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+      <aside
+        className={`
+          w-full h-full flex flex-col
+          ${usesPortalSidebar ? 'coordinator-sidebar border-r border-[#243456]' : 'bg-white border-r border-neutral-200'}
         `}
       >
         <div className="flex items-center justify-between gap-2 px-5 py-6 shrink-0">
@@ -108,14 +115,14 @@ export default function Sidebar({ role }: SidebarProps) {
             <div className="min-w-0 text-left">
               <p
                 className={`text-lg font-semibold leading-tight truncate ${
-                  isCoordinator ? 'text-white' : 'text-darkSlateBlue'
+                  usesPortalSidebar ? 'text-white' : 'text-darkSlateBlue'
                 }`}
               >
                 Archivum
               </p>
               <p
                 className={`text-sm leading-snug truncate ${
-                  isCoordinator ? 'text-white/75' : 'text-neutral-500'
+                  usesPortalSidebar ? 'text-white/75' : 'text-neutral-500'
                 }`}
               >
                 Research Portal
@@ -126,7 +133,7 @@ export default function Sidebar({ role }: SidebarProps) {
             type="button"
             onClick={closeSidebar}
             className={`p-2 rounded-lg transition-colors lg:hidden flex-shrink-0 ${
-              isCoordinator
+              usesPortalSidebar
                 ? 'text-white/70 hover:text-white hover:bg-white/10'
                 : 'text-neutral-400 hover:text-darkSlateBlue hover:bg-neutral-100'
             }`}
@@ -150,16 +157,16 @@ export default function Sidebar({ role }: SidebarProps) {
                       flex items-center gap-3 rounded-lg
                       transition-all duration-200 group text-sm px-4 py-2.5 relative
                       ${isActive
-                        ? (isCoordinator ? 'coordinator-nav-active' : 'bg-neutral-100 text-darkSlateBlue font-medium')
-                        : (isCoordinator ? '' : 'text-neutral-600 hover:bg-neutral-50 hover:text-darkSlateBlue')
+                        ? (usesPortalSidebar ? 'coordinator-nav-active' : 'bg-neutral-100 text-darkSlateBlue font-medium')
+                        : (usesPortalSidebar ? '' : 'text-neutral-600 hover:bg-neutral-50 hover:text-darkSlateBlue')
                       }
                     `}
                   >
                     <span
                       className={`text-lg flex-shrink-0 ${
                         isActive
-                          ? (isCoordinator ? 'text-white' : 'text-darkSlateBlue')
-                          : (isCoordinator ? 'text-white/60 group-hover:text-white' : 'text-neutral-400 group-hover:text-darkSlateBlue')
+                          ? (usesPortalSidebar ? 'text-white' : 'text-darkSlateBlue')
+                          : (usesPortalSidebar ? 'text-white/60 group-hover:text-white' : 'text-neutral-400 group-hover:text-darkSlateBlue')
                       }`}
                     >
                       {item.icon}
@@ -179,6 +186,7 @@ export default function Sidebar({ role }: SidebarProps) {
           </ul>
         </nav>
       </aside>
+      </div>
     </>
   );
 }

@@ -19,13 +19,13 @@ export interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, role, user, onLogout }: DashboardLayoutProps) {
-  const isCoordinator = role === 'coordinator';
+  const usesPortalChrome = role === 'coordinator' || role === 'student';
 
   return (
     <SidebarProvider>
       <div
         className={`min-h-screen overflow-x-hidden ${
-          isCoordinator ? 'coordinator-theme coordinator-main-bg' : 'bg-neutral-50'
+          usesPortalChrome ? 'coordinator-theme coordinator-main-bg' : 'bg-neutral-50'
         }`}
       >
         <Sidebar role={role} />
