@@ -35,7 +35,19 @@ module.exports = {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        // Primary Palette
+        // Archivum Colors
+        oxfordBlue : '#2C3E6B' ,
+        deepSpaceBlue : '#1F2B4B' ,
+        velvetWine : '#9B4455' ,
+        eerieBlack : '#2E2A2B' ,
+        antiFlashWhite : '#F0ECEC' ,
+        snow : '#FAF8F8' ,
+        oldGold : '#C5A84B' ,
+        deepSeaGreen : '#49766C' ,
+        frenchRose : '#F06880' ,
+        malachite : '#5ED86D' ,
+
+        // Student Research Portal Original Colors
         ivory: '#FEFBF5',
         darkSlateBlue: '#19374C',
         crimsonRed: '#EC1E24',

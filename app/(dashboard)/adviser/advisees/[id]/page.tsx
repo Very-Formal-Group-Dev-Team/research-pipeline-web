@@ -187,7 +187,7 @@ export default function AdviserProjectDetailPage() {
             <Button
               onClick={
                 handleBookMeeting}
-              className="bg-red-700 hover:bg-red-800 text-white"
+              className="bg-navy hover:bg-navy/10 text-white"
             >
               Book a Meeting
             </Button>
@@ -219,7 +219,7 @@ export default function AdviserProjectDetailPage() {
                       <div 
                         key={member.id} 
                         className={`flex items-center justify-between p-3 rounded-lg ${
-                          member.role === 'leader' ? 'bg-primary-50 border-2 border-primary-200' : 'bg-neutral-50'
+                          member.role === 'leader' ? 'bg-primary-50 border-2 border-primary-200' : 'bg-neutral-100 border border-neutral-200'
                         }`}
                       >
                         <div className="w-full flex items-center gap-3">
@@ -278,7 +278,7 @@ export default function AdviserProjectDetailPage() {
                       return (
                         <div
                           key={meeting.id}
-                          className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-3"
+                          className="rounded-lg border border-neutral-200 bg-neutral-100 p-4 space-y-3"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
