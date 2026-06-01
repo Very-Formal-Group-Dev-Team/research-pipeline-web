@@ -507,7 +507,7 @@ export default function MeetingSchedule() {
 
                 {/* Buttons */}
                 <div className="grid grid-cols-2 gap-4 mt-6">
-                  <Button variant="error" onClick={handleSubmit}>
+                  <Button variant="error" onClick={handleSubmit} className="bg-darkSlateBlue hover:bg-darkSlateBlue/90" disabled={projectLookupLoading}>
                     Book Meeting
                   </Button>
                   {/* Changed: Clear button calls handleClearClick (modal aware) */}
@@ -551,7 +551,7 @@ export default function MeetingSchedule() {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                      <thead className="bg-neutral-50 border-b border-neutral-200">
+                      <thead className="bg-neutral-100 border-b border-neutral-200">
                         <tr>
                           <th className="px-4 py-3 font-medium text-neutral-600">Project Title</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Project Code</th>
@@ -569,9 +569,9 @@ export default function MeetingSchedule() {
                             moved: 'bg-accent-100 text-accent-700',
                             rejected: 'bg-error-100 text-error-700',
                           };
-                          const style = statusStyles[d.status] || 'bg-neutral-100 text-neutral-600';
+                          const style = statusStyles[d.status] || 'bg-neutral-200 text-neutral-600';
                           return (
-                            <tr key={d.id} className="hover:bg-neutral-50">
+                            <tr key={d.id} className="hover:bg-coordinator-neutral-50 cursor-pointer">
                               <td className="px-4 py-3 text-neutral-800">{d.project_title}</td>
                               <td className="px-4 py-3 text-neutral-600">{d.project_code}</td>
                               <td className="px-4 py-3 text-neutral-600">{formatDateTime(d.start_time)}</td>

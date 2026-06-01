@@ -67,7 +67,7 @@ export default function Sidebar({ role }: SidebarProps) {
   const items = menuItems[role] || [];
   const { isOpen, setOpen } = useSidebar();
   /** Coordinator-style navy sidebar (student + coordinator only). */
-  const usesPortalSidebar = role === 'coordinator' || role === 'student';
+  const usesPortalSidebar = role === 'coordinator' || role === 'student' || role === 'adviser';
 
   const closeSidebar = () => setOpen(false);
   const homeHref = `/${role}`;

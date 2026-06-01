@@ -54,7 +54,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-darkSlateBlue mb-1">Join a Project</h3>
           <p className="text-sm text-neutral-600 mb-4">
-            Enter the project code provided by your team leader to join a research project
+            Enter the project code provided by the team leader to join a research project
           </p>
           
           <div className="space-y-3">
@@ -102,7 +102,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
               onClick={handleJoinGroup}
               disabled={isLoading}
               loading={isLoading}
-              className="bg-crimsonRed hover:bg-crimsonRed/90"
+              className="bg-darkSlateBlue hover:bg-darkSlateBlue/90"
             >
               {!isLoading && (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

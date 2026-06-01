@@ -19,7 +19,7 @@ export interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, role, user, onLogout }: DashboardLayoutProps) {
-  const usesPortalChrome = role === 'coordinator' || role === 'student';
+  const usesPortalChrome = role === 'coordinator' || role === 'student' || role === 'adviser';
 
   return (
     <SidebarProvider>
