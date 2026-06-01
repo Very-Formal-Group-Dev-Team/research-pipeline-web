@@ -6,6 +6,9 @@ export interface CardProps {
   className?: string;
   padding?: 'none' | 'sm' | 'md' | 'lg';
   shadow?: 'none' | 'soft' | 'medium' | 'hard';
+  /** Lift shadow + border on hover (default on). Use false to disable. */
+  hoverShadow?: boolean;
+  /** Clickable card — includes hover shadow and pointer cursor. */
   hover?: boolean;
   onClick?: () => void;
 }
@@ -30,9 +33,12 @@ export default function Card({
   className = '', 
   padding = 'md', 
   shadow = 'soft',
+  hoverShadow = true,
   hover = false,
   onClick 
 }: CardProps) {
+  const elevateOnHover = hoverShadow || hover;
+
   return (
     <div
       id={id}
@@ -40,8 +46,8 @@ export default function Card({
         bg-white border border-neutral-300 rounded-md
         ${paddingStyles[padding]}
         ${shadowStyles[shadow]}
-        ${hover ? 'hover:shadow-lg hover:border-neutral-400 transition-all cursor-pointer' : ''}
-        ${onClick ? 'cursor-pointer' : ''}
+        ${elevateOnHover ? 'transition-all hover:shadow-lg hover:border-neutral-400' : ''}
+        ${hover || onClick ? 'cursor-pointer' : ''}
         ${className}
       `}
       onClick={onClick}

@@ -56,11 +56,13 @@ export default function CoordinatorDashboardPage() {
 
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-primary-700">Coordinator Dashboard</h1>
+          <h1 className="text-3xl font-bold text-primary-700">Welcome back, {user.name}!</h1>
           <p className="text-neutral-600 mt-1">
-            {institution ? `${institution.name} — Institution-wide overview` : 'System-wide overview and management'}
+            {institution
+              ? `${institution.name} — institution-wide overview and management`
+              : 'System-wide overview and management'}
           </p>
         </div>
 

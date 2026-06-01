@@ -122,7 +122,7 @@ export default function PendingInvitationsCard() {
                   Accept
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="error"
                   size="sm"
                   leftIcon={<FiX className="text-sm" />}
                   disabled={respondingId !== null}
