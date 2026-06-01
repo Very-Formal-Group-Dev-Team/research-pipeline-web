@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import Card, { CardTitle, CardDescription } from '@/components/ui/Card';
-import { FiUsers, FiFolder, FiCalendar, FiBookOpen } from 'react-icons/fi';
+import Card from '@/components/ui/Card';
+import CardIconHeader from '@/components/ui/CardIconHeader';
+import { FiUsers, FiFolder, FiCalendar, FiBookOpen, FiShield } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import CoordinatorFullCalendar from '@/components/coordinator/CoordinatorFullCalendar';
@@ -55,7 +56,7 @@ export default function CoordinatorDashboardPage() {
 
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold text-primary-700">Coordinator Dashboard</h1>
           <p className="text-neutral-600 mt-1">
@@ -87,9 +88,13 @@ export default function CoordinatorDashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card hover onClick={() => router.push('/coordinator/events?tab=pending')}>
-                <CardTitle>Defense Verification</CardTitle>
-                <CardDescription>Review and approve defense schedules proposed by advisers</CardDescription>
-                <div className="mt-4">
+                <CardIconHeader
+                  title="Defense Verification"
+                  description="Review and approve defense schedules proposed by advisers"
+                  iconClassName="text-archivumRed"
+                  icon={<FiShield className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+                />
+                <div>
                   {stats && stats.pendingDefenses > 0 ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-warning-100 text-warning-700">
                       {stats.pendingDefenses} pending verification
@@ -101,11 +106,12 @@ export default function CoordinatorDashboardPage() {
               </Card>
 
               <Card hover onClick={() => router.push('/coordinator/courses')}>
-                <CardTitle>Courses</CardTitle>
-                <CardDescription>
-                  Manage courses and assign faculty advisers to each course
-                </CardDescription>
-                <div className="mt-4">
+                <CardIconHeader
+                  title="Courses"
+                  description="Manage courses and assign faculty advisers to each course"
+                  icon={<FiBookOpen className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+                />
+                <div>
                   <span className="text-sm text-neutral-500">
                     {stats
                       ? `${stats.totalCourses} courses · ${stats.totalAdvisers} advisers`
@@ -116,11 +122,13 @@ export default function CoordinatorDashboardPage() {
             </div>
 
             <Card padding="none" className="overflow-hidden">
-              <div className="border-b border-neutral-200 px-6 py-4">
-                <CardTitle>Schedule Calendar</CardTitle>
-                <CardDescription>
-                  Defenses and institution events in month, week, day, year, and agenda views
-                </CardDescription>
+              <div className="border-b border-neutral-300 px-6 py-4">
+                <CardIconHeader
+                  className="mb-0"
+                  title="Schedule Calendar"
+                  description="Defenses and institution events in month, week, day, year, and agenda views"
+                  icon={<FiCalendar className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+                />
               </div>
               <div className="p-3 pt-0 sm:p-4">
                 <CoordinatorFullCalendar

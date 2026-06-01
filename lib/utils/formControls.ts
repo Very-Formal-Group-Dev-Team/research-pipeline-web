@@ -4,12 +4,16 @@ export const formLabelClassName = 'block text-sm font-medium text-primary-700 mb
 /** text-sm on small screens, text-base from md breakpoint up */
 export const formControlTextSizeClassName = 'text-sm md:text-base';
 
+/** Focus glow aligned with oxfordBlue / primary actions */
+export const formControlFocusGlowClassName =
+  'focus:outline-none focus:shadow-[0_0_12px_rgba(44,62,107,0.2)]';
+
 export const formControlClassName = [
   'w-full text-sm text-neutral-900',
   'placeholder:text-neutral-400',
   'border border-neutral-300 rounded-lg',
   'px-4 py-2.5',
-  'focus:outline-none focus:shadow-[0_0_12px_rgba(236,30,36,0.15)]',
+  formControlFocusGlowClassName,
   'transition-colors',
   'disabled:bg-neutral-100 disabled:cursor-not-allowed disabled:text-neutral-600',
 ].join(' ');
@@ -34,7 +38,7 @@ export const formControlResponsiveClassName = [
   'placeholder:text-neutral-400',
   'border border-neutral-300 rounded-lg',
   'px-4 py-2.5',
-  'focus:outline-none focus:shadow-[0_0_12px_rgba(236,30,36,0.15)]',
+  formControlFocusGlowClassName,
   'transition-colors',
   'disabled:bg-neutral-100 disabled:cursor-not-allowed disabled:text-neutral-600',
 ].join(' ');
@@ -55,7 +59,7 @@ export const rubricCriteriaInputClassName = [
   'text-neutral-900 placeholder:text-neutral-400',
   'border border-neutral-300 rounded-md',
   'px-2 py-1 md:px-2.5 md:py-1.5',
-  'focus:outline-none focus:shadow-[0_0_12px_rgba(236,30,36,0.15)]',
+  formControlFocusGlowClassName,
   'transition-colors',
 ].join(' ');
 

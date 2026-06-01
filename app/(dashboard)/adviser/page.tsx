@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import Card, { CardTitle, CardDescription } from '@/components/ui/Card';
+import Card from '@/components/ui/Card';
+import CardIconHeader from '@/components/ui/CardIconHeader';
 import JoinGroupCard from '@/components/ui/JoinGroupCard';
 import AdviserFullCalendar from '@/components/adviser/AdviserFullCalendar';
-import { FiUsers, FiFolder, FiCalendar, FiTrendingUp } from 'react-icons/fi';
+import { FiUsers, FiFolder, FiCalendar, FiTrendingUp, FiActivity, FiFileText } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { MOCK_ADVISER_STATS } from '@/lib/mock-data';
 import type { Defense } from '@/lib/api/defenses';
@@ -81,29 +82,38 @@ export default function AdviserDashboardPage() {
                 <JoinGroupCard />
 
                 <Card>
-                  <CardTitle>Pending Reviews</CardTitle>
-                  <CardDescription>Documents awaiting your feedback</CardDescription>
-                  <div className="mt-4 space-y-3">
+                  <CardIconHeader
+                    title="Pending Reviews"
+                    description="Documents awaiting your feedback"
+                    iconClassName="text-archivumRed"
+                    icon={<FiFileText className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+                  />
+                  <div className="space-y-3">
                     <p className="text-sm text-neutral-600">No pending reviews</p>
                   </div>
                 </Card>
               </div>
 
               <Card>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest updates from your advisees</CardDescription>
-                <div className="mt-4 space-y-3">
+                <CardIconHeader
+                  title="Recent Activity"
+                  description="Latest updates from your advisees"
+                  icon={<FiActivity className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+                />
+                <div className="space-y-3">
                   <p className="text-sm text-neutral-600">No recent activity</p>
                 </div>
               </Card>
             </div>
 
             <Card padding="none" className="overflow-hidden">
-              <div className="border-b border-neutral-200 px-6 py-4">
-                <CardTitle>Schedule Calendar</CardTitle>
-                <CardDescription>
-                  Defenses, meetings, and institution events
-                </CardDescription>
+              <div className="border-b border-neutral-300 px-6 py-4">
+                <CardIconHeader
+                  className="mb-0"
+                  title="Schedule Calendar"
+                  description="Defenses, meetings, and institution events"
+                  icon={<FiCalendar className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+                />
               </div>
               <div className="p-3 pt-0 sm:p-4">
                 <AdviserFullCalendar
