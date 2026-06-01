@@ -138,8 +138,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        serif: ['Georgia', 'serif'],
+        sans: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-dm-serif-text)', 'Georgia', 'serif'],
         mono: ['Fira Code', 'monospace'],
       },
       fontSize: {

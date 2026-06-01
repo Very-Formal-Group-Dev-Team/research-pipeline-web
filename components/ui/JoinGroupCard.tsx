@@ -52,8 +52,8 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
           </svg>
         </div>
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-darkSlateBlue mb-1">Join a Project</h3>
-          <p className="text-sm text-neutral-600 mb-4">
+          <h3 className="font-serif text-lg font-semibold text-darkSlateBlue mb-1">Join a Project</h3>
+          <p className="font-sans text-sm text-neutral-600 mb-4">
             Enter the project code provided by the team leader to join a research project
           </p>
           
@@ -71,7 +71,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
             )}
 
             <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+              <label className="font-sans block text-xs font-medium text-neutral-700 mb-1.5">
                 Project Code
               </label>
               <input
@@ -89,7 +89,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
                 }}
                 placeholder="Enter project code"
                 disabled={isLoading}
-                className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg 
+                className="font-sans w-full px-4 py-2.5 border border-neutral-300 rounded-lg 
                          focus:outline-none focus:shadow-[0_0_12px_rgba(236,30,36,0.15)]
                          text-sm placeholder:text-neutral-400
                          disabled:bg-neutral-100 disabled:cursor-not-allowed"
@@ -113,7 +113,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
             </Button>
           </div>
           
-          <p className="text-xs text-neutral-500 mt-3">
+          <p className="font-sans text-xs text-neutral-500 mt-3">
             Project code is available in the projects page.
           </p>
         </div>

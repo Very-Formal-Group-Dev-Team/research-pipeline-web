@@ -61,7 +61,7 @@ export function CardHeader({ children, className = '' }: { children: React.React
 
 export function CardTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <h3 className={`text-xl font-semibold text-primary-700 ${className}`}>
+    <h3 className={`font-serif text-xl font-semibold text-primary-700 ${className}`}>
       {children}
     </h3>
   );
@@ -69,7 +69,7 @@ export function CardTitle({ children, className = '' }: { children: React.ReactN
 
 export function CardDescription({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={`text-sm text-neutral-600 mt-1 ${className}`}>
+    <p className={`font-sans text-sm text-neutral-600 mt-1 ${className}`}>
       {children}
     </p>
   );

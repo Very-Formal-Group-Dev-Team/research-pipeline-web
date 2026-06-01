@@ -82,20 +82,22 @@ export default function Sidebar({ role }: SidebarProps) {
         />
       )}
 
-      {/* Mobile: fixed drawer under header. Desktop: in-flow column flush under header. */}
+      {/* Mobile: fixed drawer. Desktop: full-height column under header (main scrolls separately). */}
       <div
         className={`
-          fixed top-20 left-0 z-40 h-[calc(100vh-5rem)] w-64
-          ${usesPortalSidebar ? 'coordinator-theme' : ''}
+          fixed top-20 bottom-0 left-0 z-40 flex w-64 shrink-0 flex-col
           transition-transform duration-300 ease-in-out
-          lg:static lg:top-auto lg:left-auto lg:z-auto lg:h-[calc(100vh-5rem)] lg:w-64 lg:shrink-0 lg:self-stretch lg:translate-x-0
+          lg:relative lg:top-auto lg:left-auto lg:z-auto
+          lg:h-[calc(100vh-5rem)] lg:min-h-[calc(100vh-5rem)]
+          lg:translate-x-0
+          ${usesPortalSidebar ? 'coordinator-theme bg-deepSpaceBlue' : 'bg-white'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
       <aside
         className={`
-          w-full h-full flex flex-col min-h-full 
-          ${usesPortalSidebar ? 'coordinator-sidebar border-r border-[#243456]' : 'bg-white border-r border-neutral-200'}
+          flex h-full min-h-full w-full flex-1 flex-col
+          ${usesPortalSidebar ? 'coordinator-sidebar border-r border-[#243456]' : 'border-r border-neutral-200'}
         `}
       >
         <div className="flex items-center justify-end px-3 py-3 shrink-0 lg:hidden">

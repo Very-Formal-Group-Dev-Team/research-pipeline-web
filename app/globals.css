@@ -30,6 +30,27 @@
     @apply bg-ivory text-neutral-900;
   }
 
+  /* Headings only — section/page/card titles */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-dm-serif-text), Georgia, serif;
+  }
+
+  /* UI copy stays DM Sans (do not inherit serif from surrounding layout) */
+  p,
+  label,
+  input,
+  textarea,
+  select,
+  button,
+  option {
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+  }
+
   * {
     @apply antialiased;
   }
@@ -104,7 +125,7 @@
 }
 
 .coordinator-theme aside.coordinator-sidebar {
-  background-color: #2c3e6b;
+  background-color: #1f2b4b; /* deepSpaceBlue — matches header */
   border-color: #243456;
 }
 
