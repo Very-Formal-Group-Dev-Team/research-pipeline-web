@@ -548,6 +548,7 @@ export default function CreateProjectPage() {
                     { value: 'custom', label: 'Custom' },
                   ]}
                   error={errors.researchType}
+                  responsiveText
                   required
                 />
               </div>

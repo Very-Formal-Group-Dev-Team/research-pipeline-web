@@ -141,7 +141,6 @@ export default function AdviserDashboardPage() {
                   <CardIconHeader
                     title="Pending Reviews"
                     description="Documents awaiting your feedback"
-                    iconClassName="text-archivumRed"
                     icon={<FiFileText className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
                   />
                   <div className="space-y-3">

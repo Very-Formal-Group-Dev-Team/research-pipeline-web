@@ -43,7 +43,7 @@ export default function Card({
     <div
       id={id}
       className={`
-        bg-white border border-neutral-300 rounded-md
+        bg-white border-[1px] border-solid border-neutral-400 rounded-md
         ${paddingStyles[padding]}
         ${shadowStyles[shadow]}
         ${elevateOnHover ? 'transition-all hover:shadow-lg hover:border-neutral-400' : ''}

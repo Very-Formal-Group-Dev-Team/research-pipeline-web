@@ -1,8 +1,8 @@
 /** Shared typography and spacing for text fields, selects, and textareas */
 export const formLabelClassName = 'block text-sm font-medium text-primary-700 mb-1.5';
 
-/** text-sm on small screens, text-base from md breakpoint up */
-export const formControlTextSizeClassName = 'text-sm md:text-base';
+/** text-sm on small screens, text-md from md breakpoint up */
+export const formControlTextSizeClassName = 'text-sm md:text-md';
 
 /** Focus glow aligned with oxfordBlue / primary actions */
 export const formControlFocusGlowClassName =

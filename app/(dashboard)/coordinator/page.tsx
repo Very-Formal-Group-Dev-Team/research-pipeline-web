@@ -93,7 +93,6 @@ export default function CoordinatorDashboardPage() {
                 <CardIconHeader
                   title="Defense Verification"
                   description="Review and approve defense schedules proposed by advisers"
-                  iconClassName="text-archivumRed"
                   icon={<FiShield className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
                 />
                 <div>
