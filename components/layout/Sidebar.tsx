@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -29,6 +28,8 @@ export interface MenuItem {
   badge?: number;
   tooltip?: string;
   roles?: string[];
+  /** Show in sidebar only below lg (header has notifications bell on desktop). */
+  mobileOnly?: boolean;
 }
 
 export interface SidebarProps {
@@ -40,14 +41,14 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Dashboard', href: '/student', icon: <FiHome /> },
     { label: 'My Projects', href: '/student/projects', icon: <FiFolder /> },
     { label: 'Create Project', href: '/student/projects/create', icon: <FiPlus /> },
-    { label: 'Notifications', href: '/student/notifications', icon: <FiBell /> },
+    { label: 'Notifications', href: '/student/notifications', icon: <FiBell />, mobileOnly: true },
     { label: 'Events', href: '/student/events', icon: <FiCalendar />, tooltip: 'Defenses, meetings, and institution events' },
     { label: 'Profile', href: '/student/profile', icon: <FiUser /> },
   ],
   adviser: [
     { label: 'Dashboard', href: '/adviser', icon: <FiHome /> },
     { label: 'My Advisees', href: '/adviser/advisees', icon: <FiUsers /> },
-    { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell />, tooltip: 'Your recent notifications and alerts' },
+    { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell />, tooltip: 'Your recent notifications and alerts', mobileOnly: true },
     // {/* label: 'Projects Overview', href: '/adviser/projects', icon: <FiFolder /> */}
     { label: 'Meeting Schedule', href: '/adviser/meetings', icon: <FiCalendar />, tooltip: 'Adviser meetings with students (one-on-one or group)' },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
@@ -55,7 +56,7 @@ const menuItems: Record<string, MenuItem[]> = {
   coordinator: [
     { label: 'Dashboard', href: '/coordinator', icon: <FiHome /> },
     { label: 'Events', href: '/coordinator/events', icon: <FiCalendar />, tooltip: 'Institution events and defense schedules' },
-    { label: 'Notifications', href: '/coordinator/notifications', icon: <FiBell />, tooltip: 'Defense and schedule notifications' },
+    { label: 'Notifications', href: '/coordinator/notifications', icon: <FiBell />, tooltip: 'Defense and schedule notifications', mobileOnly: true },
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
     { label: 'Rubrics', href: '/coordinator/rubrics', icon: <FiClipboard /> },
@@ -70,69 +71,38 @@ export default function Sidebar({ role }: SidebarProps) {
   const usesPortalSidebar = role === 'coordinator' || role === 'student' || role === 'adviser';
 
   const closeSidebar = () => setOpen(false);
-  const homeHref = `/${role}`;
 
   return (
     <>
       {/* Backdrop - only show on mobile when sidebar is open */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-x-0 top-20 bottom-0 z-20 bg-black/20 backdrop-blur-[1px] lg:hidden"
           onClick={closeSidebar}
         />
       )}
 
-      {/* Sidebar — full-height left rail; coordinator-theme wrapper scopes nav styles to this rail only */}
+      {/* Mobile: fixed drawer under header. Desktop: in-flow column flush under header. */}
       <div
         className={`
-          fixed top-0 left-0 z-50 h-screen w-64
+          fixed top-20 left-0 z-40 h-[calc(100vh-5rem)] w-64
           ${usesPortalSidebar ? 'coordinator-theme' : ''}
           transition-transform duration-300 ease-in-out
-          lg:translate-x-0
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:static lg:top-auto lg:left-auto lg:z-auto lg:h-[calc(100vh-5rem)] lg:w-64 lg:shrink-0 lg:self-stretch lg:translate-x-0
+          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
       <aside
         className={`
-          w-full h-full flex flex-col
+          w-full h-full flex flex-col min-h-full 
           ${usesPortalSidebar ? 'coordinator-sidebar border-r border-[#243456]' : 'bg-white border-r border-neutral-200'}
         `}
       >
-        <div className="flex items-center justify-between gap-2 px-5 py-6 shrink-0">
-          <Link
-            href={homeHref}
-            onClick={closeSidebar}
-            className="flex items-center gap-3.5 min-w-0"
-          >
-            <Image
-              src="/archivum.svg"
-              alt="Archivum"
-              width={52}
-              height={52}
-              className="h-[52px] w-[52px] flex-shrink-0 object-contain"
-              priority
-            />
-            <div className="min-w-0 text-left">
-              <p
-                className={`text-lg font-semibold leading-tight truncate ${
-                  usesPortalSidebar ? 'text-white' : 'text-darkSlateBlue'
-                }`}
-              >
-                Archivum
-              </p>
-              <p
-                className={`text-sm leading-snug truncate ${
-                  usesPortalSidebar ? 'text-white/75' : 'text-neutral-500'
-                }`}
-              >
-                Research Portal
-              </p>
-            </div>
-          </Link>
+        <div className="flex items-center justify-end px-3 py-3 shrink-0 lg:hidden">
           <button
             type="button"
             onClick={closeSidebar}
-            className={`p-2 rounded-lg transition-colors lg:hidden flex-shrink-0 ${
+            className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
               usesPortalSidebar
                 ? 'text-white/70 hover:text-white hover:bg-white/10'
                 : 'text-neutral-400 hover:text-darkSlateBlue hover:bg-neutral-100'
@@ -143,12 +113,12 @@ export default function Sidebar({ role }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex-1 p-3 overflow-y-auto overflow-x-hidden">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-5">
           <ul className="space-y-1">
             {items.map((item) => {
               const isActive = pathname === item.href;
               return (
-                <li key={item.href}>
+                <li key={item.href} className={item.mobileOnly ? 'lg:hidden' : undefined}>
                   <Link
                     href={item.href}
                     onClick={closeSidebar}
