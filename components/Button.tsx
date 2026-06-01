@@ -43,7 +43,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   secondaryBg: 'bg-lightGray text-neutral-900 hover:bg-neutral-300',
   accent: 'bg-oxfordBlue text-white hover:bg-oxfordBlue/90',
   alert: 'bg-archivumRed text-white hover:bg-archivumRed/90',
-  accept: 'bg-malachite text-white hover:bg-malachite/90',
+  accept: 'bg-malachiteDark text-white hover:bg-malachiteDark/90 focus:ring-malachiteDark/30 disabled:bg-malachiteDark/50',
   decline: 'bg-velvetWine text-white hover:bg-velvetWine/90',
 };
 
@@ -79,7 +79,7 @@ export default function Button({
     secondaryBg: 'hover:shadow-[0_4px_12px_rgba(211,211,211,0.4)] active:shadow-[0_2px_8px_rgba(211,211,211,0.5)]',
     accent: 'hover:shadow-[0_4px_12px_rgba(44,62,107,0.2)] active:shadow-[0_2px_8px_rgba(44,62,107,0.3)]',
     alert: 'hover:shadow-[0_4px_12px_rgba(194,58,70,0.2)] active:shadow-[0_2px_8px_rgba(194,58,70,0.3)]',
-    accept: 'hover:shadow-[0_4px_12px_rgba(92,184,92,0.2)] active:shadow-[0_2px_8px_rgba(92,184,92,0.3)]',
+    accept: 'hover:shadow-[0_4px_12px_rgba(76,189,92,0.2)] active:shadow-[0_2px_8px_rgba(76,189,92,0.3)]',
     decline: 'hover:shadow-[0_4px_12px_rgba(155,68,85,0.2)] active:shadow-[0_2px_8px_rgba(155,68,85,0.3)]',
   };
 

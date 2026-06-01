@@ -111,7 +111,7 @@ export default function StudentProjectsPage() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
-                      variant="primary"
+                      variant="accept"
                       size="sm"
                       disabled={respondingId === inv.id}
                       onClick={() => handleRespond(inv.id, true)}
@@ -120,7 +120,7 @@ export default function StudentProjectsPage() {
                       Accept
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="decline"
                       size="sm"
                       disabled={respondingId === inv.id}
                       onClick={() => handleRespond(inv.id, false)}
