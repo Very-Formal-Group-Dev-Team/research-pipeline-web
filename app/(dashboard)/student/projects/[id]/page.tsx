@@ -141,12 +141,20 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatCreatedDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatCreatedTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
     });
   };
 
@@ -321,7 +329,10 @@ export default function ProjectDetailPage() {
               <FiCalendar className="text-2xl text-success-500 mb-2" />
               <CardTitle>Created</CardTitle>
             </CardHeader>
-            <p className="mt-4 text-neutral-700">{formatDate(project.created_at)}</p>
+            <div className="mt-4 flex flex-col gap-1">
+              <span className="created-date text-neutral-700">{formatCreatedDate(project.created_at)}</span>
+              <span className="created-time text-neutral-700 text-md">{formatCreatedTime(project.created_at)}</span>
+            </div>
           </Card>
         </div>
 

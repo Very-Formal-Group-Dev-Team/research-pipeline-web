@@ -9,36 +9,59 @@ import UserSearchModal from '@/components/UserSearchModal';
 import { FiUpload, FiX } from 'react-icons/fi';
 import { FaPlusCircle, FaRegTrashAlt } from 'react-icons/fa';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
-import { createProject } from '@/lib/api/projects';
+import { createProject, inviteToProject } from '@/lib/api/projects';
 import type { SearchUserResult } from '@/lib/api/users';
 import { createPortal } from 'react-dom';
+
+const CONTRIBUTOR_ROLE_OPTIONS = [
+  { value: 'Author', label: 'Author' },
+  { value: 'Editor', label: 'Editor' },
+  { value: 'Compiler', label: 'Compiler' },
+  { value: 'Translator', label: 'Translator' },
+];
+
+const ADVISER_ROLE_OPTIONS = [
+  { value: 'Adviser', label: 'Adviser' },
+  { value: 'Co-adviser', label: 'Co-adviser' },
+];
+
+interface InvitedContributor {
+  user: SearchUserResult;
+  contributorRole: string;
+}
+
+interface InvitedAdviser {
+  user: SearchUserResult;
+  adviserRole: string;
+}
 
 export default function CreateProjectPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user, handleLogout } = useDashboardUser('Student');
+  const { user, profile, handleLogout } = useDashboardUser('Student');
 
   // Form state
   const [title, setTitle] = useState('');
-  const [contributorRole, setContributorRole] = useState('');
+  const [creatorRole, setCreatorRole] = useState('Author');
   const [program, setProgram] = useState('');
   const [course, setCourse] = useState('');
   const [section, setSection] = useState('');
-  const [adviserRole, setAdviserRole] = useState('');
   const [researchType, setResearchType] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isContributorModalOpen, setIsContributorModalOpen] = useState(false);
   const [isAdviserModalOpen, setIsAdviserModalOpen] = useState(false);
 
-  const [contributors, setContributors] = useState<SearchUserResult[]>([]);
-  const [advisers, setAdvisers] = useState<SearchUserResult[]>([]);
+  const [invitedContributors, setInvitedContributors] = useState<InvitedContributor[]>([]);
+  const [invitedAdvisers, setInvitedAdvisers] = useState<InvitedAdviser[]>([]);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   // Error state
   const [errors, setErrors] = useState<{
     title?: string;
     researchType?: string;
+    contributors?: string;
+    advisers?: string;
     file?: string;
     general?: string;
   }>({});
@@ -55,25 +78,14 @@ export default function CreateProjectPage() {
         course ||
         section ||
         selectedFile ||
-        contributors.length > 1 ||
-        advisers.length > 0
+        invitedContributors.length > 0 ||
+        invitedAdvisers.length > 0
       ) {
         setIsDirty(true);
       } else {
         setIsDirty(false);
       }
-    }, [title, researchType, program, course, section, selectedFile, contributors, advisers]);
-
-  useEffect(() => {
-    if (user.name && !contributors.find((c) => c.full_name === user.name)) {
-      setContributors([{
-        id: '',
-        email: '',
-        full_name: user.name,
-        role: 'student',
-      }]);
-    }
-  }, []);
+    }, [title, researchType, program, course, section, selectedFile, invitedContributors, invitedAdvisers]);
 
 
   const validateFile = (file: File): string | null => {
@@ -147,25 +159,37 @@ export default function CreateProjectPage() {
   };
 
   const removeContributor = (index: number) => {
-    if (contributors.length > 1) {
-      setContributors(contributors.filter((_, i) => i !== index));
-    } 
-  }
+    setInvitedContributors(invitedContributors.filter((_, i) => i !== index));
+  };
 
   const removeAdviser = (index: number) => {
-    setAdvisers(advisers.filter((_, i) => i !== index));
-  }
+    setInvitedAdvisers(invitedAdvisers.filter((_, i) => i !== index));
+  };
 
   const handleAddContributor = (user: SearchUserResult) => {
-    if (!contributors.find((c) => c.id === user.id)) {
-      setContributors([...contributors, user]);
+    if (!user.id || user.id === profile?.id) return;
+    if (!invitedContributors.find((c) => c.user.id === user.id)) {
+      setInvitedContributors([...invitedContributors, { user, contributorRole: '' }]);
     }
   };
 
   const handleAddAdviser = (user: SearchUserResult) => {
-    if (!advisers.find((a) => a.id === user.id)) {
-      setAdvisers([...advisers, user]);
+    if (!user.id || user.id === profile?.id) return;
+    if (!invitedAdvisers.find((a) => a.user.id === user.id)) {
+      setInvitedAdvisers([...invitedAdvisers, { user, adviserRole: '' }]);
     }
+  };
+
+  const updateContributorRole = (index: number, contributorRole: string) => {
+    setInvitedContributors((prev) =>
+      prev.map((entry, i) => (i === index ? { ...entry, contributorRole } : entry)),
+    );
+  };
+
+  const updateAdviserRole = (index: number, adviserRole: string) => {
+    setInvitedAdvisers((prev) =>
+      prev.map((entry, i) => (i === index ? { ...entry, adviserRole } : entry)),
+    );
   };
 
   const validateForm = (): boolean => {
@@ -179,9 +203,51 @@ export default function CreateProjectPage() {
       newErrors.researchType = 'Research type is required';
     }
 
+    if (!creatorRole) {
+      newErrors.contributors = 'Select your role on this project';
+    }
+
+    const contributorMissingRole = invitedContributors.find((c) => !c.contributorRole);
+    if (contributorMissingRole) {
+      newErrors.contributors = 'Select a role for each invited contributor';
+    }
+
+    const adviserMissingRole = invitedAdvisers.find((a) => !a.adviserRole);
+    if (adviserMissingRole) {
+      newErrors.advisers = 'Select a role for each invited adviser';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  async function sendInvitationsAfterCreate(projectId: string) {
+    const failures: string[] = [];
+
+    for (const { user, contributorRole } of invitedContributors) {
+      const res = await inviteToProject(projectId, {
+        userId: user.id,
+        role: 'member',
+        contributorRole,
+      });
+      if (res.error) {
+        failures.push(`${user.full_name}: ${res.error}`);
+      }
+    }
+
+    for (const { user, adviserRole } of invitedAdvisers) {
+      const res = await inviteToProject(projectId, {
+        userId: user.id,
+        role: 'adviser',
+        contributorRole: adviserRole,
+      });
+      if (res.error) {
+        failures.push(`${user.full_name}: ${res.error}`);
+      }
+    }
+
+    return failures;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +275,17 @@ export default function CreateProjectPage() {
         return;
       }
 
-      // Redirect to the newly created project detail page
+      const inviteFailures = await sendInvitationsAfterCreate(res.data.projectId);
+
+      if (inviteFailures.length > 0) {
+        setErrors({
+          general: `Project created, but some invitations failed: ${inviteFailures.join('; ')}. You can retry from the project page.`,
+        });
+        setIsSubmitting(false);
+        router.push(`/student/projects/${res.data.projectId}`);
+        return;
+      }
+
       router.push(`/student/projects/${res.data.projectId}`);
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : 'An unexpected error occurred' });
@@ -256,43 +332,66 @@ export default function CreateProjectPage() {
               <label className="block text-sm font-medium text-neutral-700 mb-2">
                 Contributors and Roles <span className="text-error-500">*</span>
               </label>
-              <ol>
-                {contributors.map((contributor, index) => (
-                  <li key={contributor.id || index} className="flex justify-between mb-2">
-                  <div className="flex gap-4 items-center">
-                    <div className="w-40">
-                      <Select 
-                        label=""
-                        placeholder="Select Role"
-                        value={contributorRole}
-                        onChange={(e) => setContributorRole(e.target.value)}
-                        options={[
-                          { value: 'Author', label: 'Author'},
-                          { value: 'Editor', label: 'Editor'},
-                          { value: 'Compiler', label: 'Compiler'},
-                          { value: 'Translator', label: 'Translator'}
-                        ]}
-                      />
+              {errors.contributors && (
+                <p className="text-sm text-error-600 mb-2">{errors.contributors}</p>
+              )}
+              <ol className="space-y-2">
+                {user.name && (
+                  <li className="flex justify-between mb-2">
+                    <div className="flex gap-4 items-center flex-1 min-w-0">
+                      <div className="w-40 flex-shrink-0">
+                        <Select
+                          label=""
+                          placeholder="Select Role"
+                          value={creatorRole}
+                          onChange={(e) => setCreatorRole(e.target.value)}
+                          options={CONTRIBUTOR_ROLE_OPTIONS}
+                          required
+                        />
+                      </div>
+                      <Avatar src={profile?.avatar} name={user.name} size="sm" />
+                      <div className="min-w-0">
+                        <p className="text-base font-medium">{user.name}</p>
+                        {user.email && (
+                          <p className="text-xs text-neutral-500">{user.email}</p>
+                        )}
+                        <p className="text-xs text-neutral-400">You (project creator)</p>
+                      </div>
                     </div>
-                    <Avatar src={contributor.avatar_url} name={contributor.full_name} size="sm" />
-                    <div>
-                      <p className="text-base font-medium">{contributor.full_name}</p>
-                      {contributor.email && (
-                        <p className="text-xs text-neutral-500">{contributor.email}</p>
-                      )}
+                  </li>
+                )}
+                {invitedContributors.map(({ user: contributor, contributorRole }, index) => (
+                  <li key={contributor.id} className="flex justify-between mb-2 gap-2">
+                    <div className="flex gap-4 items-center flex-1 min-w-0">
+                      <div className="w-40 flex-shrink-0">
+                        <Select
+                          label=""
+                          placeholder="Select Role"
+                          value={contributorRole}
+                          onChange={(e) => updateContributorRole(index, e.target.value)}
+                          options={CONTRIBUTOR_ROLE_OPTIONS}
+                          required
+                        />
+                      </div>
+                      <Avatar src={contributor.avatar_url} name={contributor.full_name} size="sm" />
+                      <div className="min-w-0">
+                        <p className="text-base font-medium">{contributor.full_name}</p>
+                        {contributor.email && (
+                          <p className="text-xs text-neutral-500">{contributor.email}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <button type="button" onClick={() => removeContributor(index)}>
-                    <FaRegTrashAlt className="text-gray-500 text-xl"/>
-                  </button>
-                </li>
+                    <button type="button" onClick={() => removeContributor(index)} aria-label="Remove contributor">
+                      <FaRegTrashAlt className="text-gray-500 text-xl" />
+                    </button>
+                  </li>
                 ))}
               </ol>
               <div className="flex justify-center mt-1">
                 <Button
                   type="button"
-                  size='sm'
-                  leftIcon=<FaPlusCircle/>
+                  size="sm"
+                  leftIcon={<FaPlusCircle />}
                   variant="ghost"
                   onClick={() => setIsContributorModalOpen(true)}
                   disabled={isSubmitting}
@@ -330,42 +429,43 @@ export default function CreateProjectPage() {
             {/* Adviser and co-adviser (if any) */}
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Adviser and co-adviser (if any) <span className="text-error-500">*</span>
+                Adviser and co-adviser (if any)
               </label>
-              <ol>
-                {advisers.map((adviser, index) => (
-                  <li key={adviser.id || index} className="flex justify-between gap-4 mb-2">
-                    <div className="flex gap-4 items-center">
-                      <div className="w-40">
-                        <Select 
+              {errors.advisers && (
+                <p className="text-sm text-error-600 mb-2">{errors.advisers}</p>
+              )}
+              <ol className="space-y-2">
+                {invitedAdvisers.map(({ user: adviser, adviserRole }, index) => (
+                  <li key={adviser.id} className="flex justify-between gap-4 mb-2">
+                    <div className="flex gap-4 items-center flex-1 min-w-0">
+                      <div className="w-40 flex-shrink-0">
+                        <Select
                           label=""
                           placeholder="Select Role"
                           value={adviserRole}
-                          onChange={(e) => setAdviserRole(e.target.value)}
-                          options={[
-                            { value: 'Adviser', label: 'Adviser'},
-                            { value: 'Co-adviser', label: 'Co-adviser'}
-                          ]}
+                          onChange={(e) => updateAdviserRole(index, e.target.value)}
+                          options={ADVISER_ROLE_OPTIONS}
+                          required
                         />
                       </div>
                       <Avatar src={adviser.avatar_url} name={adviser.full_name} size="sm" />
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-base font-medium">{adviser.full_name}</p>
                         {adviser.email && (
                           <p className="text-xs text-neutral-500">{adviser.email}</p>
                         )}
                       </div>
                     </div>
-                    <button type="button" onClick={() => removeAdviser(index)}>
-                      <FaRegTrashAlt className="text-gray-500 text-xl"/>
+                    <button type="button" onClick={() => removeAdviser(index)} aria-label="Remove adviser">
+                      <FaRegTrashAlt className="text-gray-500 text-xl" />
                     </button>
                   </li>
                 ))}
               </ol>
               <Button
-                type="button" 
-                size='sm'
-                leftIcon=<FaPlusCircle/>
+                type="button"
+                size="sm"
+                leftIcon={<FaPlusCircle />}
                 variant="ghost"
                 onClick={() => setIsAdviserModalOpen(true)}
                 disabled={isSubmitting}
@@ -537,7 +637,11 @@ export default function CreateProjectPage() {
           onSelect={handleAddContributor}
           role="student"
           title="Invite Contributor"
-          excludeIds={contributors.map((c) => c.id).filter(Boolean)}
+          excludeIds={[
+            ...(profile?.id ? [profile.id] : []),
+            ...invitedContributors.map((c) => c.user.id),
+            ...invitedAdvisers.map((a) => a.user.id),
+          ]}
         />
 
         <UserSearchModal
@@ -546,7 +650,11 @@ export default function CreateProjectPage() {
           onSelect={handleAddAdviser}
           role="adviser"
           title="Invite Adviser"
-          excludeIds={advisers.map((a) => a.id).filter(Boolean)}
+          excludeIds={[
+            ...(profile?.id ? [profile.id] : []),
+            ...invitedContributors.map((c) => c.user.id),
+            ...invitedAdvisers.map((a) => a.user.id),
+          ]}
         />
       </div>
     </DashboardLayout>
