@@ -6,6 +6,7 @@ import { FiCheck, FiMail, FiX } from 'react-icons/fi';
 
 import Button from '@/components/Button';
 import Card from '@/components/ui/Card';
+import CardIconHeader from '@/components/ui/CardIconHeader';
 import {
   getMyInvitations,
   respondToInvitation,
@@ -63,19 +64,17 @@ export default function PendingInvitationsCard() {
 
   return (
     <Card className="flex flex-col min-h-0">
-      <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-        <div className="w-12 h-12 bg-archivumRed/10 rounded-lg flex items-center justify-center">
-          <FiMail className="w-6 h-6 text-archivumRed" aria-hidden />
-        </div>
-        <div className="min-w-0">
-          <h2 className="font-serif text-lg font-semibold text-eerieBlack">Pending Invitations</h2>
-          {!loading && invitations.length > 0 && (
-            <p className="font-sans text-xs text-neutral-500 mt-0.5">
-              {invitations.length} pending {invitations.length === 1 ? 'invitation' : 'invitations'}
-            </p>
-          )}
-        </div>
-      </div>
+      <CardIconHeader
+        className="mb-4 flex-shrink-0"
+        title="Pending Invitations"
+        description={
+          !loading && invitations.length > 0
+            ? `${invitations.length} pending ${invitations.length === 1 ? 'invitation' : 'invitations'}`
+            : undefined
+        }
+        iconClassName="text-archivumRed"
+        icon={<FiMail className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+      />
 
       {loading ? (
         <p className="font-sans text-sm text-neutral-500 py-4">Loading invitations...</p>
