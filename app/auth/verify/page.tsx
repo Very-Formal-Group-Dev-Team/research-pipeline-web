@@ -47,8 +47,8 @@ function VerifyEmailContent() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-neutral-50">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-lightGray text-center space-y-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-crimsonRed rounded-xl mb-2">
-          <svg className="w-6 h-6 text-ivory" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="inline-flex items-center justify-center w-12 h-12 bg-archivumRed rounded-xl mb-2">
+          <svg className="w-6 h-6 text-snow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
           </svg>
         </div>
@@ -56,7 +56,7 @@ function VerifyEmailContent() {
         {status === 'loading' && (
           <>
             <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crimsonRed" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-archivumRed" />
             </div>
             <p className="text-neutral-600">Verifying your email...</p>
           </>
@@ -69,7 +69,7 @@ function VerifyEmailContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-darkSlateBlue">Email Verified!</h2>
+            <h2 className="text-2xl font-bold text-eerieBlack">Email Verified!</h2>
             <p className="text-neutral-600">{message}</p>
             <p className="text-sm text-neutral-400">Redirecting to complete your profile...</p>
           </>
@@ -78,15 +78,15 @@ function VerifyEmailContent() {
         {status === 'error' && (
           <>
             <div className="inline-flex items-center justify-center w-14 h-14 bg-red-100 rounded-full">
-              <svg className="w-7 h-7 text-crimsonRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-7 h-7 text-archivumRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-darkSlateBlue">Verification Failed</h2>
+            <h2 className="text-2xl font-bold text-eerieBlack">Verification Failed</h2>
             <p className="text-neutral-600">{message}</p>
             <button
               onClick={() => router.push('/register')}
-              className="mt-4 inline-block px-6 py-2.5 bg-crimsonRed text-white rounded-lg font-medium hover:bg-crimsonRed/90 transition-colors"
+              className="mt-4 inline-block px-6 py-2.5 bg-archivumRed text-white rounded-lg font-medium hover:bg-archivumRed/90 transition-colors"
             >
               Back to Register
             </button>
@@ -102,7 +102,7 @@ export default function VerifyEmailPage() {
     <Suspense
       fallback={
         <div className="min-h-screen w-full flex items-center justify-center p-4 bg-neutral-50">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-crimsonRed" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-archivumRed" />
         </div>
       }
     >

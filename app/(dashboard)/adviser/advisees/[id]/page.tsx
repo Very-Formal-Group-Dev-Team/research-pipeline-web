@@ -172,7 +172,7 @@ export default function AdviserProjectDetailPage() {
                       transition-all duration-200
                       focus:outline-none hover:shadow-[0_4px_12px_rgba(229,231,235,0.4)] active:shadow-[0_2px_8px_rgba(229,231,235,0.5)]
                       disabled:cursor-not-allowed disabled:opacity-60
-                      text-darkSlateBlue hover:bg-neutral-100 focus:ring-neutral-300 disabled:text-neutral-400
+                      text-oxfordBlue hover:bg-neutral-100 focus:ring-neutral-300 disabled:text-neutral-400
                       py-2.5 text-base"
             >
               <FiArrowLeft /> Back

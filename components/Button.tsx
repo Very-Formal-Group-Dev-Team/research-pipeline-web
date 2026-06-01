@@ -30,21 +30,21 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-darkSlateBlue text-white hover:bg-darkSlateBlue/90 focus:ring-darkSlateBlue/30 disabled:bg-darkSlateBlue/50',
+  primary: 'bg-oxfordBlue text-white hover:bg-oxfordBlue/90 focus:ring-oxfordBlue/30 disabled:bg-oxfordBlue/50',
   secondary: 'bg-neutral-200 text-neutral-900 hover:bg-neutral-300 focus:ring-neutral-300 disabled:bg-neutral-100',
-  outline: 'border-2 border-darkSlateBlue text-darkSlateBlue hover:bg-darkSlateBlue/5 focus:ring-darkSlateBlue/30 disabled:border-neutral-300 disabled:text-neutral-400',
-  ghost: 'text-darkSlateBlue hover:bg-neutral-100 focus:ring-neutral-300 disabled:text-neutral-400',
-  success: 'bg-mutedGreen text-white hover:bg-mutedGreen/90 focus:ring-mutedGreen/30 disabled:bg-mutedGreen/50',
-  error: 'bg-crimsonRed text-white hover:bg-crimsonRed/90 focus:ring-crimsonRed/30 disabled:bg-crimsonRed/50',
+  outline: 'border-2 border-oxfordBlue text-oxfordBlue hover:bg-oxfordBlue/5 focus:ring-oxfordBlue/30 disabled:border-neutral-300 disabled:text-neutral-400',
+  ghost: 'text-oxfordBlue hover:bg-neutral-100 focus:ring-neutral-300 disabled:text-neutral-400',
+  success: 'bg-deepSeaGreen text-white hover:bg-deepSeaGreen/90 focus:ring-deepSeaGreen/30 disabled:bg-deepSeaGreen/50',
+  error: 'bg-archivumRed text-white hover:bg-archivumRed/90 focus:ring-archivumRed/30 disabled:bg-archivumRed/50',
   warning: 'bg-warning-500 text-white hover:bg-warning-600 focus:ring-warning-300 disabled:bg-warning-300',
   // Legacy variants
-  primaryBg: 'bg-ivory text-darkSlateBlue hover:bg-neutral-100',
-  primaryTxt: 'bg-darkSlateBlue text-white hover:bg-darkSlateBlue/90',
+  primaryBg: 'bg-snow text-eerieBlack hover:bg-neutral-100',
+  primaryTxt: 'bg-oxfordBlue text-white hover:bg-oxfordBlue/90',
   secondaryBg: 'bg-lightGray text-neutral-900 hover:bg-neutral-300',
-  accent: 'bg-skyBlue text-white hover:bg-skyBlue/90',
-  alert: 'bg-crimsonRed text-white hover:bg-crimsonRed/90',
+  accent: 'bg-oxfordBlue text-white hover:bg-oxfordBlue/90',
+  alert: 'bg-archivumRed text-white hover:bg-archivumRed/90',
   accept: 'bg-malachite text-white hover:bg-malachite/90',
-  decline: 'bg-frenchRose text-white hover:bg-frenchRose/90',
+  decline: 'bg-velvetWine text-white hover:bg-velvetWine/90',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -67,20 +67,20 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const shadowColor = {
-    primary: 'hover:shadow-[0_4px_12px_rgba(25,55,109,0.2)] active:shadow-[0_2px_8px_rgba(25,55,109,0.3)]',
+    primary: 'hover:shadow-[0_4px_12px_rgba(44,62,107,0.2)] active:shadow-[0_2px_8px_rgba(44,62,107,0.3)]',
     secondary: 'hover:shadow-[0_4px_12px_rgba(229,231,235,0.4)] active:shadow-[0_2px_8px_rgba(229,231,235,0.5)]',
-    outline: 'hover:shadow-[0_4px_12px_rgba(25,55,109,0.2)] active:shadow-[0_2px_8px_rgba(25,55,109,0.3)]',
+    outline: 'hover:shadow-[0_4px_12px_rgba(44,62,107,0.2)] active:shadow-[0_2px_8px_rgba(44,62,107,0.3)]',
     ghost: 'hover:shadow-[0_4px_12px_rgba(229,231,235,0.4)] active:shadow-[0_2px_8px_rgba(229,231,235,0.5)]',
-    success: 'hover:shadow-[0_4px_12px_rgba(76,175,80,0.2)] active:shadow-[0_2px_8px_rgba(76,175,80,0.3)]',
-    error: 'hover:shadow-[0_4px_12px_rgba(220,53,69,0.2)] active:shadow-[0_2px_8px_rgba(220,53,69,0.3)]',
+    success: 'hover:shadow-[0_4px_12px_rgba(73,118,108,0.2)] active:shadow-[0_2px_8px_rgba(73,118,108,0.3)]',
+    error: 'hover:shadow-[0_4px_12px_rgba(194,58,70,0.2)] active:shadow-[0_2px_8px_rgba(194,58,70,0.3)]',
     warning: 'hover:shadow-[0_4px_12px_rgba(255,193,7,0.2)] active:shadow-[0_2px_8px_rgba(255,193,7,0.3)]',
-    primaryBg: 'hover:shadow-[0_4px_12px_rgba(245,245,220,0.4)] active:shadow-[0_2px_8px_rgba(245,245,220,0.5)]',
-    primaryTxt: 'hover:shadow-[0_4px_12px_rgba(25,55,109,0.2)] active:shadow-[0_2px_8px_rgba(25,55,109,0.3)]',
+    primaryBg: 'hover:shadow-[0_4px_12px_rgba(250,248,248,0.4)] active:shadow-[0_2px_8px_rgba(250,248,248,0.5)]',
+    primaryTxt: 'hover:shadow-[0_4px_12px_rgba(44,62,107,0.2)] active:shadow-[0_2px_8px_rgba(44,62,107,0.3)]',
     secondaryBg: 'hover:shadow-[0_4px_12px_rgba(211,211,211,0.4)] active:shadow-[0_2px_8px_rgba(211,211,211,0.5)]',
-    accent: 'hover:shadow-[0_4px_12px_rgba(135,206,235,0.2)] active:shadow-[0_2px_8px_rgba(135,206,235,0.3)]',
-    alert: 'hover:shadow-[0_4px_12px_rgba(220,53,69,0.2)] active:shadow-[0_2px_8px_rgba(220,53,69,0.3)]',
+    accent: 'hover:shadow-[0_4px_12px_rgba(44,62,107,0.2)] active:shadow-[0_2px_8px_rgba(44,62,107,0.3)]',
+    alert: 'hover:shadow-[0_4px_12px_rgba(194,58,70,0.2)] active:shadow-[0_2px_8px_rgba(194,58,70,0.3)]',
     accept: 'hover:shadow-[0_4px_12px_rgba(92,184,92,0.2)] active:shadow-[0_2px_8px_rgba(92,184,92,0.3)]',
-    decline: 'hover:shadow-[0_4px_12px_rgba(220,53,69,0.2)] active:shadow-[0_2px_8px_rgba(220,53,69,0.3)]',
+    decline: 'hover:shadow-[0_4px_12px_rgba(155,68,85,0.2)] active:shadow-[0_2px_8px_rgba(155,68,85,0.3)]',
   };
 
   return (

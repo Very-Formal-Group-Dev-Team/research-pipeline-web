@@ -64,11 +64,11 @@ export default function PendingInvitationsCard() {
   return (
     <Card className="flex flex-col min-h-0">
       <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-        <div className="w-12 h-12 bg-crimsonRed/10 rounded-lg flex items-center justify-center">
-          <FiMail className="w-6 h-6 text-crimsonRed" aria-hidden />
+        <div className="w-12 h-12 bg-archivumRed/10 rounded-lg flex items-center justify-center">
+          <FiMail className="w-6 h-6 text-archivumRed" aria-hidden />
         </div>
         <div className="min-w-0">
-          <h2 className="font-serif text-lg font-semibold text-darkSlateBlue">Pending Invitations</h2>
+          <h2 className="font-serif text-lg font-semibold text-eerieBlack">Pending Invitations</h2>
           {!loading && invitations.length > 0 && (
             <p className="font-sans text-xs text-neutral-500 mt-0.5">
               {invitations.length} pending {invitations.length === 1 ? 'invitation' : 'invitations'}
@@ -80,7 +80,7 @@ export default function PendingInvitationsCard() {
       {loading ? (
         <p className="font-sans text-sm text-neutral-500 py-4">Loading invitations...</p>
       ) : error ? (
-        <p className="font-sans text-sm text-crimsonRed py-4">{error}</p>
+        <p className="font-sans text-sm text-archivumRed py-4">{error}</p>
       ) : invitations.length === 0 ? (
         <p className="font-sans text-sm text-neutral-500 py-4">
           You have no pending project invitations.
@@ -90,11 +90,11 @@ export default function PendingInvitationsCard() {
           {invitations.map((invitation) => (
             <div
               key={invitation.id}
-              className="flex justify-between py-4 px-6 border border-neutral-200 rounded-lg hover:border-skyBlue/50 hover:bg-skyBlue/5 transition-all"
+              className="flex justify-between py-4 px-6 border border-neutral-200 rounded-lg hover:border-oxfordBlue/40 hover:bg-oxfordBlue/5 transition-all"
             >
               
               <div className="flex flex-col justify-around min-w-0">
-                <h3 className="font-semibold text-darkSlateBlue text-md mb-0.5">
+                <h3 className="font-semibold text-eerieBlack text-md mb-0.5">
                   {invitation.project_title}
                 </h3>
                 <div>

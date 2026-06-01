@@ -51,7 +51,7 @@ function AuthContinueContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-crimsonRed" />
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-archivumRed" />
     </div>
   );
 }
@@ -61,7 +61,7 @@ export default function AuthContinue() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-crimsonRed" />
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-archivumRed" />
         </div>
       }
     >
