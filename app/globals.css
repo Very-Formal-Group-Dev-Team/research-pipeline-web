@@ -69,6 +69,29 @@
   }
 }
 
+/* Tighter corners on login/register — scoped via .auth-ui on (auth) layout */
+@layer utilities {
+  .auth-ui .rounded-xl {
+    border-radius: 0.25rem !important;
+  }
+
+  .auth-ui .rounded-lg {
+    border-radius: 0.1875rem !important;
+  }
+
+  .auth-ui .rounded-md {
+    border-radius: 0.125rem !important;
+  }
+
+  .auth-ui .rounded-sm {
+    border-radius: 0.125rem !important;
+  }
+
+  .auth-ui .rounded {
+    border-radius: 0.125rem !important;
+  }
+}
+
 /* Tighter corners in dashboard/app UI — landing page (/) is not wrapped in .dashboard-ui */
 @layer utilities {
   .dashboard-ui .rounded-3xl {

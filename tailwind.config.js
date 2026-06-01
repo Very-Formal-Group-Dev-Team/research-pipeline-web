@@ -46,6 +46,7 @@ module.exports = {
         deepSeaGreen : '#49766C' ,
         frenchRose : '#F06880' ,
         malachite : '#5ED86D' ,
+        malachiteDark: '#4CBD5C',
         /** Between legacy crimsonRed (#EC1E24) and velvetWine (#9B4455) — UI accent red */
         archivumRed: '#C23A46',
 
