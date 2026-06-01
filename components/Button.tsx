@@ -8,6 +8,8 @@ export type ButtonVariant =
   | 'success' 
   | 'error' 
   | 'warning'
+  | 'accept'
+  | 'decline'
   // Legacy variants for backward compatibility
   | 'primaryBg' 
   | 'primaryTxt' 
@@ -41,6 +43,8 @@ const variantStyles: Record<ButtonVariant, string> = {
   secondaryBg: 'bg-lightGray text-neutral-900 hover:bg-neutral-300',
   accent: 'bg-skyBlue text-white hover:bg-skyBlue/90',
   alert: 'bg-crimsonRed text-white hover:bg-crimsonRed/90',
+  accept: 'bg-malachite text-white hover:bg-malachite/90',
+  decline: 'bg-frenchRose text-white hover:bg-frenchRose/90',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -75,6 +79,8 @@ export default function Button({
     secondaryBg: 'hover:shadow-[0_4px_12px_rgba(211,211,211,0.4)] active:shadow-[0_2px_8px_rgba(211,211,211,0.5)]',
     accent: 'hover:shadow-[0_4px_12px_rgba(135,206,235,0.2)] active:shadow-[0_2px_8px_rgba(135,206,235,0.3)]',
     alert: 'hover:shadow-[0_4px_12px_rgba(220,53,69,0.2)] active:shadow-[0_2px_8px_rgba(220,53,69,0.3)]',
+    accept: 'hover:shadow-[0_4px_12px_rgba(92,184,92,0.2)] active:shadow-[0_2px_8px_rgba(92,184,92,0.3)]',
+    decline: 'hover:shadow-[0_4px_12px_rgba(220,53,69,0.2)] active:shadow-[0_2px_8px_rgba(220,53,69,0.3)]',
   };
 
   return (

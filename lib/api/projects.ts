@@ -38,6 +38,12 @@ export interface ProjectMember {
   } | null;
 }
 
+export interface CreateProjectInvite {
+  userId: string;
+  role: 'member' | 'adviser';
+  contributorRole?: string;
+}
+
 export interface CreateProjectPayload {
   title: string;
   researchType: string;
@@ -47,6 +53,7 @@ export interface CreateProjectPayload {
   course?: string;
   section?: string;
   file?: File | null;
+  invites?: CreateProjectInvite[];
 }
 
 export interface JoinProjectPayload {
@@ -64,6 +71,7 @@ export interface Invitation {
   id: string;
   project_id: string;
   role: string;
+  contributor_role?: string | null;
   status: string;
   invited_at: string;
   project_title: string;
@@ -74,7 +82,8 @@ export interface Invitation {
 
 export interface InvitePayload {
   userId: string;
-  role?: string;
+  role?: 'member' | 'adviser';
+  contributorRole?: string;
 }
 
 export interface ScheduleDefensePayload {
@@ -161,8 +170,14 @@ export async function createProject(payload: CreateProjectPayload) {
   if (payload.course) formData.append('course', payload.course);
   if (payload.section) formData.append('section', payload.section);
   if (payload.file) formData.append('file', payload.file);
+  if (payload.invites?.length) {
+    formData.append('invites', JSON.stringify(payload.invites));
+  }
 
-  return post<{ projectId: string; projectCode: string }>('/projects', formData);
+  return post<{ projectId: string; projectCode: string; inviteErrors?: { userId: string; error: string }[] }>(
+    '/projects',
+    formData,
+  );
 }
 
 /** Join a project using a project code. */
