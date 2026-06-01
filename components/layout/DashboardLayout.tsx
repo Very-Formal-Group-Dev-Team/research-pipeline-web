@@ -30,11 +30,11 @@ export default function DashboardLayout({ children, role, user, onLogout }: Dash
       >
         <Header user={user} onLogout={onLogout} />
 
-        <div className="flex flex-1 min-h-0 items-stretch overflow-hidden">
+        <div className="flex flex-1 items-stretch">
           <Sidebar role={role} />
 
-          <div className="flex min-w-0 flex-1 flex-col min-h-0">
-            <main className="flex flex-1 flex-col min-h-0 overflow-y-auto coordinator-main-bg">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <main className="flex flex-1 flex-col coordinator-main-bg">
               <div className="flex-1 px-6 pb-6 pt-10">
                 <div className="max-w-7xl mx-auto">
                   {children}

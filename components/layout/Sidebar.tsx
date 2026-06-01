@@ -82,13 +82,13 @@ export default function Sidebar({ role }: SidebarProps) {
         />
       )}
 
-      {/* Mobile: fixed drawer. Desktop: full-height column under header (main scrolls separately). */}
+      {/* Mobile: fixed drawer. Desktop: stretches with page content (min. viewport below header). */}
       <div
         className={`
           fixed top-20 bottom-0 left-0 z-40 flex w-64 shrink-0 flex-col
           transition-transform duration-300 ease-in-out
           lg:relative lg:top-auto lg:left-auto lg:z-auto
-          lg:h-[calc(100vh-5rem)] lg:min-h-[calc(100vh-5rem)]
+          lg:h-auto lg:min-h-[calc(100vh-5rem)] lg:self-stretch
           lg:translate-x-0
           ${usesPortalSidebar ? 'coordinator-theme bg-deepSpaceBlue' : 'bg-white'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
