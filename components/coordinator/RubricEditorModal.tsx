@@ -282,15 +282,14 @@ export default function RubricEditorModal({
                           />
                         </td>
                         <td className="px-2 py-1.5 md:px-3 md:py-2">
-                          <input
-                            type="text"
+                          <textarea
                             value={row.description}
                             onChange={(e) => updateRow(row.key, 'description', e.target.value)}
-                            className={rubricCriteriaInputClassName}
+                            className={`${rubricCriteriaInputClassName} resize-none h-full`}
                             placeholder="Optional"
                           />
                         </td>
-                        <td className="w-[4.5rem] px-2 py-1.5 md:px-3 md:py-2">
+                        <td className="w-[4.5rem] px-2 py-1.5 md:px-2 md:py-2">
                           <input
                             type="number"
                             min={0}
@@ -302,7 +301,7 @@ export default function RubricEditorModal({
                             placeholder="0"
                           />
                         </td>
-                        <td className="px-2 py-1.5 md:px-3 md:py-2 text-center">
+                        <td className="px-2 py-1.5 md:px-1 md:py-2 text-center">
                           <button
                             type="button"
                             onClick={() => removeRow(row.key)}

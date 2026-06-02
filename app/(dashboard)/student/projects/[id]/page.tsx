@@ -295,9 +295,6 @@ export default function ProjectDetailPage() {
                 {project.status}
               </Badge>
             </div>
-            <p className="text-neutral-600 line-clamp-3">
-              {headerSubtitle || 'No description provided'}
-            </p>
           </div>
           <Button
             variant="outline"
@@ -408,12 +405,12 @@ export default function ProjectDetailPage() {
 
           <div>
             <textarea
-              className={`${formTextareaResponsiveClassName} focus:ring-2 focus:ring-primary-500 ${
-                abstractError ? 'border-error-500' : ''
-              }`}
               placeholder="Write a concise abstract of your project"
               rows={6}
               value={abstractInput}
+              className={`${formTextareaResponsiveClassName} resize-none h-full focus:ring-2 focus:ring-primary-500 ${
+                abstractError ? 'border-error-500' : ''
+              }`}
               onChange={(e) => setAbstractInput(e.target.value)}
             />
 
@@ -422,193 +419,6 @@ export default function ProjectDetailPage() {
             )}
           </div>
         </Card>
-
-        {/* Keywords */}
-        <Card>
-          <CardHeader>
-            <div className="flex w-full flex-wrap items-start justify-between gap-3">
-              <div>
-                <CardTitle>Keywords</CardTitle>
-                <CardDescription>Extract, edit, and cross-reference related studies</CardDescription>
-              </div>
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  disabled={findingRelated}
-                  onClick={handleFindRelatedStudies}
-                >
-                  {findingRelated ? 'Running keyword model...' : 'Set Keywords'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={clearKeywords}
-                  disabled={savingKeywords}
-                >
-                  Clear
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={commitKeywords}
-                  disabled={savingKeywords}
-                >
-                  {savingKeywords ? 'Saving...' : 'Commit'}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              type="text"
-              value={keywordInput}
-              onChange={(e) => setKeywordInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addKeywordFromInput();
-                }
-              }}
-              placeholder="Type keyword then press Enter"
-              className={`${formControlResponsiveClassName} focus:ring-2 focus:ring-primary-400`}
-            />
-          </div>
-
-          {editableKeywords.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {editableKeywords.map((keyword, idx) => (
-                <span
-                  key={`${keyword}-${idx}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-md text-neutral-800"
-                >
-                  {keyword}
-                  <button
-                    type="button"
-                    className="text-neutral-500 hover:text-neutral-700"
-                    onClick={() => removeKeyword(keyword)}
-                    aria-label={`Remove ${keyword}`}
-                  >
-                    <FiX size={14} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-500">No detected keywords yet.</p>
-          )}
-
-          {relatedStudiesError && (
-            <p className="mt-3 text-sm text-archivumRed">{relatedStudiesError}</p>
-          )}
-
-          {keywordsError && (
-            <p className="mt-3 text-sm text-archivumRed">{keywordsError}</p>
-          )}
-
-          {relatedStudiesResult && (
-            <div className="mt-4 space-y-2 text-sm text-neutral-700">
-              <p>
-                Analyzed file: <span className="font-medium">{relatedStudiesResult.latestVersion.file_name}</span>
-              </p>
-              {relatedStudiesResult.vectorization?.shape && (
-                <p>
-                  Vector shape: {relatedStudiesResult.vectorization.shape.join(' x ')} |
-                  Non-zero: {relatedStudiesResult.vectorization.non_zero ?? 0}
-                </p>
-              )}
-              {relatedStudiesResult.vectorization?.message && (
-                <p>{relatedStudiesResult.vectorization.message}</p>
-              )}
-            </div>
-          )}
-
-          <div className="mt-6 border-t border-neutral-300 pt-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-serif text-lg font-semibold text-eerieBlack">Cross-referencing</h3>
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={handleCrossReference}
-                disabled={crossRefLoading}
-              >
-                {crossRefLoading ? 'Searching...' : 'Cross-reference 20 Studies'}
-              </Button>
-            </div>
-
-            {crossRefError && (
-              <p className="mt-2 text-sm text-archivumRed">{crossRefError}</p>
-            )}
-
-            {crossRefResult && (
-              <div className="mt-3 space-y-3">
-                <p className="text-sm text-neutral-600">
-                  Query: <span className="font-medium">{crossRefResult.query}</span> ·
-                  Results: {crossRefResult.total}
-                </p>
-                {crossRefResult.studies.length > 0 ? (
-                  <div
-                    className="h-96 overflow-y-auto overscroll-contain rounded-md border border-neutral-200 bg-neutral-50/50 p-2 space-y-2"
-                    aria-label="Cross-referenced studies"
-                  >
-                    {crossRefResult.studies.map((study, index) => {
-                      const authorNames = (study.authorships || [])
-                        .map((a) => a?.author?.display_name)
-                        .filter(Boolean)
-                        .slice(0, 3)
-                        .join(', ');
-                      const doiUrl = study.doi
-                        ? (study.doi.startsWith('http') ? study.doi : `https://doi.org/${study.doi.replace(/^https?:\/\/doi.org\//, '')}`)
-                        : null;
-
-                      return (
-                        <div key={`${study.display_name}-${index}`} className="rounded-lg border border-neutral-300 bg-white p-3">
-                          <p className="font-medium text-sm text-neutral-900">{study.display_name}</p>
-                          <p className="text-xs text-neutral-600 mt-1">
-                            {authorNames || 'Unknown authors'}
-                            {study.publication_date ? ` · ${study.publication_date}` : ''}
-                            {study.primary_location?.source?.display_name ? ` · ${study.primary_location.source.display_name}` : ''}
-                          </p>
-                          {doiUrl && (
-                            <a
-                              href={doiUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary-600 underline mt-1 inline-block break-all"
-                            >
-                              {doiUrl}
-                            </a>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-neutral-500">No studies found for current keywords.</p>
-                )}
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Document Reference */}
-        {project.document_reference && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Attached Document</CardTitle>
-              <CardDescription>Initial document uploaded with this project</CardDescription>
-            </CardHeader>
-            <a
-              href={project.document_reference}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-oxfordBlue hover:underline break-all text-sm md:text-md"
-            >
-              View document
-            </a>
-          </Card>
-        )}
 
         {/* Team members */}
         <Card>
@@ -735,6 +545,184 @@ export default function ProjectDetailPage() {
           title="Invite Members"
           excludeIds={existingUserIds}
         />
+
+        {/* Keywords */}
+        <Card>
+          <CardHeader>
+            <div className="flex w-full flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>Keywords</CardTitle>
+                <CardDescription>Extract, edit, and cross-reference related studies</CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={findingRelated}
+                  onClick={handleFindRelatedStudies}
+                >
+                  {findingRelated ? 'Running keyword model...' : 'Set Keywords'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={clearKeywords}
+                  disabled={savingKeywords}
+                >
+                  Clear
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={commitKeywords}
+                  disabled={savingKeywords}
+                >
+                  {savingKeywords ? 'Saving...' : 'Commit'}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="text"
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addKeywordFromInput();
+                }
+              }}
+              placeholder="Type keyword then press Enter"
+              className={`${formControlResponsiveClassName} focus:ring-2 focus:ring-primary-400`}
+            />
+          </div>
+
+          {editableKeywords.length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {editableKeywords.map((keyword, idx) => (
+                <span
+                  key={`${keyword}-${idx}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-md text-neutral-800"
+                >
+                  {keyword}
+                  <button
+                    type="button"
+                    className="text-neutral-500 hover:text-neutral-700"
+                    onClick={() => removeKeyword(keyword)}
+                    aria-label={`Remove ${keyword}`}
+                  >
+                    <FiX size={14} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-500">No detected keywords yet.</p>
+          )}
+
+          {relatedStudiesError && (
+            <p className="mt-3 text-sm text-archivumRed">{relatedStudiesError}</p>
+          )}
+
+          {keywordsError && (
+            <p className="mt-3 text-sm text-archivumRed">{keywordsError}</p>
+          )}
+
+          {relatedStudiesResult && (
+            <div className="mt-4 space-y-2 text-sm text-neutral-700">
+              <p>
+                Analyzed file: <span className="font-medium">{relatedStudiesResult.latestVersion.file_name}</span>
+              </p>
+            </div>
+          )}
+
+          <div className="mt-6 border-t border-neutral-300 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-serif text-lg font-semibold text-eerieBlack">Cross-referencing</h3>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={handleCrossReference}
+                disabled={crossRefLoading}
+              >
+                {crossRefLoading ? 'Searching...' : 'Cross-reference 20 Studies'}
+              </Button>
+            </div>
+
+            {crossRefError && (
+              <p className="mt-2 text-sm text-archivumRed">{crossRefError}</p>
+            )}
+
+            {crossRefResult && (
+              <div className="mt-3 space-y-3">
+                <p className="text-sm text-neutral-600">
+                  Query: <span className="font-medium">{crossRefResult.query}</span> ·
+                  Results: {crossRefResult.total}
+                </p>
+                {crossRefResult.studies.length > 0 ? (
+                  <div
+                    className="h-96 overflow-y-auto overscroll-contain rounded-md border border-neutral-200 bg-neutral-50/50 p-2 space-y-2"
+                    aria-label="Cross-referenced studies"
+                  >
+                    {crossRefResult.studies.map((study, index) => {
+                      const authorNames = (study.authorships || [])
+                        .map((a) => a?.author?.display_name)
+                        .filter(Boolean)
+                        .slice(0, 3)
+                        .join(', ');
+                      const doiUrl = study.doi
+                        ? (study.doi.startsWith('http') ? study.doi : `https://doi.org/${study.doi.replace(/^https?:\/\/doi.org\//, '')}`)
+                        : null;
+
+                      return (
+                        <div key={`${study.display_name}-${index}`} className="rounded-lg border border-neutral-300 bg-white p-3">
+                          <p className="font-medium text-sm text-neutral-900">{study.display_name}</p>
+                          <p className="text-xs text-neutral-600 mt-1">
+                            {authorNames || 'Unknown authors'}
+                            {study.publication_date ? ` · ${study.publication_date}` : ''}
+                            {study.primary_location?.source?.display_name ? ` · ${study.primary_location.source.display_name}` : ''}
+                          </p>
+                          {doiUrl && (
+                            <a
+                              href={doiUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary-600 underline mt-1 inline-block break-all"
+                            >
+                              {doiUrl}
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-neutral-500">No studies found for current keywords.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Document Reference */}
+        {project.document_reference && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Attached Document</CardTitle>
+              <CardDescription>Initial document uploaded with this project</CardDescription>
+            </CardHeader>
+            <a
+              href={project.document_reference}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-oxfordBlue hover:underline break-all text-sm md:text-md"
+            >
+              View document
+            </a>
+          </Card>
+        )}
 
         {/* Paper versions */}
         <Card>

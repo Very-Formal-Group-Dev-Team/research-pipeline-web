@@ -65,7 +65,7 @@ export default function AdviserAdviseesPage() {
                     </div>
                     <StatusIcon status={project.status} />
                   </div>
-                  <CardTitle className="line-clamp-1">{project.title}</CardTitle>
+                  <CardTitle className="line-clamp-3">{project.title}</CardTitle>
                   <CardDescription className="line-clamp-2">
                     {project.description || 'No description available'}
                   </CardDescription>
