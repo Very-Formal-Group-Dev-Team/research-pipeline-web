@@ -12,7 +12,7 @@ export async function PATCH(
 ) {
   const { id, action } = await params;
 
-  if (!['cancel', 'reschedule'].includes(action)) {
+  if (!['cancel', 'reschedule', 'complete'].includes(action)) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   }
 

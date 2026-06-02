@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
-import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText, FiMoreVertical } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import { useRouter, useParams } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -19,8 +19,23 @@ import {
 } from '@/lib/api/projects';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
-import { getProjectMeetings, getMyDefenses, normalizeDefenseSchedule, type Defense } from '@/lib/api/defenses';
+import {
+  cancelMeeting,
+  completeMeeting,
+  getProjectMeetings,
+  getMyDefenses,
+  normalizeDefenseSchedule,
+  type Defense,
+} from '@/lib/api/defenses';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
+import {
+  formatMeetingStatusLabel,
+  formatMeetingVenueDisplay,
+  meetingStatusBadgeVariant,
+} from '@/lib/meetings/display';
+import Dropdown from '@/components/ui/Dropdown';
+import Modal, { ModalFooter } from '@/components/ui/Modal';
+import Select from '@/components/ui/Select';
 import { isOnlineModality, normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
 import EmptyState from '@/components/layout/EmptyState';
 import {
@@ -36,19 +51,19 @@ import {
   projectSummaryDetailTextClassName,
 } from '@/lib/utils/formControls';
 
-function formatMeetingDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
 function formatMeetingTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
+  });
+}
+
+function formatMeetingDateCompact(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 }
 
@@ -72,6 +87,35 @@ function formatModalityLabel(modality?: string | null) {
 }
 
 const projectSummaryBodyTextClass = `${projectSummaryDetailTextClassName} text-neutral-700`;
+
+/** Meeting card typography — body text-md from md up; title one step above (xl at lg) */
+const MEETING_CARD_BODY_CLASS = 'text-sm leading-tight md:text-md';
+const MEETING_CARD_TITLE_CLASS =
+  'text-md font-semibold leading-tight sm:text-lg md:text-xl';
+
+/** Shared height for Meetings card toolbar filter + primary action */
+const MEETINGS_TOOLBAR_CONTROL_CLASS =
+  'h-9 min-h-9 max-h-9 shrink-0 box-border !py-0 inline-flex items-center';
+
+type MeetingStatusFilter = 'scheduled' | 'completed' | 'cancelled' | 'all';
+
+const MEETING_STATUS_FILTER_OPTIONS: { value: MeetingStatusFilter; label: string }[] = [
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'all', label: 'Show all' },
+];
+
+function meetingMatchesStatusFilter(
+  meeting: Defense,
+  filter: MeetingStatusFilter,
+): boolean {
+  const status = (meeting.status || '').toLowerCase();
+  if (filter === 'all') return true;
+  if (filter === 'completed') return status === 'completed';
+  if (filter === 'cancelled') return status === 'cancelled';
+  return status === 'scheduled' || status === 'pending' || status === 'rescheduled';
+}
 
 const PROJECT_TITLE_CLASS =
   'font-serif text-2xl font-bold leading-tight text-primary-700 sm:text-3xl';
@@ -111,21 +155,43 @@ export default function AdviserProjectDetailPage() {
   const [meetingsLoading, setMeetingsLoading] = useState(true);
   const [meetingsError, setMeetingsError] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [cancelMeetingId, setCancelMeetingId] = useState<string | null>(null);
+  const [meetingActionLoading, setMeetingActionLoading] = useState(false);
+  const [meetingActionError, setMeetingActionError] = useState<string | null>(null);
+  const [meetingStatusFilter, setMeetingStatusFilter] =
+    useState<MeetingStatusFilter>('scheduled');
 
-  const loadMeetings = async () => {
+  const filteredMeetings = useMemo(
+    () => meetings.filter((meeting) => meetingMatchesStatusFilter(meeting, meetingStatusFilter)),
+    [meetings, meetingStatusFilter],
+  );
+
+  const loadMeetings = useCallback(async () => {
     setMeetingsLoading(true);
     setMeetingsError(null);
     try {
       const normalizedProjectId = projectId.trim().toLowerCase();
-      const meetingsRes = await getProjectMeetings(projectId);
-      let rows = (meetingsRes.data || []).map(normalizeDefenseSchedule);
+      const [meetingsRes, mineRes] = await Promise.all([
+        getProjectMeetings(projectId),
+        getMyDefenses(),
+      ]);
 
-      if (!rows.length) {
-        const mineRes = await getMyDefenses();
-        rows = (mineRes.data || [])
-          .filter((row) => String(row.project_id).trim().toLowerCase() === normalizedProjectId)
-          .map(normalizeDefenseSchedule);
+      const byId = new Map<string, Defense>();
+      for (const row of meetingsRes.data || []) {
+        if (row?.id) byId.set(row.id, normalizeDefenseSchedule(row));
       }
+      for (const row of mineRes.data || []) {
+        if (
+          row?.id &&
+          String(row.project_id).trim().toLowerCase() === normalizedProjectId
+        ) {
+          byId.set(row.id, normalizeDefenseSchedule(row));
+        }
+      }
+
+      const rows = Array.from(byId.values()).sort(
+        (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+      );
 
       if (!rows.length && meetingsRes.error) {
         setMeetingsError(meetingsRes.error);
@@ -138,7 +204,7 @@ export default function AdviserProjectDetailPage() {
     } finally {
       setMeetingsLoading(false);
     }
-  };
+  }, [projectId]);
 
   const loadMembers = async () => {
     const [membersRes, invitesRes] = await Promise.all([
@@ -179,7 +245,26 @@ export default function AdviserProjectDetailPage() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [projectId]);
+  }, [projectId, loadMeetings]);
+
+  useEffect(() => {
+    const refreshMeetings = () => {
+      void loadMeetings();
+    };
+    const refreshOnVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshMeetings();
+      }
+    };
+    document.addEventListener('visibilitychange', refreshOnVisible);
+    window.addEventListener('focus', refreshMeetings);
+    window.addEventListener('pageshow', refreshMeetings);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshOnVisible);
+      window.removeEventListener('focus', refreshMeetings);
+      window.removeEventListener('pageshow', refreshMeetings);
+    };
+  }, [loadMeetings]);
 
   const copyProjectCode = () => {
     if (project?.project_code) {
@@ -220,6 +305,53 @@ export default function AdviserProjectDetailPage() {
     });
 
     router.push(`/defenses?${query.toString()}`);
+  };
+
+  const handleEditMeeting = (meeting: Defense) => {
+    if (!project) return;
+    const query = new URLSearchParams({
+      project_id: String(project.id),
+      project_code: project.project_code || '',
+      title: project.title || '',
+      meeting_id: meeting.id,
+    });
+    router.push(`/defenses?${query.toString()}`);
+  };
+
+  const handleCompleteMeeting = async (meetingId: string) => {
+    setMeetingActionLoading(true);
+    setMeetingActionError(null);
+    try {
+      const res = await completeMeeting(meetingId);
+      if (res.error) {
+        setMeetingActionError(res.error);
+        return;
+      }
+      await loadMeetings();
+    } catch {
+      setMeetingActionError('Failed to mark meeting as complete.');
+    } finally {
+      setMeetingActionLoading(false);
+    }
+  };
+
+  const handleConfirmCancelMeeting = async () => {
+    if (!cancelMeetingId) return;
+    setMeetingActionLoading(true);
+    setMeetingActionError(null);
+    try {
+      const res = await cancelMeeting(cancelMeetingId);
+      if (res.error) {
+        setMeetingActionError(res.error);
+        return;
+      }
+      setCancelMeetingId(null);
+      await loadMeetings();
+    } catch {
+      setMeetingActionError('Failed to cancel meeting.');
+    } finally {
+      setMeetingActionLoading(false);
+    }
   };
 
   if (loading) {
@@ -469,103 +601,212 @@ export default function AdviserProjectDetailPage() {
         {/* Meetings */}
         <Card>
           <CardHeader>
-            <CardTitle>Meetings</CardTitle>
-            <CardDescription>Scheduled sessions for this project</CardDescription>
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Meetings</CardTitle>
+                <CardDescription>Scheduled sessions for this project</CardDescription>
+              </div>
+              {!meetingsLoading ? (
+                <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:shrink-0 sm:justify-end sm:gap-3">
+                  <Select
+                    aria-label="Filter meetings by status"
+                    value={meetingStatusFilter}
+                    onChange={(e) =>
+                      setMeetingStatusFilter(e.target.value as MeetingStatusFilter)
+                    }
+                    options={MEETING_STATUS_FILTER_OPTIONS}
+                    responsiveText
+                    className={`${MEETINGS_TOOLBAR_CONTROL_CLASS} !px-3 !pr-9 min-w-[9.75rem] text-sm`}
+                  />
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className={`${MEETINGS_TOOLBAR_CONTROL_CLASS} !px-3.5 text-sm`}
+                    onClick={handleBookMeeting}
+                  >
+                    Book a Meeting
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           </CardHeader>
           {meetingsLoading ? (
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
             </div>
           ) : meetingsError ? (
-            <p className="text-sm text-archivumRed py-4 text-center">{meetingsError}</p>
-          ) : meetings.length > 0 ? (
             <div className="space-y-3">
-              {meetings.map((meeting) => {
+              <p className="text-sm text-archivumRed py-4 text-center">{meetingsError}</p>
+            </div>
+          ) : meetings.length > 0 ? (
+            filteredMeetings.length > 0 ? (
+            <div className="space-y-3">
+              {filteredMeetings.map((meeting) => {
                 const online = isOnlineModality(meeting.modality);
                 const joinUrl = normalizeJitsiJoinUrl(
                   meeting.meeting_url,
                   meeting.meeting_room,
                 );
-                const venue = meeting.venue?.trim() || meeting.location?.trim();
+                const venueDisplay = formatMeetingVenueDisplay(
+                  meeting.location,
+                  meeting.venue,
+                );
+                const meetingHeading =
+                  meeting.meeting_title?.trim() ||
+                  `${meeting.defense_type} meeting`;
+                const timeRange = meeting.end_time
+                  ? `${formatMeetingTime(meeting.start_time)} – ${formatMeetingTime(meeting.end_time)}`
+                  : formatMeetingTime(meeting.start_time);
+                const statusKey = (meeting.status || '').toLowerCase();
+                const isTerminalStatus =
+                  statusKey === 'cancelled' || statusKey === 'completed';
+
+                const locationLine = online
+                  ? formatModalityLabel(meeting.modality)
+                  : [formatModalityLabel(meeting.modality), venueDisplay || 'Venue not specified']
+                      .filter(Boolean)
+                      .join(' · ');
 
                 return (
-                  <div
+                  <article
                     key={meeting.id}
-                    className="rounded-lg border border-neutral-300 bg-white p-4 space-y-3"
+                    className="rounded-lg border border-neutral-300 bg-white px-4 py-3"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-serif text-lg font-semibold text-eerieBlack capitalize">
-                          {meeting.defense_type} meeting
-                        </p>
-                        <p className="text-sm text-neutral-600 mt-0.5">
-                          {formatModalityLabel(meeting.modality)}
-                        </p>
-                      </div>
-                      <Badge variant="default" className="capitalize shrink-0">
-                        {meeting.status_label || meeting.status}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-2 text-sm text-neutral-700">
-                      <p>
-                        <span className="font-medium text-neutral-900">Date:</span>{' '}
-                        {formatMeetingDate(meeting.start_time)}
-                      </p>
-                      <p>
-                        <span className="font-medium text-neutral-900">Time:</span>{' '}
-                        {formatMeetingTime(meeting.start_time)}
-                        {meeting.end_time ? ` – ${formatMeetingTime(meeting.end_time)}` : ''}
-                      </p>
-                    </div>
-
-                    {online ? (
-                      <div className="space-y-2 border-t border-neutral-200 pt-3 text-sm text-neutral-700">
-                        <div>
-                          <p className="font-medium text-neutral-900">Meeting link</p>
-                          {joinUrl ? (
-                            <a
-                              href={joinUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-oxfordBlue break-all hover:underline"
-                            >
-                              {joinUrl}
-                            </a>
-                          ) : (
-                            <p className="text-neutral-500">
-                              Link will be available once the meeting is confirmed.
-                            </p>
-                          )}
-                        </div>
-                        <JoinMeetingButton
-                          meeting_url={meeting.meeting_url}
-                          meeting_room={meeting.meeting_room}
-                          label="Join Meeting"
+                    <div className="flex items-start justify-between gap-2.5">
+                      <h4
+                        className={`min-w-0 flex-1 font-serif text-eerieBlack ${MEETING_CARD_TITLE_CLASS} ${
+                          meeting.meeting_title?.trim() ? '' : 'capitalize'
+                        }`}
+                      >
+                        {meetingHeading}
+                      </h4>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <Badge
+                          variant={meetingStatusBadgeVariant(meeting.status)}
                           size="sm"
+                          className="capitalize md:px-2.5 md:py-1 md:text-sm"
+                        >
+                          {formatMeetingStatusLabel(meeting.status, meeting.status_label)}
+                        </Badge>
+                        <Dropdown
+                          align="right"
+                          trigger={
+                            <button
+                              type="button"
+                              className="rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                              aria-label="Meeting options"
+                            >
+                              <FiMoreVertical className="h-5 w-5 md:h-6 md:w-6" aria-hidden />
+                            </button>
+                          }
+                          items={[
+                            {
+                              label: 'Edit',
+                              value: 'edit',
+                              onClick: () => handleEditMeeting(meeting),
+                              disabled: isTerminalStatus || meetingActionLoading,
+                            },
+                            {
+                              label: 'Cancel',
+                              value: 'cancel',
+                              danger: true,
+                              onClick: () => setCancelMeetingId(meeting.id),
+                              disabled: isTerminalStatus || meetingActionLoading,
+                            },
+                            {
+                              label: 'Mark as complete',
+                              value: 'complete',
+                              onClick: () => void handleCompleteMeeting(meeting.id),
+                              disabled: isTerminalStatus || meetingActionLoading,
+                            },
+                          ]}
                         />
                       </div>
-                    ) : (
-                      <div className="border-t border-neutral-200 pt-3 text-sm text-neutral-700">
-                        <p className="font-medium text-neutral-900">Venue</p>
-                        <p>{venue || 'Venue not specified'}</p>
+                    </div>
+
+                    <div className="mt-2 flex items-end justify-between gap-3">
+                      <div className={`min-w-0 space-y-0.5 ${MEETING_CARD_BODY_CLASS}`}>
+                        <p className="text-neutral-600">{locationLine}</p>
+                        <p className="font-medium text-neutral-900 tabular-nums">
+                          {formatMeetingDateCompact(meeting.start_time)}
+                        </p>
+                        <p className="text-neutral-600 tabular-nums">{timeRange}</p>
                       </div>
-                    )}
-                  </div>
+
+                      <div className="flex shrink-0 flex-col items-end justify-end">
+                        {online && joinUrl && !isTerminalStatus ? (
+                          <JoinMeetingButton
+                            meeting_url={meeting.meeting_url}
+                            meeting_room={meeting.meeting_room}
+                            label="Join Meeting"
+                            size="sm"
+                            className="md:!text-base"
+                          />
+                        ) : online && !joinUrl && !isTerminalStatus ? (
+                          <p
+                            className={`max-w-[11rem] text-right text-neutral-500 ${MEETING_CARD_BODY_CLASS}`}
+                          >
+                            Link available when confirmed
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
                 );
               })}
             </div>
+            ) : (
+              <p className="py-8 text-center text-sm text-neutral-500">
+                No{' '}
+                {meetingStatusFilter === 'all'
+                  ? 'meetings'
+                  : `${MEETING_STATUS_FILTER_OPTIONS.find((o) => o.value === meetingStatusFilter)?.label.toLowerCase() ?? meetingStatusFilter} meetings`}{' '}
+                to show.
+              </p>
+            )
           ) : (
             <EmptyState
               title="No meetings scheduled"
               description="Book a meeting to see it listed here for this project."
-              action={{
-                label: 'Book a Meeting',
-                onClick: handleBookMeeting,
-              }}
             />
           )}
+          {meetingActionError ? (
+            <p className="mt-3 text-center text-sm text-archivumRed">{meetingActionError}</p>
+          ) : null}
         </Card>
+
+        <Modal
+          isOpen={Boolean(cancelMeetingId)}
+          onClose={() => {
+            if (!meetingActionLoading) setCancelMeetingId(null);
+          }}
+          title="Cancel meeting?"
+          size="sm"
+        >
+          <p className="text-sm text-neutral-700">
+            This meeting will be marked as cancelled. Students will still see it in the list with
+            a cancelled status.
+          </p>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCancelMeetingId(null)}
+              disabled={meetingActionLoading}
+            >
+              Keep meeting
+            </Button>
+            <Button
+              type="button"
+              variant="error"
+              onClick={() => void handleConfirmCancelMeeting()}
+              loading={meetingActionLoading}
+              disabled={meetingActionLoading}
+            >
+              Cancel meeting
+            </Button>
+          </ModalFooter>
+        </Modal>
 
         {/* Paper versions — timeline includes its own section header */}
         <Card>
