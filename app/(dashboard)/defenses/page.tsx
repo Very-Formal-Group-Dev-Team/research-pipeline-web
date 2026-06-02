@@ -11,6 +11,7 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/Button';
+import { FiArrowLeft } from 'react-icons/fi';
 import { formControlTextSizeClassName, formLabelClassName } from '@/lib/utils/formControls';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { createPortal } from 'react-dom';
@@ -409,9 +410,30 @@ export default function MeetingSchedule() {
           </div>
         ) : (
           <>
-            <div>
-              <h1 className="text-3xl font-bold text-primary-700">Meeting Schedule</h1>
-              <p className="text-neutral-600 mt-1">Manage your meeting availability and scheduled sessions</p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-primary-700">Meeting Schedule</h1>
+                <p className="text-neutral-600 mt-1">
+                  Manage your meeting availability and scheduled sessions
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="shrink-0 self-start text-primary-700 hover:bg-primary-50"
+                leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+                onClick={() => {
+                  const projectId = searchParams.get('project_id');
+                  if (projectId) {
+                    router.push(`/adviser/advisees/${projectId}`);
+                  } else {
+                    router.push('/adviser/advisees');
+                  }
+                }}
+              >
+                {searchParams.get('project_id') ? 'Back to Project' : 'Back to Advisees'}
+              </Button>
             </div>
 
             <Card>

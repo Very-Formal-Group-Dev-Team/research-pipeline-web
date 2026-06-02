@@ -10,13 +10,24 @@ import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText } from 'react-icons/f
 import { LuLink } from 'react-icons/lu';
 import { useRouter, useParams } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
-import { getProject, getProjectMembers, type Project, type ProjectMember } from '@/lib/api/projects';
+import {
+  getProject,
+  getProjectMembers,
+  getProjectInvitations,
+  type Project,
+  type ProjectMember,
+} from '@/lib/api/projects';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import { getProjectMeetings, getMyDefenses, normalizeDefenseSchedule, type Defense } from '@/lib/api/defenses';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { isOnlineModality, normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
 import EmptyState from '@/components/layout/EmptyState';
+import {
+  formatPaperStandard,
+  formatProjectType,
+  statusBadgeVariant,
+} from '@/lib/utils/projectDisplay';
 
 function formatMeetingDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -34,11 +45,13 @@ function formatMeetingTime(iso: string) {
   });
 }
 
-function formatProjectDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatProjectDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
@@ -51,14 +64,6 @@ function formatModalityLabel(modality?: string | null) {
   return modality;
 }
 
-function statusBadgeVariant(status: string): 'primary' | 'warning' | 'success' | 'default' {
-  const s = status.toLowerCase();
-  if (s === 'draft') return 'warning';
-  if (s === 'active') return 'primary';
-  if (s === 'completed' || s === 'archived') return 'success';
-  return 'default';
-}
-
 const summaryDetailTextClass = 'text-sm md:text-md text-neutral-700';
 
 export default function AdviserProjectDetailPage() {
@@ -69,6 +74,7 @@ export default function AdviserProjectDetailPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [paperVersions, setPaperVersions] = useState<PaperVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -105,25 +111,45 @@ export default function AdviserProjectDetailPage() {
     }
   };
 
+  const loadMembers = async () => {
+    const [membersRes, invitesRes] = await Promise.all([
+      getProjectMembers(projectId),
+      getProjectInvitations(projectId),
+    ]);
+    setMembers(membersRes.data || []);
+    setPendingInvites(invitesRes.data || []);
+  };
+
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
-        const [projectRes, membersRes] = await Promise.all([
+        const [projectRes, membersRes, invitesRes] = await Promise.all([
           getProject(projectId),
           getProjectMembers(projectId),
+          getProjectInvitations(projectId),
         ]);
-        if (projectRes.data) setProject(projectRes.data);
-        if (membersRes.data) setMembers(membersRes.data);
+        if (!cancelled) {
+          if (projectRes.data) setProject(projectRes.data);
+          setMembers(membersRes.data || []);
+          setPendingInvites(invitesRes.data || []);
+        }
         await loadMeetings();
       } catch (err) {
         console.error('Failed to fetch project data:', err);
         setMeetingsLoading(false);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchData();
+    const interval = setInterval(loadMembers, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [projectId]);
 
   const copyProjectCode = () => {
@@ -193,7 +219,6 @@ export default function AdviserProjectDetailPage() {
   }
 
   const abstractText = project.abstract || project.description || '';
-  const studentMembers = members.filter((m) => m.role === 'leader' || m.role === 'member');
 
   return (
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
@@ -208,20 +233,15 @@ export default function AdviserProjectDetailPage() {
               {project.status}
             </Badge>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-primary-700 hover:bg-primary-50"
-              leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
-              onClick={() => router.push('/adviser/advisees')}
-            >
-              Back to Advisees
-            </Button>
-            <Button variant="primary" onClick={handleBookMeeting}>
-              Book a Meeting
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0 text-primary-700 hover:bg-primary-50"
+            leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+            onClick={() => router.push('/adviser/advisees')}
+          >
+            Back to Advisees
+          </Button>
         </header>
 
         {/* Summary cards */}
@@ -260,11 +280,11 @@ export default function AdviserProjectDetailPage() {
             <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
               <p>
                 <span className="font-medium text-neutral-900">Type:</span>{' '}
-                <span className="capitalize">{project.project_type}</span>
+                {formatProjectType(project.project_type)}
               </p>
               <p>
                 <span className="font-medium text-neutral-900">Paper standard:</span>{' '}
-                <span className="uppercase">{project.paper_standard}</span>
+                {formatPaperStandard(project.paper_standard)}
               </p>
               {project.program ? (
                 <p>
@@ -292,38 +312,39 @@ export default function AdviserProjectDetailPage() {
             <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
               <p>
                 <span className="font-medium text-neutral-900">Created:</span>{' '}
-                {formatProjectDate(project.created_at)}
+                {formatProjectDateTime(project.created_at)}
               </p>
               <p>
                 <span className="font-medium text-neutral-900">Last updated:</span>{' '}
-                {formatProjectDate(project.updated_at)}
+                {formatProjectDateTime(project.updated_at)}
               </p>
             </div>
           </Card>
         </div>
 
-        {/* Abstract */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Abstract</CardTitle>
-            <CardDescription>Project summary from the student team</CardDescription>
-          </CardHeader>
-          <p className="text-neutral-700 whitespace-pre-wrap">
-            {abstractText || 'No abstract provided'}
-          </p>
-        </Card>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+          {/* Abstract */}
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Abstract</CardTitle>
+              <CardDescription>Project summary from the student team</CardDescription>
+            </CardHeader>
+            <p className="text-neutral-700 whitespace-pre-wrap">
+              {abstractText || 'No abstract provided'}
+            </p>
+          </Card>
 
-        {/* Team members */}
-        <Card>
+          {/* Team members */}
+          <Card className="h-full">
           <CardHeader>
             <CardTitle>Team Members</CardTitle>
             <CardDescription>
-              {studentMembers.length > 0
-                ? `${studentMembers.length} ${studentMembers.length === 1 ? 'member' : 'members'} on this project`
-                : 'No student members yet'}
+              {members.length} {members.length === 1 ? 'member' : 'members'}
+              {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
             </CardDescription>
           </CardHeader>
-          {members.length > 0 ? (
+
+          {members.length > 0 || pendingInvites.length > 0 ? (
             <div className="space-y-3">
               {members.map((member) => (
                 <div
@@ -364,15 +385,54 @@ export default function AdviserProjectDetailPage() {
                     }
                     className="capitalize shrink-0"
                   >
-                    {member.role}
+                    {member.role === 'adviser'
+                      ? 'adviser'
+                      : member.role === 'leader'
+                        ? 'leader'
+                        : 'collaborator'}
                   </Badge>
                 </div>
               ))}
+
+              {pendingInvites.length > 0 ? (
+                <>
+                  <div className="pt-2 pb-1">
+                    <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                      Pending invitations
+                    </p>
+                  </div>
+                  {pendingInvites.map((invite) => (
+                    <div
+                      key={invite.id}
+                      className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
+                    >
+                      <Avatar
+                        src={invite.users?.avatar_url}
+                        name={invite.users?.full_name || invite.users?.email || 'Unknown'}
+                        size="md"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-semibold text-neutral-800 truncate">
+                          {invite.users?.full_name || 'Unknown User'}
+                        </h4>
+                        <p className="mt-0.5 text-sm text-neutral-600 break-all">{invite.users?.email}</p>
+                      </div>
+                      <Badge
+                        variant={invite.role === 'adviser' ? 'success' : 'default'}
+                        className="capitalize shrink-0"
+                      >
+                        {invite.role}
+                      </Badge>
+                    </div>
+                  ))}
+                </>
+              ) : null}
             </div>
           ) : (
-            <p className="text-sm text-neutral-500 py-4 text-center">No team members found</p>
+            <p className="py-4 text-center text-sm text-neutral-500">No team members found</p>
           )}
-        </Card>
+          </Card>
+        </div>
 
         {/* Meetings */}
         <Card>

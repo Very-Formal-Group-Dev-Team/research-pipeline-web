@@ -47,6 +47,7 @@ export interface CreateProjectInvite {
 export interface CreateProjectPayload {
   title: string;
   researchType: string;
+  projectType: 'thesis' | 'capstone';
   abstract?: string;
   keywords?: string[];
   program?: string;
@@ -166,6 +167,7 @@ export async function createProject(payload: CreateProjectPayload) {
   formData.append('abstract', payload.abstract ?? '');
   formData.append('keywords', JSON.stringify(payload.keywords ?? []));
   formData.append('researchType', payload.researchType);
+  formData.append('projectType', payload.projectType);
   if (payload.program) formData.append('program', payload.program);
   if (payload.course) formData.append('course', payload.course);
   if (payload.section) formData.append('section', payload.section);

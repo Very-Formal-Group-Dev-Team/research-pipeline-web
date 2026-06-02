@@ -32,7 +32,12 @@ export default function UserSearchModal({
     }
   }, [isOpen, reset]);
 
-  const filteredResults = results.filter((u) => !excludeIds.includes(u.id));
+  const projectEligibleRoles = new Set(['student', 'adviser', 'teacher']);
+  const filteredResults = results.filter((u) => {
+    if (excludeIds.includes(u.id)) return false;
+    if (role) return true;
+    return projectEligibleRoles.has(u.role);
+  });
 
   const handleSelect = (user: SearchUserResult) => {
     onSelect(user);
@@ -71,7 +76,13 @@ export default function UserSearchModal({
 
           {!isLoading && !error && query.trim().length >= 2 && filteredResults.length === 0 && (
             <div className="text-sm text-neutral-500 text-center py-8">
-              No {role === 'student' ? 'students' : role === 'adviser' ? 'advisers' : 'users'} found matching &quot;{query}&quot;
+              No{' '}
+              {role === 'student'
+                ? 'students'
+                : role === 'adviser'
+                  ? 'advisers'
+                  : 'students or advisers'}{' '}
+              found matching &quot;{query}&quot;
             </div>
           )}
 

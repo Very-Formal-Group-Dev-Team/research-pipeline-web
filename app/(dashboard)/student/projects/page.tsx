@@ -8,7 +8,7 @@ import StatusIcon from '@/components/StatusIcon';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
 import Avatar from '@/components/ui/Avatar';
-import { FiFolder, FiPlus, FiClock, FiCheck, FiX } from 'react-icons/fi';
+import { FiFolder, FiPlus, FiCheck, FiX } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
@@ -18,16 +18,7 @@ import {
   type Project,
   type Invitation,
 } from '@/lib/api/projects';
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+import { formatProjectCardDate, formatProjectCardMeta } from '@/lib/utils/projectDisplay';
 
 export default function StudentProjectsPage() {
   const router = useRouter();
@@ -46,17 +37,6 @@ export default function StudentProjectsPage() {
     );
     setInvitations(invRes.data || []);
   };
-
-
-  function formatDateTime(iso: string) {
-    return new Date(iso).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  }
 
   const handleRespond = async (invitationId: string, accept: boolean) => {
     setRespondingId(invitationId);
@@ -169,33 +149,40 @@ export default function StudentProjectsPage() {
                 hover 
                 onClick={() => router.push(`/student/projects/${project.id}`)}
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <FiFolder className="text-2xl text-primary-500" />
-                    <div className="flex items-center gap-2">
-                      {project.member_role && (
-                        <Badge
-                          variant={project.member_role === 'adviser' ? 'success' : 'primary'}
-                          size="sm"
-                        >
-                          {project.member_role === 'adviser' ? 'adviser' :
-                           project.member_role === 'leader' ? 'leader' : 'contributor'}
-                        </Badge>
-                      )}
-                      <StatusIcon status={project.status} />
-                    </div>
+                <div className="flex items-start justify-between">
+                  <FiFolder className="text-2xl text-primary-500" />
+                  <div className="flex items-center gap-2">
+                    {project.member_role && (
+                      <Badge
+                        variant={project.member_role === 'adviser' ? 'success' : 'primary'}
+                        size="sm"
+                        className="capitalize"
+                      >
+                        {project.member_role === 'adviser' ? 'adviser' :
+                         project.member_role === 'leader' ? 'leader' : 'contributor'}
+                      </Badge>
+                    )}
+                    <StatusIcon status={project.status} />
                   </div>
-                </CardHeader>
-                <CardTitle>{project.title}</CardTitle>
-                <CardDescription>
-                  {project.description || 'No abstract available'}
+                </div>
+                <CardTitle className="mt-4">{project.title}</CardTitle>
+                <CardDescription
+                  lines={2}
+                  uniformHeight
+                  className={`italic ${
+                    project.description?.trim() || project.abstract?.trim()
+                      ? ''
+                      : 'text-neutral-500/60'
+                  }`}
+                >
+                  {project.description?.trim() || project.abstract?.trim() || 'No abstract available'}
                 </CardDescription>
-                <div className="mt-4 space-y-2 text-sm text-neutral-600">
-                  <div>Type: {project.project_type}</div>
-                  <div>Standard: {project.paper_standard}</div>
-                  <div className="flex items-center gap-1">
-                    <FiClock className="text-neutral-500" />
-                    {formatDateTime(project.created_at)}
+                <div className="mt-4 flex items-center justify-between gap-4 border-t border-neutral-300 pt-4 text-sm text-neutral-600">
+                  <div className="min-w-0 flex-1">
+                    <span>{formatProjectCardMeta(project)}</span>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {formatProjectCardDate(project.created_at)}
                   </div>
                 </div>
               </Card>
