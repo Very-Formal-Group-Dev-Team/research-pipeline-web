@@ -33,6 +33,7 @@ import {
   formatMeetingVenueDisplay,
   meetingStatusBadgeVariant,
 } from '@/lib/meetings/display';
+import { PROJECT_MEETINGS_SECTION_ID } from '@/lib/meetings/navigation';
 import Dropdown from '@/components/ui/Dropdown';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
@@ -265,6 +266,20 @@ export default function AdviserProjectDetailPage() {
       window.removeEventListener('pageshow', refreshMeetings);
     };
   }, [loadMeetings]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash !== `#${PROJECT_MEETINGS_SECTION_ID}`) return;
+
+    const scrollToMeetings = () => {
+      document
+        .getElementById(PROJECT_MEETINGS_SECTION_ID)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const timer = window.setTimeout(scrollToMeetings, 100);
+    return () => window.clearTimeout(timer);
+  }, [meetingsLoading]);
 
   const copyProjectCode = () => {
     if (project?.project_code) {
@@ -599,7 +614,7 @@ export default function AdviserProjectDetailPage() {
         </div>
 
         {/* Meetings */}
-        <Card>
+        <Card id={PROJECT_MEETINGS_SECTION_ID} className="scroll-mt-24">
           <CardHeader>
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

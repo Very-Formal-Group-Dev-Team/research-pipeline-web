@@ -15,6 +15,7 @@ import { FiArrowLeft } from 'react-icons/fi';
 import { formControlTextSizeClassName, formLabelClassName } from '@/lib/utils/formControls';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { buildMeetingBookingPayload, meetingToBookingForm } from '@/lib/meetings/bookingForm';
+import { adviserProjectMeetingsUrl } from '@/lib/meetings/navigation';
 import { getMeeting } from '@/lib/api/defenses';
 import { createPortal } from 'react-dom';
 
@@ -315,6 +316,16 @@ export default function MeetingSchedule() {
     }
     setOverlapWarning(null);
     setPendingSubmitPayload(null);
+
+    const projectId =
+      (payload.project_id as string | undefined) ||
+      form.projectId ||
+      searchParams.get('project_id');
+    if (projectId) {
+      router.push(adviserProjectMeetingsUrl(projectId));
+      return;
+    }
+
     handleClear();
     await refreshDefenses();
   };
@@ -356,7 +367,7 @@ export default function MeetingSchedule() {
 
     const projectId = form.projectId || searchParams.get('project_id');
     if (projectId) {
-      router.push(`/adviser/advisees/${projectId}`);
+      router.push(adviserProjectMeetingsUrl(projectId));
     } else {
       handleClear();
       await refreshDefenses();
@@ -508,7 +519,7 @@ export default function MeetingSchedule() {
                 onClick={() => {
                   const projectId = searchParams.get('project_id');
                   if (projectId) {
-                    router.push(`/adviser/advisees/${projectId}`);
+                    router.push(adviserProjectMeetingsUrl(projectId));
                   } else {
                     router.push('/adviser/advisees');
                   }
