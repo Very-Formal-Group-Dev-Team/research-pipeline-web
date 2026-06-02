@@ -307,6 +307,20 @@ export function updateProjectAbstract(projectId: string, abstract: string) {
   return patch<{ success: boolean; abstract: string }>(`/projects/${projectId}/abstract`, { abstract });
 }
 
+export interface UpdateProjectDetailsPayload {
+  title: string;
+  projectType: string;
+  paperStandard: string;
+  program?: string;
+  course?: string;
+  section?: string;
+}
+
+/** Update project title, type, paper standard, and class fields (student members). */
+export function updateProjectDetails(projectId: string, payload: UpdateProjectDetailsPayload) {
+  return patch<Project>(`/projects/${projectId}/details`, payload);
+}
+
 /** Query OpenAlex for cross-referenced studies using project keywords. */
 export function crossReferenceStudies(projectId: string) {
   return get<CrossReferenceResult>(`/projects/${projectId}/cross-reference`);

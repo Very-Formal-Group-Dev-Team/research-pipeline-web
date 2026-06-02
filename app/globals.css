@@ -94,7 +94,7 @@
 
 /* Responsive form control text on student project detail */
 @layer components {
-  .project-detail-forms input:not([type='hidden']):not([type='file']),
+  .project-detail-forms input:not([type='hidden']):not([type='file']):not(.project-title-inline-input),
   .project-detail-forms textarea,
   .project-detail-forms select {
     font-size: 0.875rem;
@@ -102,12 +102,18 @@
   }
 
   @media (min-width: 768px) {
-    .project-detail-forms input:not([type='hidden']):not([type='file']),
+    .project-detail-forms input:not([type='hidden']):not([type='file']):not(.project-title-inline-input),
     .project-detail-forms textarea,
     .project-detail-forms select {
       font-size: 1rem;
       line-height: 1.5rem;
     }
+  }
+
+  .project-detail-forms .project-title-inline-input {
+    background-color: var(--color-neutral-50, #fafafa);
+    box-shadow: none;
+    font-family: var(--font-dm-serif-text), Georgia, serif;
   }
 }
 
