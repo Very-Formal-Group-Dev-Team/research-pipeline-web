@@ -14,12 +14,15 @@ import Button from '@/components/Button';
 import { FiArrowLeft } from 'react-icons/fi';
 import { formControlTextSizeClassName, formLabelClassName } from '@/lib/utils/formControls';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
+import { buildMeetingBookingPayload, meetingToBookingForm } from '@/lib/meetings/bookingForm';
+import { getMeeting } from '@/lib/api/defenses';
 import { createPortal } from 'react-dom';
 
 interface ScheduledDefense {
   id: string;
   project_title: string;
   project_code: string;
+  meeting_title?: string | null;
   start_time: string;
   end_time: string;
   scheduled_at?: string;
@@ -117,6 +120,10 @@ export default function MeetingSchedule() {
 
   const [defenses, setDefenses] = useState<ScheduledDefense[]>([]);
   const [defensesLoading, setDefensesLoading] = useState(true);
+  const [editFormLoading, setEditFormLoading] = useState(false);
+
+  const editingMeetingId = searchParams.get('meeting_id');
+  const isEditMode = Boolean(editingMeetingId);
 
   const [form, setForm] = useState({
     projectId: '',
@@ -129,6 +136,7 @@ export default function MeetingSchedule() {
     meetingType: 'Online',
     defenseType: 'Proposal',
     roomOption: '',
+    meetingTitle: '',
   });
 
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
@@ -185,6 +193,36 @@ export default function MeetingSchedule() {
       }
       localStorage.removeItem('projectMembers');
     }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const meetingId = searchParams.get('meeting_id');
+    if (!meetingId) return;
+
+    const meetingIdForEdit = meetingId;
+    let cancelled = false;
+    async function loadMeetingForEdit() {
+      setEditFormLoading(true);
+      try {
+        const res = await getMeeting(meetingIdForEdit);
+        if (cancelled) return;
+        if (res.data) {
+          setForm((prev) => ({
+            ...prev,
+            ...meetingToBookingForm(res.data!),
+          }));
+        } else {
+          showToast(res.error || 'Failed to load meeting for editing.', 'error');
+        }
+      } finally {
+        if (!cancelled) setEditFormLoading(false);
+      }
+    }
+
+    void loadMeetingForEdit();
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams]);
 
   useEffect(() => {
@@ -282,11 +320,46 @@ export default function MeetingSchedule() {
   };
 
   const handleWaitForSlot = async () => {
-    if (!pendingSubmitPayload) return;
+    if (!pendingSubmitPayload || isEditMode) return;
     try {
       await submitDefense({ ...pendingSubmitPayload, wait_for_slot: true });
     } catch (err: any) {
       showToast(err.message || 'Failed to queue meeting.', 'error');
+    }
+  };
+
+  const submitMeetingUpdate = async (payload: Record<string, unknown>) => {
+    if (!editingMeetingId) return;
+
+    const res = await fetch(`/api/defenses/${editingMeetingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+
+    const data = await res.json();
+
+    if (res.status === 409 && data?.conflict) {
+      setOverlapWarning(data as OverlapConflictResponse);
+      setPendingSubmitPayload(payload);
+      return;
+    }
+
+    if (!res.ok) {
+      throw new Error(data?.error || 'Failed to update meeting.');
+    }
+
+    showToast('Meeting updated successfully.', 'success');
+    setOverlapWarning(null);
+    setPendingSubmitPayload(null);
+
+    const projectId = form.projectId || searchParams.get('project_id');
+    if (projectId) {
+      router.push(`/adviser/advisees/${projectId}`);
+    } else {
+      handleClear();
+      await refreshDefenses();
     }
   };
 
@@ -302,22 +375,30 @@ export default function MeetingSchedule() {
         return;
       }
 
-      const payload = {
-        project_id: projectId,
-        defense_type: form.defenseType === 'Finals'
-            ? 'final'
-            : form.defenseType.toLowerCase(),
-        start_time: `${form.date}T${form.startTime}:00`,
-        end_time: `${form.date}T${form.endTime}:00`,
-        location: form.meetingType === 'Face-to-Face'
-            ? `Face-to-Face - ${form.roomOption}` 
-            : 'Online',
-        modality: form.meetingType,
-      };
+      const meetingTitle = form.meetingTitle.trim();
+      if (!meetingTitle) {
+        showToast('Please enter a meeting title.', 'error');
+        return;
+      }
 
-      await submitDefense(payload);
+      if (form.meetingType === 'Face-to-Face' && !form.roomOption) {
+        showToast('Please select a room for face-to-face meetings.', 'error');
+        return;
+      }
+
+      const payload = buildMeetingBookingPayload({
+        ...form,
+        projectId,
+        meetingTitle,
+      });
+
+      if (isEditMode) {
+        await submitMeetingUpdate(payload);
+      } else {
+        await submitDefense(payload);
+      }
     } catch (err: any) {
-      showToast(err.message || 'Failed to book meeting.', 'error');
+      showToast(err.message || (isEditMode ? 'Failed to update meeting.' : 'Failed to book meeting.'), 'error');
     }
   };
 
@@ -382,6 +463,7 @@ export default function MeetingSchedule() {
       meetingType: 'Online',
       defenseType: 'Proposal',
       roomOption: '',
+      meetingTitle: '',
     });
   };
 
@@ -438,12 +520,19 @@ export default function MeetingSchedule() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Book a Meeting</CardTitle>
+                <CardTitle>{isEditMode ? 'Edit Meeting' : 'Book a Meeting'}</CardTitle>
                 <CardDescription>
-                  Enter a project code and time slot to schedule a session with your advisee group
+                  {isEditMode
+                    ? 'Update the meeting title, schedule, and location for this session'
+                    : 'Enter a project code and time slot to schedule a session with your advisee group'}
                 </CardDescription>
               </CardHeader>
 
+              {editFormLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
+                </div>
+              ) : (
               <form
                 className="mt-4 space-y-4"
                 onSubmit={(e) => {
@@ -451,16 +540,29 @@ export default function MeetingSchedule() {
                   void handleSubmit();
                 }}
               >
-                <Input
-                  label="Project Code"
-                  type="text"
-                  name="projectCode"
-                  value={form.projectCode || ''}
-                  onChange={handleChange}
-                  placeholder="Enter project code"
-                  responsiveText
-                  fullWidth
-                />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Project Code"
+                    type="text"
+                    name="projectCode"
+                    value={form.projectCode || ''}
+                    onChange={handleChange}
+                    placeholder="Enter project code"
+                    responsiveText
+                    fullWidth
+                    disabled={isEditMode}
+                  />
+                  <Input
+                    label="Meeting Title"
+                    type="text"
+                    name="meetingTitle"
+                    value={form.meetingTitle || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. Proposal review"
+                    responsiveText
+                    fullWidth
+                  />
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Input
@@ -548,11 +650,12 @@ export default function MeetingSchedule() {
                       disabled={projectLookupLoading}
                       loading={projectLookupLoading}
                     >
-                      Book Meeting
+                      {isEditMode ? 'Save Changes' : 'Book Meeting'}
                     </Button>
                   </div>
                 </div>
               </form>
+              )}
             </Card>
 
             {/* Scheduled Meetings Table */}
