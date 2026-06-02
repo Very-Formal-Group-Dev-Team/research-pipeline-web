@@ -2,7 +2,7 @@
  * Projects API service – replaces all direct Supabase project queries.
  */
 
-import { get, post, patch } from './client';
+import { get, post, patch, del } from './client';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -307,6 +307,20 @@ export function updateProjectAbstract(projectId: string, abstract: string) {
   return patch<{ success: boolean; abstract: string }>(`/projects/${projectId}/abstract`, { abstract });
 }
 
+export interface UpdateProjectDetailsPayload {
+  title: string;
+  projectType: string;
+  paperStandard: string;
+  program?: string;
+  course?: string;
+  section?: string;
+}
+
+/** Update project title, type, paper standard, and class fields (student members). */
+export function updateProjectDetails(projectId: string, payload: UpdateProjectDetailsPayload) {
+  return patch<Project>(`/projects/${projectId}/details`, payload);
+}
+
 /** Query OpenAlex for cross-referenced studies using project keywords. */
 export function crossReferenceStudies(projectId: string) {
   return get<CrossReferenceResult>(`/projects/${projectId}/cross-reference`);
@@ -315,4 +329,9 @@ export function crossReferenceStudies(projectId: string) {
 /** Update a project's status (adviser only). */
 export function updateProjectStatus(projectId: string, status: string) {
   return patch<Project>(`/projects/${projectId}/status`, { status });
+}
+
+/** Permanently delete a project (project leader only). Requires exact title confirmation. */
+export function deleteProject(projectId: string, confirmTitle: string) {
+  return del<{ success: boolean; message: string }>(`/projects/${projectId}`, { confirmTitle });
 }

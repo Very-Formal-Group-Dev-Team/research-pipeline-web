@@ -17,6 +17,26 @@ export function formatProjectType(type?: string | null): string {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
+export const PAPER_STANDARD_FORM_OPTIONS = [
+  { value: 'IMRAD', label: 'IMRAD' },
+  { value: 'IEEE', label: 'IEEE' },
+  { value: 'custom', label: 'Custom' },
+] as const;
+
+export const PROJECT_TYPE_FORM_OPTIONS = [
+  { value: 'thesis', label: 'Thesis' },
+  { value: 'capstone', label: 'Capstone' },
+] as const;
+
+/** Map stored paper_standard to create-form select values. */
+export function paperStandardFormValue(standard?: string | null): string {
+  const lower = (standard || 'ieee').trim().toLowerCase();
+  if (lower === 'imrad') return 'IMRAD';
+  if (lower === 'ieee') return 'IEEE';
+  if (lower === 'custom') return 'custom';
+  return 'IEEE';
+}
+
 /** IMRAD/IEEE uppercase; Custom title case; other values first letter only */
 export function formatPaperStandard(standard?: string | null): string {
   if (!standard) return '';

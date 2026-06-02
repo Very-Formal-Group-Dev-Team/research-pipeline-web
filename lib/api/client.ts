@@ -119,8 +119,11 @@ export function patch<T>(path: string, body?: unknown) {
   });
 }
 
-export function del<T>(path: string) {
-  return request<T>(path, { method: 'DELETE' });
+export function del<T>(path: string, body?: unknown) {
+  return request<T>(path, {
+    method: 'DELETE',
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
 }
 
 export default { get, post, put, patch, del };

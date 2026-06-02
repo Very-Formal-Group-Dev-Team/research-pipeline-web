@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
 import Avatar from '@/components/ui/Avatar';
-import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiEdit2, FiFileText, FiX } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -20,19 +20,25 @@ import {
   crossReferenceStudies,
   updateProjectKeywords,
   updateProjectAbstract,
+  updateProjectDetails,
+  deleteProject,
   type Project,
   type ProjectMember,
   type RelatedStudiesResult,
   type CrossReferenceResult,
 } from '@/lib/api/projects';
+import Modal, { ModalFooter } from '@/components/ui/Modal';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
 import { formControlResponsiveClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
 import {
-  formatPaperStandard,
-  formatProjectType,
+  PAPER_STANDARD_FORM_OPTIONS,
+  PROJECT_TYPE_FORM_OPTIONS,
+  paperStandardFormValue,
   statusBadgeVariant,
 } from '@/lib/utils/projectDisplay';
 
@@ -56,11 +62,21 @@ function formatProjectDateTime(iso: string) {
 
 const summaryDetailTextClass = 'text-sm md:text-md text-neutral-700';
 
+/** Shared display styles for the page title (view + inline edit). */
+const PROJECT_TITLE_CLASS =
+  'font-serif text-2xl font-bold leading-tight text-primary-700 sm:text-3xl';
+
+const PROJECT_TITLE_INPUT_SHELL_CLASS =
+  'rounded-md border border-neutral-300/70 px-2 py-0.5';
+
+/** Serif ink extends past the layout box; padding avoids clipping the last glyph. */
+const PROJECT_TITLE_END_BLEED_CLASS = 'pe-[0.75ch] sm:pe-[1ch]';
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [codeCopied, setCodeCopied] = useState(false);
-  const { user, handleLogout } = useDashboardUser('Student');
+  const { user, profile, handleLogout } = useDashboardUser('Student');
 
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
@@ -84,6 +100,23 @@ export default function ProjectDetailPage() {
   const [crossRefLoading, setCrossRefLoading] = useState(false);
   const [crossRefError, setCrossRefError] = useState<string | null>(null);
   const [crossRefResult, setCrossRefResult] = useState<CrossReferenceResult | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTitleInput, setDeleteTitleInput] = useState('');
+  const [deletingProject, setDeletingProject] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const [detailsProjectType, setDetailsProjectType] = useState('thesis');
+  const [detailsPaperStandard, setDetailsPaperStandard] = useState('IEEE');
+  const [detailsProgram, setDetailsProgram] = useState('');
+  const [detailsCourse, setDetailsCourse] = useState('');
+  const [detailsSection, setDetailsSection] = useState('');
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [detailsSuccess, setDetailsSuccess] = useState<string | null>(null);
 
   const loadPaperVersions = useCallback(async () => {
     if (!params.id) return;
@@ -134,6 +167,29 @@ export default function ProjectDetailPage() {
     if (!project) return;
     setAbstractInput(project.description || project.abstract || '');
   }, [project?.id, project?.description, project?.abstract]);
+
+  useEffect(() => {
+    if (!project) return;
+    setDetailsProjectType(project.project_type || 'thesis');
+    setDetailsPaperStandard(paperStandardFormValue(project.paper_standard));
+    setDetailsProgram(project.program || '');
+    setDetailsCourse(project.course || '');
+    setDetailsSection(project.section || '');
+  }, [
+    project?.id,
+    project?.project_type,
+    project?.paper_standard,
+    project?.program,
+    project?.course,
+    project?.section,
+  ]);
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isEditingTitle]);
 
   const copyProjectCode = () => {
     if (project?.project_code) {
@@ -223,6 +279,96 @@ export default function ProjectDetailPage() {
     setSavingKeywords(false);
   };
 
+  const startEditingTitle = () => {
+    if (!project || savingTitle) return;
+    setTitleInput(project.title);
+    setTitleError(null);
+    setIsEditingTitle(true);
+  };
+
+  const cancelEditingTitle = () => {
+    setIsEditingTitle(false);
+    setTitleInput(project?.title || '');
+    setTitleError(null);
+  };
+
+  const saveProjectTitle = async () => {
+    if (!project || savingTitle) return;
+    const trimmed = titleInput.trim();
+    if (!trimmed) {
+      setTitleError('Project title is required');
+      return;
+    }
+    if (trimmed === project.title) {
+      setIsEditingTitle(false);
+      setTitleError(null);
+      return;
+    }
+
+    setSavingTitle(true);
+    setTitleError(null);
+
+    const res = await updateProjectDetails(project.id, {
+      title: trimmed,
+      projectType: detailsProjectType,
+      paperStandard: detailsPaperStandard,
+      program: detailsProgram.trim(),
+      course: detailsCourse.trim(),
+      section: detailsSection.trim(),
+    });
+
+    if (res.error || !res.data) {
+      setTitleError(res.error || 'Failed to save title');
+      setSavingTitle(false);
+      return;
+    }
+
+    setProject(res.data);
+    setIsEditingTitle(false);
+    setSavingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      void saveProjectTitle();
+    } else if (e.key === 'Escape') {
+      cancelEditingTitle();
+    }
+  };
+
+  const commitProjectDetails = async () => {
+    if (!project) return;
+    if (!detailsPaperStandard) {
+      setDetailsError('Paper standard is required');
+      return;
+    }
+
+    setSavingDetails(true);
+    setDetailsError(null);
+    setDetailsSuccess(null);
+
+    const res = await updateProjectDetails(project.id, {
+      title: project.title,
+      projectType: detailsProjectType,
+      paperStandard: detailsPaperStandard,
+      program: detailsProgram.trim(),
+      course: detailsCourse.trim(),
+      section: detailsSection.trim(),
+    });
+
+    if (res.error || !res.data) {
+      setDetailsError(res.error || 'Failed to save project details');
+      setSavingDetails(false);
+      return;
+    }
+
+    setProject(res.data);
+    setDetailsSuccess('Project details saved');
+    setTimeout(() => setDetailsSuccess(null), 3000);
+    setSavingDetails(false);
+  };
+
   const commitAbstract = async () => {
     if (!project) return;
     setSavingAbstract(true);
@@ -288,6 +434,42 @@ export default function ProjectDetailPage() {
   }
 
   const headerSubtitle = project.abstract || project.description || '';
+  const isProjectLeader =
+    Boolean(profile?.id) &&
+    (project.created_by === profile?.id ||
+      members.some(
+        (member) =>
+          member.user_id === profile?.id && member.role === 'leader' && member.status === 'accepted',
+      ));
+  const deleteTitleMatches = deleteTitleInput === project.title;
+
+  const openDeleteModal = () => {
+    setDeleteTitleInput('');
+    setDeleteError(null);
+    setDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (deletingProject) return;
+    setDeleteModalOpen(false);
+    setDeleteTitleInput('');
+    setDeleteError(null);
+  };
+
+  const handleDeleteProject = async () => {
+    if (!deleteTitleMatches || deletingProject) return;
+    setDeletingProject(true);
+    setDeleteError(null);
+
+    const res = await deleteProject(project.id, deleteTitleInput);
+    if (res.error || !res.data?.success) {
+      setDeleteError(res.error || 'Failed to delete project');
+      setDeletingProject(false);
+      return;
+    }
+
+    router.push('/student/projects');
+  };
 
   return (
     <DashboardLayout role="student" user={user} onLogout={handleLogout}>
@@ -295,9 +477,51 @@ export default function ProjectDetailPage() {
         {/* Page header */}
         <header className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <h1 className="min-w-0 truncate text-2xl font-bold text-primary-700 sm:text-3xl">
-              {project.title}
-            </h1>
+            <div className="min-w-0 flex-1">
+              {isEditingTitle ? (
+                <div className="min-w-0 max-w-full">
+                  <div className="inline-grid w-max max-w-full min-w-0 [&>*]:col-start-1 [&>*]:row-start-1">
+                    <span
+                      className={`invisible whitespace-pre pointer-events-none ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_INPUT_SHELL_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+                      aria-hidden
+                    >
+                      {titleInput || '\u00A0'}
+                    </span>
+                    <input
+                      ref={titleInputRef}
+                      type="text"
+                      value={titleInput}
+                      onChange={(e) => setTitleInput(e.target.value)}
+                      onKeyDown={handleTitleKeyDown}
+                      onBlur={() => void saveProjectTitle()}
+                      disabled={savingTitle}
+                      size={1}
+                      className={`project-title-inline-input min-w-0 w-full max-w-full bg-neutral-50 outline-none focus:border-primary-400/60 disabled:opacity-60 ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_INPUT_SHELL_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+                      aria-label="Project title"
+                    />
+                  </div>
+                  {titleError ? (
+                    <p className="mt-1 text-sm text-archivumRed">{titleError}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="inline-flex w-max max-w-full min-w-0 items-center gap-1.5">
+                  <h1
+                    className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+                  >
+                    {project.title}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={startEditingTitle}
+                    className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                    aria-label="Edit project title"
+                  >
+                    <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+                  </button>
+                </div>
+              )}
+            </div>
             <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
               {project.status}
             </Badge>
@@ -313,8 +537,84 @@ export default function ProjectDetailPage() {
           </Button>
         </header>
 
+        <Card>
+            <CardHeader>
+              <div className="flex w-full flex-wrap items-start justify-between gap-3">
+                <div>
+                  <FiFileText className="mb-2 text-2xl text-primary-500" aria-hidden />
+                  <CardTitle>Project Details</CardTitle>
+                  <CardDescription>Edit type, paper standard, and class information</CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="shrink-0"
+                  onClick={commitProjectDetails}
+                  disabled={savingDetails}
+                  loading={savingDetails}
+                >
+                  {savingDetails ? 'Saving...' : 'Save Details'}
+                </Button>
+              </div>
+            </CardHeader>
+            <div className="mt-4 space-y-4">
+              {(detailsSuccess || detailsError) && (
+                <div
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    detailsSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
+                  }`}
+                >
+                  {detailsSuccess || detailsError}
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Input
+                  label="Program"
+                  value={detailsProgram}
+                  onChange={(e) => setDetailsProgram(e.target.value)}
+                  placeholder="Enter program name"
+                  responsiveText
+                />
+                <Input
+                  label="Course"
+                  value={detailsCourse}
+                  onChange={(e) => setDetailsCourse(e.target.value)}
+                  placeholder="Enter course name"
+                  responsiveText
+                />
+                <Input
+                  label="Section"
+                  value={detailsSection}
+                  onChange={(e) => setDetailsSection(e.target.value)}
+                  placeholder="Enter section"
+                  responsiveText
+                />
+                <Select
+                  label="Project Type"
+                  placeholder="Select project type"
+                  value={detailsProjectType}
+                  onChange={(e) => setDetailsProjectType(e.target.value)}
+                  options={[...PROJECT_TYPE_FORM_OPTIONS]}
+                  responsiveText
+                  required
+                />
+              </div>
+              <div className="max-w-xs sm:max-w-sm">
+                <Select
+                  label="Paper Standard"
+                  placeholder="Select paper standard"
+                  value={detailsPaperStandard}
+                  onChange={(e) => setDetailsPaperStandard(e.target.value)}
+                  options={[...PAPER_STANDARD_FORM_OPTIONS]}
+                  responsiveText
+                  required
+                />
+              </div>
+            </div>
+        </Card>
+
         {/* Summary cards */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
               <LuLink className="mb-2 text-2xl text-primary-500" aria-hidden />
@@ -338,38 +638,6 @@ export default function ProjectDetailPage() {
                   <FiCopy aria-hidden />
                 )}
               </Button>
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <FiFileText className="mb-2 text-2xl text-primary-500" aria-hidden />
-              <CardTitle>Project Details</CardTitle>
-            </CardHeader>
-            <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
-              <p>
-                <span className="font-medium text-neutral-900">Type:</span>{' '}
-                {formatProjectType(project.project_type)}
-              </p>
-              <p>
-                <span className="font-medium text-neutral-900">Paper standard:</span>{' '}
-                {formatPaperStandard(project.paper_standard)}
-              </p>
-              {project.program ? (
-                <p>
-                  <span className="font-medium text-neutral-900">Program:</span> {project.program}
-                </p>
-              ) : null}
-              {project.course ? (
-                <p>
-                  <span className="font-medium text-neutral-900">Course:</span> {project.course}
-                </p>
-              ) : null}
-              {project.section ? (
-                <p>
-                  <span className="font-medium text-neutral-900">Section:</span> {project.section}
-                </p>
-              ) : null}
             </div>
           </Card>
 
@@ -743,7 +1011,68 @@ export default function ProjectDetailPage() {
             onRefresh={loadPaperVersions}
           />
         </Card>
+
+        {isProjectLeader ? (
+          <Card className="border-error-200">
+            <CardHeader>
+              <CardTitle className="text-archivumRed">Danger zone</CardTitle>
+              <CardDescription>
+                Permanently delete this project and all related papers, meetings, and team data.
+                This cannot be undone.
+              </CardDescription>
+            </CardHeader>
+            <Button variant="error" size="sm" onClick={openDeleteModal}>
+              Delete project
+            </Button>
+          </Card>
+        ) : null}
       </div>
+
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={closeDeleteModal}
+        title="Delete this project?"
+        size="md"
+        closeOnOverlayClick={!deletingProject}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-700">
+            This will permanently remove{' '}
+            <span className="font-semibold text-neutral-900">{project.title}</span>, including team
+            members, paper versions, and schedules. This action cannot be undone.
+          </p>
+          <p className="text-sm text-neutral-700">
+            To confirm, type the project title exactly as shown below (case sensitive):
+          </p>
+          <p className="rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 font-mono text-sm text-neutral-900 break-all">
+            {project.title}
+          </p>
+          <Input
+            label="Project title"
+            value={deleteTitleInput}
+            onChange={(e) => setDeleteTitleInput(e.target.value)}
+            placeholder={project.title}
+            autoComplete="off"
+            disabled={deletingProject}
+            responsiveText
+          />
+          {deleteError ? <p className="text-sm text-archivumRed">{deleteError}</p> : null}
+        </div>
+        <ModalFooter>
+          <Button variant="outline" size="sm" onClick={closeDeleteModal} disabled={deletingProject}>
+            Cancel
+          </Button>
+          <Button
+            variant="error"
+            size="sm"
+            onClick={handleDeleteProject}
+            disabled={!deleteTitleMatches || deletingProject}
+            loading={deletingProject}
+          >
+            Delete this project
+          </Button>
+        </ModalFooter>
+      </Modal>
     </DashboardLayout>
   );
 }
