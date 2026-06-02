@@ -294,3 +294,18 @@
 .coordinator-theme .coordinator-spinner {
   border-color: #9b4455;
 }
+
+/* Project list cards: 2-line abstract with ellipsis (handles long unbroken strings). */
+@layer utilities {
+  .project-card-abstract-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    min-height: 2.5rem;
+    max-height: 2.5rem;
+    line-height: 1.25rem;
+  }
+}

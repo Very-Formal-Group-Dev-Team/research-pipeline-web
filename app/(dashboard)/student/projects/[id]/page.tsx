@@ -30,6 +30,11 @@ import UserSearchModal from '@/components/UserSearchModal';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
 import { formControlResponsiveClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
+import {
+  formatPaperStandard,
+  formatProjectType,
+  statusBadgeVariant,
+} from '@/lib/utils/projectDisplay';
 
 function formatProjectDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -47,14 +52,6 @@ function formatProjectDateTime(iso: string) {
     hour: 'numeric',
     minute: '2-digit',
   });
-}
-
-function statusBadgeVariant(status: string): 'primary' | 'warning' | 'success' | 'default' {
-  const s = status.toLowerCase();
-  if (s === 'draft') return 'warning';
-  if (s === 'active') return 'primary';
-  if (s === 'completed' || s === 'archived') return 'success';
-  return 'default';
 }
 
 const summaryDetailTextClass = 'text-sm md:text-md text-neutral-700';
@@ -156,7 +153,8 @@ export default function ProjectDetailPage() {
     setInviteError(null);
     setInviteSuccess(null);
 
-    const role = selectedUser.role === 'adviser' ? 'adviser' : 'member';
+    const role =
+      selectedUser.role === 'adviser' || selectedUser.role === 'teacher' ? 'adviser' : 'member';
     const res = await inviteToProject(params.id as string, {
       userId: selectedUser.id,
       role,
@@ -351,11 +349,11 @@ export default function ProjectDetailPage() {
             <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
               <p>
                 <span className="font-medium text-neutral-900">Type:</span>{' '}
-                <span className="capitalize">{project.project_type}</span>
+                {formatProjectType(project.project_type)}
               </p>
               <p>
                 <span className="font-medium text-neutral-900">Paper standard:</span>{' '}
-                <span className="uppercase">{project.paper_standard}</span>
+                {formatPaperStandard(project.paper_standard)}
               </p>
               {project.program ? (
                 <p>
@@ -393,45 +391,45 @@ export default function ProjectDetailPage() {
           </Card>
         </div>
 
-        {/* Abstract */}
-        <Card>
-          <CardHeader>
-            <div className="flex w-full flex-wrap items-start justify-between gap-3">
-              <div>
-                <CardTitle>Abstract</CardTitle>
-                <CardDescription>Edit your project summary</CardDescription>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
+          {/* Abstract */}
+          <Card className="flex h-full min-h-0 flex-col">
+            <CardHeader className="shrink-0">
+              <div className="flex w-full flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Abstract</CardTitle>
+                  <CardDescription>Edit your project summary</CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="shrink-0"
+                  onClick={commitAbstract}
+                  disabled={savingAbstract}
+                >
+                  {savingAbstract ? 'Saving...' : 'Save Abstract'}
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant="primary"
-                className="shrink-0"
-                onClick={commitAbstract}
-                disabled={savingAbstract}
-              >
-                {savingAbstract ? 'Saving...' : 'Save Abstract'}
-              </Button>
+            </CardHeader>
+
+            <div className="flex min-h-0 flex-1 flex-col">
+              <textarea
+                placeholder="Write a concise abstract of your project"
+                value={abstractInput}
+                className={`${formTextareaResponsiveClassName} min-h-[12rem] w-full flex-1 resize-none focus:ring-2 focus:ring-primary-500 lg:min-h-0 lg:h-0 ${
+                  abstractError ? 'border-error-500' : ''
+                }`}
+                onChange={(e) => setAbstractInput(e.target.value)}
+              />
+
+              {abstractError && (
+                <p className="mt-2 shrink-0 text-sm text-archivumRed">{abstractError}</p>
+              )}
             </div>
-          </CardHeader>
+          </Card>
 
-          <div>
-            <textarea
-              placeholder="Write a concise abstract of your project"
-              rows={6}
-              value={abstractInput}
-              className={`${formTextareaResponsiveClassName} resize-none h-full focus:ring-2 focus:ring-primary-500 ${
-                abstractError ? 'border-error-500' : ''
-              }`}
-              onChange={(e) => setAbstractInput(e.target.value)}
-            />
-
-            {abstractError && (
-              <p className="mt-2 text-sm text-archivumRed">{abstractError}</p>
-            )}
-          </div>
-        </Card>
-
-        {/* Team members */}
-        <Card>
+          {/* Team members */}
+          <Card className="h-full">
           <CardHeader>
             <div className="flex w-full flex-wrap items-start justify-between gap-3">
               <div>
@@ -546,7 +544,8 @@ export default function ProjectDetailPage() {
               No team members yet. Use Invite Members to add collaborators or advisers.
             </p>
           )}
-        </Card>
+          </Card>
+        </div>
 
         <UserSearchModal
           isOpen={inviteOpen}

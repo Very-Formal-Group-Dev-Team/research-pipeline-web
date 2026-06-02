@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import Card, { CardTitle, CardDescription } from '@/components/ui/Card';
 import EmptyState from '@/components/layout/EmptyState';
 import StatusIcon from '@/components/StatusIcon';
-import Button from '@/components/Button';
-import { FiFolder, FiPlus } from 'react-icons/fi';
+import { FiFolder } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { getAdvisedProjects, type Project } from '@/lib/api/projects';
+import { formatProjectCardDate, formatProjectCardMeta } from '@/lib/utils/projectDisplay';
 
 export default function AdviserAdviseesPage() {
   const router = useRouter();
@@ -52,30 +52,39 @@ export default function AdviserAdviseesPage() {
           </div>
         ) : projects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <Card
-                key={project.id}
-                hover
-                onClick={() => router.push(`/adviser/advisees/${project.id}`)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                      <FiFolder className="text-2xl text-primary-600" />
-                    </div>
+            {projects.map((project) => {
+              const abstractText =
+                project.description?.trim() || project.abstract?.trim() || '';
+
+              return (
+                <Card
+                  key={project.id}
+                  hover
+                  onClick={() => router.push(`/adviser/advisees/${project.id}`)}
+                >
+                  <div className="flex items-start justify-between">
+                    <FiFolder className="text-2xl text-primary-500" />
                     <StatusIcon status={project.status} />
                   </div>
-                  <CardTitle className="line-clamp-3">{project.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {project.description || 'No description available'}
+                  <CardTitle className="mt-4 line-clamp-3">{project.title}</CardTitle>
+                  <CardDescription
+                    lines={2}
+                    uniformHeight
+                    className={`italic ${abstractText ? '' : 'text-neutral-500/60'}`}
+                  >
+                    {abstractText || 'No abstract available'}
                   </CardDescription>
-                </CardHeader>
-                <div className="mt-4 flex items-center justify-between text-sm text-neutral-600">
-                  <span className="capitalize">{project.project_type}</span>
-                  <span>{new Date(project.created_at).toLocaleDateString()}</span>
-                </div>
-              </Card>
-            ))}
+                  <div className="mt-4 flex items-center justify-between gap-4 border-t border-neutral-300 pt-4 text-sm text-neutral-600">
+                    <div className="min-w-0 flex-1">
+                      <span>{formatProjectCardMeta(project)}</span>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {formatProjectCardDate(project.created_at)}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <EmptyState

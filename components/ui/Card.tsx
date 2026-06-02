@@ -82,9 +82,34 @@ export function CardTitle({ children, className = '' }: { children: React.ReactN
   );
 }
 
-export function CardDescription({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+export interface CardDescriptionProps {
+  children: React.ReactNode;
+  className?: string;
+  /** Max visible lines (default 3). Use 2 with `uniformHeight` on project list cards. */
+  lines?: 2 | 3;
+  /** Fixed block height matching `lines` for aligned card grids. */
+  uniformHeight?: boolean;
+}
+
+export function CardDescription({
+  children,
+  className = '',
+  lines = 3,
+  uniformHeight = false,
+}: CardDescriptionProps) {
+  const isProjectCardAbstract = uniformHeight && lines === 2;
+  const clampClass = isProjectCardAbstract
+    ? 'project-card-abstract-2 min-w-0 text-left'
+    : lines === 2
+      ? 'line-clamp-2 break-words text-left'
+      : 'line-clamp-3 break-words text-justify';
+  const heightClass =
+    !isProjectCardAbstract && uniformHeight && lines === 3 ? 'h-[3.75rem] leading-5' : '';
+
   return (
-    <p className={`w-full overflow-hidden text-ellipsis line-clamp-3 text-justify font-sans text-sm text-neutral-600 mt-1 ${className}`}>
+    <p
+      className={`w-full min-w-0 overflow-hidden font-sans text-sm text-neutral-600 mt-1 ${clampClass} ${heightClass} ${className}`}
+    >
       {children}
     </p>
   );

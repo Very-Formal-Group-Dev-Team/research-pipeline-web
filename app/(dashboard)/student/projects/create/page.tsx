@@ -4,95 +4,23 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardHeader, CardTitle, CardDescription, Input, Select, Avatar, Modal } from '@/components/ui';
+import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
 import UserSearchModal from '@/components/UserSearchModal';
-import { FiUpload, FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiUpload, FiX, FiTrash2 } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { createProject, inviteToProject } from '@/lib/api/projects';
 import type { SearchUserResult } from '@/lib/api/users';
 
-const CONTRIBUTOR_ROLE_OPTIONS = [
-  { value: 'Author', label: 'Author' },
-  { value: 'Editor', label: 'Editor' },
-  { value: 'Compiler', label: 'Compiler' },
-  { value: 'Translator', label: 'Translator' },
-];
+type InviteMembershipRole = 'member' | 'adviser';
 
-const ADVISER_ROLE_OPTIONS = [
-  { value: 'Adviser', label: 'Adviser' },
-  { value: 'Co-adviser', label: 'Co-adviser' },
-];
-
-interface InvitedContributor {
+interface InvitedTeamMember {
   user: SearchUserResult;
-  contributorRole: string;
+  membershipRole: InviteMembershipRole;
 }
 
-interface InvitedAdviser {
-  user: SearchUserResult;
-  adviserRole: string;
-}
-
-interface TeamMemberRowProps {
-  role: string;
-  onRoleChange: (value: string) => void;
-  roleOptions: { value: string; label: string }[];
-  avatarUrl?: string;
-  name: string;
-  email?: string;
-  subtitle?: string;
-  onRemove?: () => void;
-  showRemove?: boolean;
-  responsiveRoleSelect?: boolean;
-}
-
-function TeamMemberRow({
-  role,
-  onRoleChange,
-  roleOptions,
-  avatarUrl,
-  name,
-  email,
-  subtitle,
-  onRemove,
-  showRemove = false,
-  responsiveRoleSelect = false,
-}: TeamMemberRowProps) {
-  return (
-    <li className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center">
-      <div className="flex min-w-0 flex-1 flex-col gap-6 sm:flex-row sm:items-center">
-        <div className="w-full sm:w-36 shrink-0">
-          <Select
-            label=""
-            placeholder="Select role"
-            value={role}
-            onChange={(e) => onRoleChange(e.target.value)}
-            options={roleOptions}
-            responsiveText={responsiveRoleSelect}
-            required
-          />
-        </div>
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Avatar src={avatarUrl} name={name} size="sm" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-primary-700 truncate">{name}</p>
-            {email ? <p className="text-xs text-neutral-500 truncate">{email}</p> : null}
-            {subtitle ? <p className="text-xs text-neutral-400">{subtitle}</p> : null}
-          </div>
-        </div>
-      </div>
-      {showRemove && onRemove ? (
-        <button
-          type="button"
-          onClick={onRemove}
-          className="self-end sm:self-center p-2 text-neutral-400 hover:text-archivumRed transition-colors"
-          aria-label={`Remove ${name}`}
-        >
-          <FiTrash2 className="text-lg" />
-        </button>
-      ) : null}
-    </li>
-  );
+function memberBadgeLabel(membershipRole: InviteMembershipRole): string {
+  return membershipRole === 'adviser' ? 'adviser' : 'collaborator';
 }
 
 export default function CreateProjectPage() {
@@ -102,26 +30,24 @@ export default function CreateProjectPage() {
 
   // Form state
   const [title, setTitle] = useState('');
-  const [creatorRole, setCreatorRole] = useState('Author');
   const [program, setProgram] = useState('');
   const [course, setCourse] = useState('');
   const [section, setSection] = useState('');
+  const [projectType, setProjectType] = useState('');
   const [researchType, setResearchType] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isContributorModalOpen, setIsContributorModalOpen] = useState(false);
-  const [isAdviserModalOpen, setIsAdviserModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
-  const [invitedContributors, setInvitedContributors] = useState<InvitedContributor[]>([]);
-  const [invitedAdvisers, setInvitedAdvisers] = useState<InvitedAdviser[]>([]);
+  const [invitedMembers, setInvitedMembers] = useState<InvitedTeamMember[]>([]);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   // Error state
   const [errors, setErrors] = useState<{
     title?: string;
+    projectType?: string;
     researchType?: string;
-    contributors?: string;
-    advisers?: string;
+    team?: string;
     file?: string;
     general?: string;
   }>({});
@@ -132,18 +58,18 @@ export default function CreateProjectPage() {
     if (
       title ||
       researchType ||
+      projectType ||
       program ||
       course ||
       section ||
       selectedFile ||
-      invitedContributors.length > 0 ||
-      invitedAdvisers.length > 0
+      invitedMembers.length > 0
     ) {
       setIsDirty(true);
     } else {
       setIsDirty(false);
     }
-  }, [title, researchType, program, course, section, selectedFile, invitedContributors, invitedAdvisers]);
+  }, [title, researchType, projectType, program, course, section, selectedFile, invitedMembers]);
 
   const validateFile = (file: File): string | null => {
     // Validate file type
@@ -215,38 +141,18 @@ export default function CreateProjectPage() {
     setErrors({ ...errors, file: undefined });
   };
 
-  const removeContributor = (index: number) => {
-    setInvitedContributors(invitedContributors.filter((_, i) => i !== index));
+  const removeInvitedMember = (index: number) => {
+    setInvitedMembers(invitedMembers.filter((_, i) => i !== index));
   };
 
-  const removeAdviser = (index: number) => {
-    setInvitedAdvisers(invitedAdvisers.filter((_, i) => i !== index));
-  };
-
-  const handleAddContributor = (user: SearchUserResult) => {
+  const handleAddTeamMember = (user: SearchUserResult) => {
     if (!user.id || user.id === profile?.id) return;
-    if (!invitedContributors.find((c) => c.user.id === user.id)) {
-      setInvitedContributors([...invitedContributors, { user, contributorRole: '' }]);
-    }
-  };
+    if (invitedMembers.some((m) => m.user.id === user.id)) return;
 
-  const handleAddAdviser = (user: SearchUserResult) => {
-    if (!user.id || user.id === profile?.id) return;
-    if (!invitedAdvisers.find((a) => a.user.id === user.id)) {
-      setInvitedAdvisers([...invitedAdvisers, { user, adviserRole: '' }]);
-    }
-  };
+    const membershipRole: InviteMembershipRole =
+      user.role === 'adviser' || user.role === 'teacher' ? 'adviser' : 'member';
 
-  const updateContributorRole = (index: number, contributorRole: string) => {
-    setInvitedContributors((prev) =>
-      prev.map((entry, i) => (i === index ? { ...entry, contributorRole } : entry)),
-    );
-  };
-
-  const updateAdviserRole = (index: number, adviserRole: string) => {
-    setInvitedAdvisers((prev) =>
-      prev.map((entry, i) => (i === index ? { ...entry, adviserRole } : entry)),
-    );
+    setInvitedMembers([...invitedMembers, { user, membershipRole }]);
   };
 
   const validateForm = (): boolean => {
@@ -256,22 +162,12 @@ export default function CreateProjectPage() {
       newErrors.title = 'Project title is required';
     }
 
+    if (!projectType) {
+      newErrors.projectType = 'Project type is required';
+    }
+
     if (!researchType) {
-      newErrors.researchType = 'Research type is required';
-    }
-
-    if (!creatorRole) {
-      newErrors.contributors = 'Select your role on this project';
-    }
-
-    const contributorMissingRole = invitedContributors.find((c) => !c.contributorRole);
-    if (contributorMissingRole) {
-      newErrors.contributors = 'Select a role for each invited contributor';
-    }
-
-    const adviserMissingRole = invitedAdvisers.find((a) => !a.adviserRole);
-    if (adviserMissingRole) {
-      newErrors.advisers = 'Select a role for each invited adviser';
+      newErrors.researchType = 'Paper standard is required';
     }
 
     setErrors(newErrors);
@@ -281,22 +177,11 @@ export default function CreateProjectPage() {
   async function sendInvitationsAfterCreate(projectId: string) {
     const failures: string[] = [];
 
-    for (const { user, contributorRole } of invitedContributors) {
+    for (const { user, membershipRole } of invitedMembers) {
       const res = await inviteToProject(projectId, {
         userId: user.id,
-        role: 'member',
-        contributorRole,
-      });
-      if (res.error) {
-        failures.push(`${user.full_name}: ${res.error}`);
-      }
-    }
-
-    for (const { user, adviserRole } of invitedAdvisers) {
-      const res = await inviteToProject(projectId, {
-        userId: user.id,
-        role: 'adviser',
-        contributorRole: adviserRole,
+        role: membershipRole,
+        contributorRole: membershipRole === 'adviser' ? 'Adviser' : 'Contributor',
       });
       if (res.error) {
         failures.push(`${user.full_name}: ${res.error}`);
@@ -320,6 +205,7 @@ export default function CreateProjectPage() {
       const res = await createProject({
         title: title.trim(),
         researchType,
+        projectType: projectType as 'thesis' | 'capstone',
         program: program.trim() || undefined,
         course: course.trim() || undefined,
         section: section.trim() || undefined,
@@ -411,7 +297,7 @@ export default function CreateProjectPage() {
                 responsiveText
                 required
               />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Input
                   label="Program"
                   placeholder="Enter program name"
@@ -433,99 +319,123 @@ export default function CreateProjectPage() {
                   onChange={(e) => setSection(e.target.value)}
                   responsiveText
                 />
+                <Select
+                  label="Project Type"
+                  placeholder="Select project type"
+                  value={projectType}
+                  onChange={(e) => setProjectType(e.target.value)}
+                  options={[
+                    { value: 'thesis', label: 'Thesis' },
+                    { value: 'capstone', label: 'Capstone' },
+                  ]}
+                  error={errors.projectType}
+                  responsiveText
+                  required
+                />
               </div>
             </div>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Contributors</CardTitle>
-              <CardDescription>Your role and collaborators on this project</CardDescription>
+              <div className="flex w-full flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Team Members</CardTitle>
+                  <CardDescription>
+                    {user.name ? 1 : 0} {user.name ? 'member' : 'members'}
+                    {invitedMembers.length > 0
+                      ? ` · ${invitedMembers.length} pending`
+                      : ''}
+                  </CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setIsInviteModalOpen(true)}
+                  disabled={isSubmitting}
+                >
+                  Invite Members
+                </Button>
+              </div>
             </CardHeader>
-            <div className="mt-4 space-y-4">
-              {errors.contributors ? (
-                <p className="text-sm text-error-600">{errors.contributors}</p>
-              ) : null}
-              <ul className="space-y-3">
-                {user.name ? (
-                  <TeamMemberRow
-                    role={creatorRole}
-                    onRoleChange={setCreatorRole}
-                    roleOptions={CONTRIBUTOR_ROLE_OPTIONS}
-                    avatarUrl={profile?.avatar}
-                    name={user.name}
-                    email={user.email}
-                    subtitle="You (project creator)"
-                    responsiveRoleSelect
-                  />
-                ) : null}
-                {invitedContributors.map(({ user: contributor, contributorRole }, index) => (
-                  <TeamMemberRow
-                    key={contributor.id}
-                    role={contributorRole}
-                    onRoleChange={(value) => updateContributorRole(index, value)}
-                    roleOptions={CONTRIBUTOR_ROLE_OPTIONS}
-                    avatarUrl={contributor.avatar_url}
-                    name={contributor.full_name}
-                    email={contributor.email}
-                    showRemove
-                    responsiveRoleSelect
-                    onRemove={() => removeContributor(index)}
-                  />
-                ))}
-              </ul>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                leftIcon={<FiPlus />}
-                onClick={() => setIsContributorModalOpen(true)}
-                disabled={isSubmitting}
-              >
-                Invite Contributor
-              </Button>
-            </div>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Advisers</CardTitle>
-              <CardDescription>Optional — invite your adviser or co-adviser</CardDescription>
-            </CardHeader>
-            <div className="mt-4 space-y-4">
-              {errors.advisers ? (
-                <p className="text-sm text-error-600">{errors.advisers}</p>
-              ) : null}
-              {invitedAdvisers.length > 0 ? (
-                <ul className="space-y-3">
-                  {invitedAdvisers.map(({ user: adviser, adviserRole }, index) => (
-                    <TeamMemberRow
-                      key={adviser.id}
-                      role={adviserRole}
-                      onRoleChange={(value) => updateAdviserRole(index, value)}
-                      roleOptions={ADVISER_ROLE_OPTIONS}
-                      avatarUrl={adviser.avatar_url}
-                      name={adviser.full_name}
-                      email={adviser.email}
-                      showRemove
-                      onRemove={() => removeAdviser(index)}
-                    />
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-neutral-500">No advisers added yet.</p>
-              )}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                leftIcon={<FiPlus />}
-                onClick={() => setIsAdviserModalOpen(true)}
-                disabled={isSubmitting}
-              >
-                Invite Adviser
-              </Button>
-            </div>
+            {errors.team ? (
+              <p className="mb-4 text-sm text-error-600">{errors.team}</p>
+            ) : null}
+
+            {user.name || invitedMembers.length > 0 ? (
+              <div className="space-y-3">
+                {user.name ? (
+                  <div className="flex items-center gap-4 rounded-lg border border-primary-300 bg-primary-50/50 p-3">
+                    <Avatar src={profile?.avatar} name={user.name} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold text-neutral-900 truncate">{user.name}</h4>
+                        <span className="text-xs font-medium text-primary-600 whitespace-nowrap">
+                          (Leader)
+                        </span>
+                      </div>
+                      {user.email ? (
+                        <p className="mt-0.5 text-sm text-neutral-600 break-all">{user.email}</p>
+                      ) : null}
+                    </div>
+                    <Badge variant="primary" className="capitalize shrink-0">
+                      leader
+                    </Badge>
+                  </div>
+                ) : null}
+
+                {invitedMembers.length > 0 ? (
+                  <>
+                    <div className="pt-2 pb-1">
+                      <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                        Pending invitations
+                      </p>
+                    </div>
+                    {invitedMembers.map(({ user: member, membershipRole }, index) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
+                      >
+                        <Avatar
+                          src={member.avatar_url}
+                          name={member.full_name}
+                          size="md"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-semibold text-neutral-800 truncate">
+                            {member.full_name}
+                          </h4>
+                          <p className="mt-0.5 text-sm text-neutral-600 break-all">{member.email}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Badge
+                            variant={membershipRole === 'adviser' ? 'success' : 'default'}
+                            className="capitalize"
+                          >
+                            {memberBadgeLabel(membershipRole)}
+                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() => removeInvitedMember(index)}
+                            className="p-2 text-neutral-400 hover:text-archivumRed transition-colors"
+                            aria-label={`Remove ${member.full_name}`}
+                          >
+                            <FiTrash2 className="text-lg" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : null}
+              </div>
+            ) : (
+              <p className="py-4 text-center text-sm text-neutral-500">
+                No team members yet. Use Invite Members to add collaborators or advisers.
+              </p>
+            )}
           </Card>
 
           <Card>
@@ -667,28 +577,13 @@ export default function CreateProjectPage() {
         </Modal>
 
         <UserSearchModal
-          isOpen={isContributorModalOpen}
-          onClose={() => setIsContributorModalOpen(false)}
-          onSelect={handleAddContributor}
-          role="student"
-          title="Invite Contributor"
+          isOpen={isInviteModalOpen}
+          onClose={() => setIsInviteModalOpen(false)}
+          onSelect={handleAddTeamMember}
+          title="Invite Members"
           excludeIds={[
             ...(profile?.id ? [profile.id] : []),
-            ...invitedContributors.map((c) => c.user.id),
-            ...invitedAdvisers.map((a) => a.user.id),
-          ]}
-        />
-
-        <UserSearchModal
-          isOpen={isAdviserModalOpen}
-          onClose={() => setIsAdviserModalOpen(false)}
-          onSelect={handleAddAdviser}
-          role="adviser"
-          title="Invite Adviser"
-          excludeIds={[
-            ...(profile?.id ? [profile.id] : []),
-            ...invitedContributors.map((c) => c.user.id),
-            ...invitedAdvisers.map((a) => a.user.id),
+            ...invitedMembers.map((m) => m.user.id),
           ]}
         />
       </div>
