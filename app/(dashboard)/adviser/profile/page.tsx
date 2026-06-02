@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, Avatar, Modal, CopyableEmail } from '@/components/ui';
 import Button from '@/components/Button';
-import EditProfile from './editProfile';
+import EditProfileForm from '@/components/profile/EditProfileForm';
 import { useUserProfile } from '@/lib/hooks/useUserProfile';
 
 export default function AdviserProfilePage() {
@@ -42,9 +42,7 @@ export default function AdviserProfilePage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-primary-700">Profile</h1>
-          <div className="flex items-center gap-4 mt-2">
-            <p className="text-neutral-600">Manage your account information</p>
-          </div>
+          <p className="text-neutral-600 mt-1">Manage your account information</p>
         </div>
 
         <Card>
@@ -66,17 +64,18 @@ export default function AdviserProfilePage() {
             </div>
           </div>
           <div className="mt-6">
-            <Button size="sm" variant="error" onClick={() => setIsEditOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setIsEditOpen(true)}>
               Edit Profile
             </Button>
           </div>
         </Card>
       </div>
 
-      <Modal isOpen={isEditOpen} onClose={handleEditClose} title="Edit Profile" size="md">
-        <EditProfile
+      <Modal isOpen={isEditOpen} onClose={handleEditClose} title="Edit profile" size="md">
+        <EditProfileForm
           user={user}
           onClose={handleEditClose}
+          statusPlaceholder="e.g. Available for consult"
         />
       </Modal>
     </DashboardLayout>
