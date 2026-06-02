@@ -47,6 +47,17 @@ export default function StudentProjectsPage() {
     setInvitations(invRes.data || []);
   };
 
+
+  function formatDateTime(iso: string) {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
+
   const handleRespond = async (invitationId: string, accept: boolean) => {
     setRespondingId(invitationId);
     await respondToInvitation(invitationId, accept);
@@ -176,9 +187,9 @@ export default function StudentProjectsPage() {
                   </div>
                 </CardHeader>
                 <CardTitle>{project.title}</CardTitle>
-                {project.description?.trim() ? (
-                  <CardDescription>{project.description}</CardDescription>
-                ) : null}
+                <CardDescription>
+                  {project.description || 'No abstract available'}
+                </CardDescription>
                 <div className="mt-4 space-y-2 text-sm text-neutral-600">
                   <div>Type: {project.project_type}</div>
                   <div>Standard: {project.paper_standard}</div>
