@@ -1,6 +1,12 @@
 import type { BadgeVariant } from '@/components/ui/Badge';
 
-/** Room values stored when booking face-to-face adviser meetings. */const ADVISER_BOOKING_ROOM_LABELS: Record<string, string> = {
+/** Meeting card typography — body text-md from md up; title one step above (xl at lg). */
+export const MEETING_CARD_BODY_CLASS = 'text-sm leading-tight md:text-md';
+export const MEETING_CARD_TITLE_CLASS =
+  'text-md font-semibold leading-tight sm:text-lg md:text-xl';
+
+/** Room values stored when booking face-to-face adviser meetings. */
+const ADVISER_BOOKING_ROOM_LABELS: Record<string, string> = {
   room1: 'Room 1',
   room2: 'Room 2',
   room3: 'Room 3',
@@ -56,6 +62,69 @@ export function meetingStatusBadgeVariant(status?: string | null): BadgeVariant 
     default:
       return 'default';
   }
+}
+
+export function parseMeetingDate(iso?: string | null): Date | null {
+  if (!iso) return null;
+  const parsed = new Date(String(iso).replace(/Z$/i, ''));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function formatMeetingTime(iso?: string | null): string {
+  const parsed = parseMeetingDate(iso);
+  if (!parsed) return '-';
+  return parsed.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function formatMeetingDateCompact(iso?: string | null): string {
+  const parsed = parseMeetingDate(iso);
+  if (!parsed) return '-';
+  return parsed.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+export function formatModalityLabel(modality?: string | null): string {
+  if (!modality) return 'Not specified';
+  const normalized = modality.trim().toLowerCase();
+  if (normalized === 'face-to-face' || normalized === 'face to face') return 'Face to face';
+  if (normalized === 'online') return 'Online';
+  if (normalized === 'hybrid') return 'Hybrid';
+  return modality;
+}
+
+function titleCaseDefenseType(type: string): string {
+  const normalized = type.trim().toLowerCase();
+  if (normalized === 'final' || normalized === 'finals') return 'Final';
+  if (!normalized) return 'Adviser';
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+export function getMeetingCardHeading(meeting: {
+  meeting_title?: string | null;
+  defense_type?: string | null;
+}): string {
+  if (meeting.meeting_title?.trim()) return meeting.meeting_title.trim();
+  return `${titleCaseDefenseType(meeting.defense_type || 'adviser')} Meeting`;
+}
+
+export function getMeetingLocationLine(meeting: {
+  modality?: string | null;
+  location?: string | null;
+  venue?: string | null;
+}): string {
+  const online = (meeting.modality || '').trim().toLowerCase() === 'online';
+  const venueDisplay = formatMeetingVenueDisplay(meeting.location, meeting.venue);
+  if (online) return formatModalityLabel(meeting.modality);
+  return [formatModalityLabel(meeting.modality), venueDisplay || 'Venue not specified']
+    .filter(Boolean)
+    .join(' · ');
 }
 
 export function formatMeetingStatusLabel(
