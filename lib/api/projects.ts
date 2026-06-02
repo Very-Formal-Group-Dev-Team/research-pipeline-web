@@ -2,7 +2,7 @@
  * Projects API service – replaces all direct Supabase project queries.
  */
 
-import { get, post, patch } from './client';
+import { get, post, patch, del } from './client';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -315,4 +315,9 @@ export function crossReferenceStudies(projectId: string) {
 /** Update a project's status (adviser only). */
 export function updateProjectStatus(projectId: string, status: string) {
   return patch<Project>(`/projects/${projectId}/status`, { status });
+}
+
+/** Permanently delete a project (project leader only). Requires exact title confirmation. */
+export function deleteProject(projectId: string, confirmTitle: string) {
+  return del<{ success: boolean; message: string }>(`/projects/${projectId}`, { confirmTitle });
 }

@@ -20,11 +20,14 @@ import {
   crossReferenceStudies,
   updateProjectKeywords,
   updateProjectAbstract,
+  deleteProject,
   type Project,
   type ProjectMember,
   type RelatedStudiesResult,
   type CrossReferenceResult,
 } from '@/lib/api/projects';
+import Modal, { ModalFooter } from '@/components/ui/Modal';
+import Input from '@/components/ui/Input';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
@@ -60,7 +63,7 @@ export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [codeCopied, setCodeCopied] = useState(false);
-  const { user, handleLogout } = useDashboardUser('Student');
+  const { user, profile, handleLogout } = useDashboardUser('Student');
 
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
@@ -84,6 +87,10 @@ export default function ProjectDetailPage() {
   const [crossRefLoading, setCrossRefLoading] = useState(false);
   const [crossRefError, setCrossRefError] = useState<string | null>(null);
   const [crossRefResult, setCrossRefResult] = useState<CrossReferenceResult | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTitleInput, setDeleteTitleInput] = useState('');
+  const [deletingProject, setDeletingProject] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const loadPaperVersions = useCallback(async () => {
     if (!params.id) return;
@@ -288,6 +295,42 @@ export default function ProjectDetailPage() {
   }
 
   const headerSubtitle = project.abstract || project.description || '';
+  const isProjectLeader =
+    Boolean(profile?.id) &&
+    (project.created_by === profile?.id ||
+      members.some(
+        (member) =>
+          member.user_id === profile?.id && member.role === 'leader' && member.status === 'accepted',
+      ));
+  const deleteTitleMatches = deleteTitleInput === project.title;
+
+  const openDeleteModal = () => {
+    setDeleteTitleInput('');
+    setDeleteError(null);
+    setDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (deletingProject) return;
+    setDeleteModalOpen(false);
+    setDeleteTitleInput('');
+    setDeleteError(null);
+  };
+
+  const handleDeleteProject = async () => {
+    if (!deleteTitleMatches || deletingProject) return;
+    setDeletingProject(true);
+    setDeleteError(null);
+
+    const res = await deleteProject(project.id, deleteTitleInput);
+    if (res.error || !res.data?.success) {
+      setDeleteError(res.error || 'Failed to delete project');
+      setDeletingProject(false);
+      return;
+    }
+
+    router.push('/student/projects');
+  };
 
   return (
     <DashboardLayout role="student" user={user} onLogout={handleLogout}>
@@ -743,7 +786,68 @@ export default function ProjectDetailPage() {
             onRefresh={loadPaperVersions}
           />
         </Card>
+
+        {isProjectLeader ? (
+          <Card className="border-error-200">
+            <CardHeader>
+              <CardTitle className="text-archivumRed">Danger zone</CardTitle>
+              <CardDescription>
+                Permanently delete this project and all related papers, meetings, and team data.
+                This cannot be undone.
+              </CardDescription>
+            </CardHeader>
+            <Button variant="error" size="sm" onClick={openDeleteModal}>
+              Delete project
+            </Button>
+          </Card>
+        ) : null}
       </div>
+
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={closeDeleteModal}
+        title="Delete this project?"
+        size="md"
+        closeOnOverlayClick={!deletingProject}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-700">
+            This will permanently remove{' '}
+            <span className="font-semibold text-neutral-900">{project.title}</span>, including team
+            members, paper versions, and schedules. This action cannot be undone.
+          </p>
+          <p className="text-sm text-neutral-700">
+            To confirm, type the project title exactly as shown below (case sensitive):
+          </p>
+          <p className="rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-2 font-mono text-sm text-neutral-900 break-all">
+            {project.title}
+          </p>
+          <Input
+            label="Project title"
+            value={deleteTitleInput}
+            onChange={(e) => setDeleteTitleInput(e.target.value)}
+            placeholder={project.title}
+            autoComplete="off"
+            disabled={deletingProject}
+            responsiveText
+          />
+          {deleteError ? <p className="text-sm text-archivumRed">{deleteError}</p> : null}
+        </div>
+        <ModalFooter>
+          <Button variant="outline" size="sm" onClick={closeDeleteModal} disabled={deletingProject}>
+            Cancel
+          </Button>
+          <Button
+            variant="error"
+            size="sm"
+            onClick={handleDeleteProject}
+            disabled={!deleteTitleMatches || deletingProject}
+            loading={deletingProject}
+          >
+            Delete this project
+          </Button>
+        </ModalFooter>
+      </Modal>
     </DashboardLayout>
   );
 }
