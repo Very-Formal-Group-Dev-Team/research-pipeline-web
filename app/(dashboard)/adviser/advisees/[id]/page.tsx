@@ -6,7 +6,7 @@ import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Ca
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
-import { FiCheck, FiClock, FiCopy, FiFileText } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import { useRouter, useParams } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -199,26 +199,30 @@ export default function AdviserProjectDetailPage() {
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
         {/* Page header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold text-primary-700 break-words sm:text-3xl">
-                {project.title}
-              </h1>
-              <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
-                {project.status}
-              </Badge>
-            </div>
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <h1 className="min-w-0 truncate text-2xl font-bold text-primary-700 sm:text-3xl">
+              {project.title}
+            </h1>
+            <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
+              {project.status}
+            </Badge>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:shrink-0">
-            <Button variant="outline" onClick={() => router.push('/adviser/advisees')}>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-primary-700 hover:bg-primary-50"
+              leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+              onClick={() => router.push('/adviser/advisees')}
+            >
               Back to Advisees
             </Button>
             <Button variant="primary" onClick={handleBookMeeting}>
               Book a Meeting
             </Button>
           </div>
-        </div>
+        </header>
 
         {/* Summary cards */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -228,8 +232,8 @@ export default function AdviserProjectDetailPage() {
               <CardTitle>Project Code</CardTitle>
               <CardDescription>Reference for this research group</CardDescription>
             </CardHeader>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <code className="flex-1 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-sm text-primary-700">
+            <div className="mt-4 flex min-w-0 items-center gap-2">
+              <code className="flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-sm text-primary-700">
                 {project.project_code}
               </code>
               <Button
