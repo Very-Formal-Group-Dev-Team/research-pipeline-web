@@ -19,6 +19,16 @@ import {
   type Invitation,
 } from '@/lib/api/projects';
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export default function StudentProjectsPage() {
   const router = useRouter();
   const { user, isLoading: profileLoading, handleLogout } = useDashboardUser('Student');

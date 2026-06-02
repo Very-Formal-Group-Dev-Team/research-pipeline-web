@@ -36,7 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${dmSans.className} ${dmSans.variable} ${dmSerifText.variable} bg-snow antialiased`}>
+      <body
+        className={`${dmSans.className} ${dmSans.variable} ${dmSerifText.variable} bg-coordinator-cream text-coordinator-ink antialiased`}
+      >
         {children}
         <Toaster position="top-right" richColors />
       </body>
