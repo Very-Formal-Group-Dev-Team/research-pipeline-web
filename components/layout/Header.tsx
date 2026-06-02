@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import Dropdown from '../ui/Dropdown';
 import Avatar from '../ui/Avatar';
@@ -44,6 +45,27 @@ export interface HeaderProps {
   onLogout?: () => void;
 }
 
+function ArchivumBrand({ compact = false }: { compact?: boolean }) {
+  return (
+    <>
+      <Image
+        src="/archivum.svg"
+        alt="Archivum"
+        width={compact ? 40 : 44}
+        height={compact ? 40 : 44}
+        className={`flex-shrink-0 object-contain ${compact ? 'h-10 w-10' : 'h-11 w-11'}`}
+        priority
+      />
+      {!compact && (
+        <div className="min-w-0 text-left hidden sm:block">
+          <p className="font-serif text-2xl leading-tight truncate text-snow">Archivum</p>
+          <p className="font-sans text-xs font-light leading-snug truncate text-white/75">Research Portal</p>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Header({ user, onLogout }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,6 +76,8 @@ export default function Header({ user, onLogout }: HeaderProps) {
   const [bellOpen, setBellOpen] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const bellRef = useRef<HTMLDivElement>(null);
+
+  const homeHref = user?.role ? `/${user.role.toLowerCase()}` : '/';
 
   const loadData = useCallback(async () => {
     if (!user) {
@@ -99,7 +123,6 @@ export default function Header({ user, onLogout }: HeaderProps) {
     };
   }, [loadData]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
@@ -147,7 +170,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
           if (pathname === url) {
             return;
           }
-          router.replace(url)
+          router.replace(url);
         }
       },
     },
@@ -171,180 +194,180 @@ export default function Header({ user, onLogout }: HeaderProps) {
     },
   ];
 
-  return (
-    <header className="flex justify-between items-center px-7 bg-coordinator-cream border-b border-[#E5DFDF] sticky top-0 z-40 flex-shrink-0 h-20">
-      {/* LEFT: Hamburger (mobile — branding lives in sidebar) */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={toggle}
-          className="p-2 rounded-lg text-neutral-500 hover:bg-[#E8E4E4] hover:text-darkSlateBlue transition-colors lg:hidden"
-          aria-label="Toggle sidebar"
-        >
-          <FiMenu className="text-xl" />
-        </button>
-      </div>
+  const notificationsDropdown = user ? (
+    <div ref={bellRef} className="relative">
+      <button
+        type="button"
+        className="relative rounded-lg p-2 text-snow transition-colors hover:bg-antiFlashWhite hover:text-oxfordBlue"
+        aria-label="Notifications"
+        title="Notifications"
+        onClick={() => {
+          setBellOpen((o) => {
+            if (!o) loadData();
+            return !o;
+          });
+        }}
+      >
+        <FiBell className="text-xl" />
+        {unreadCount > 0 && (
+          <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-crimsonRed px-1.5 py-0.5 text-center text-xs font-semibold text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
 
-      {/* RIGHT: Notifications + User */}
-      <div className="flex items-center gap-4">
-        {user && (
-          <div ref={bellRef} className="relative">
+      {bellOpen && (
+        <div className="absolute right-0 top-full mt-2 w-96 max-h-[28rem] overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-lg z-50">
+          <div className="sticky top-0 bg-white border-b border-neutral-100 px-4 py-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-neutral-800">Notifications</h3>
+            {notifications.some((n) => !n.is_read) && (
               <button
-                type="button"
-                className="relative rounded-lg p-2 text-neutral-500 transition-colors hover:bg-[#E8E4E4] hover:text-darkSlateBlue"
-                aria-label="Notifications"
-                title="Notifications"
-                onClick={() => {
-                  setBellOpen((o) => {
-                    if (!o) loadData(); // refresh when opening
-                    return !o;
-                  });
-                }}
+                className="text-xs text-primary-600 hover:text-primary-800 font-medium"
+                onClick={handleMarkAllRead}
               >
-                <FiBell className="text-xl" />
-                {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-crimsonRed px-1.5 py-0.5 text-center text-xs font-semibold text-white">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
+                Mark all read
               </button>
+            )}
+          </div>
 
-              {bellOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 max-h-[28rem] overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-lg z-50">
-                  <div className="sticky top-0 bg-white border-b border-neutral-100 px-4 py-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-neutral-800">Notifications</h3>
-                    {notifications.some((n) => !n.is_read) && (
-                      <button
-                        className="text-xs text-primary-600 hover:text-primary-800 font-medium"
-                        onClick={handleMarkAllRead}
-                      >
-                        Mark all read
-                      </button>
-                    )}
+          {invitations.length > 0 && (
+            <div className="border-b border-neutral-100">
+              <div className="px-4 py-2 bg-primary-50">
+                <span className="text-xs font-semibold text-primary-700 uppercase tracking-wide">
+                  Project Invitations
+                </span>
+              </div>
+              {invitations.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="px-4 py-3 border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50"
+                >
+                  <p className="text-sm font-medium text-neutral-800">{inv.project_title}</p>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Invited by {inv.invited_by_name} &middot; Role: {inv.role}
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      className="flex items-center gap-1 rounded-md bg-success-600 px-3 py-1 text-xs font-medium text-white hover:bg-success-700 transition-colors disabled:opacity-50"
+                      onClick={() => handleRespondInvitation(inv.id, true)}
+                      disabled={respondingId === inv.id}
+                    >
+                      <FiCheck className="text-xs" /> Accept
+                    </button>
+                    <button
+                      className="flex items-center gap-1 rounded-md bg-error-100 px-3 py-1 text-xs font-medium text-error-700 hover:bg-error-200 transition-colors disabled:opacity-50"
+                      onClick={() => handleRespondInvitation(inv.id, false)}
+                      disabled={respondingId === inv.id}
+                    >
+                      <FiX className="text-xs" /> Decline
+                    </button>
                   </div>
-
-                  {/* Pending Invitations */}
-                  {invitations.length > 0 && (
-                    <div className="border-b border-neutral-100">
-                      <div className="px-4 py-2 bg-primary-50">
-                        <span className="text-xs font-semibold text-primary-700 uppercase tracking-wide">
-                          Project Invitations
-                        </span>
-                      </div>
-                      {invitations.map((inv) => (
-                        <div
-                          key={inv.id}
-                          className="px-4 py-3 border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50"
-                        >
-                          <p className="text-sm font-medium text-neutral-800">
-                            {inv.project_title}
-                          </p>
-                          <p className="text-xs text-neutral-500 mt-0.5">
-                            Invited by {inv.invited_by_name} &middot; Role: {inv.role}
-                          </p>
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              className="flex items-center gap-1 rounded-md bg-success-600 px-3 py-1 text-xs font-medium text-white hover:bg-success-700 transition-colors disabled:opacity-50"
-                              onClick={() => handleRespondInvitation(inv.id, true)}
-                              disabled={respondingId === inv.id}
-                            >
-                              <FiCheck className="text-xs" /> Accept
-                            </button>
-                            <button
-                              className="flex items-center gap-1 rounded-md bg-error-100 px-3 py-1 text-xs font-medium text-error-700 hover:bg-error-200 transition-colors disabled:opacity-50"
-                              onClick={() => handleRespondInvitation(inv.id, false)}
-                              disabled={respondingId === inv.id}
-                            >
-                              <FiX className="text-xs" /> Decline
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Notification items */}
-                  {notifications.length === 0 && invitations.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-neutral-400">
-                      No notifications yet
-                    </div>
-                  ) : (
-                    notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className={`px-4 py-3 border-b border-neutral-50 last:border-b-0 flex items-start gap-3 cursor-pointer hover:bg-neutral-50 ${
-                          n.is_read ? 'opacity-60' : ''
-                        }`}
-                        onClick={() => handleNotificationClick(n)}
-                        role="link"
-                      >
-                        <div className="mt-0.5">
-                          {n.type === 'defense_approved' && (
-                            <FiCheckCircle className="text-success-600" />
-                          )}
-                          {n.type === 'defense_rejected' && (
-                            <FiX className="text-error-600" />
-                          )}
-                          {n.type === 'defense_moved' && (
-                            <FiInfo className="text-warning-600" />
-                          )}
-                          {(n.type === 'invitation' ||
-                            n.type === 'schedule' ||
-                            n.type === 'event') && (
-                            <FiCalendar className="text-primary-500" />
-                          )}
-                          {n.type !== 'defense_approved' &&
-                            n.type !== 'defense_rejected' &&
-                            n.type !== 'defense_moved' &&
-                            n.type !== 'invitation' &&
-                            n.type !== 'schedule' &&
-                            n.type !== 'event' && (
-                            <FiBell className="text-primary-500" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-neutral-800 truncate">
-                            {n.title}
-                          </p>
-                          <p className="text-xs text-neutral-500 line-clamp-2 mt-0.5">
-                            {n.message}
-                          </p>
-                          <p className="text-xs text-neutral-400 mt-1">
-                            {new Date(n.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        {!n.is_read && (
-                          <span className="mt-1.5 h-2 w-2 rounded-full bg-primary-500 flex-shrink-0" />
-                        )}
-                      </div>
-                    ))
-                  )}
                 </div>
-              )}
+              ))}
             </div>
           )}
 
-          {user ? (
-            <Dropdown
-              align="right"
-              trigger={
-                <div className="flex items-center gap-3 cursor-pointer hover:bg-neutral-50 px-3 py-2 rounded-lg transition-colors">
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-darkSlateBlue">{user.name}</div>
-                    <div className="text-xs text-neutral-500">({user.role})</div>
-                  </div>
-                  <Avatar src={user.avatar} name={user.name} size="md" />
-                </div>
-              }
-              items={userMenuItems}
-            />
+          {notifications.length === 0 && invitations.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-neutral-400">
+              No notifications yet
+            </div>
           ) : (
-            <Link href="/login">
-              <button className="px-4 py-2 bg-crimsonRed text-white rounded-lg hover:bg-error-600 transition-colors">
-                Sign In
-              </button>
-            </Link>
+            notifications.map((n) => (
+              <div
+                key={n.id}
+                className={`px-4 py-3 border-b border-neutral-50 last:border-b-0 flex items-start gap-3 cursor-pointer hover:bg-neutral-50 ${
+                  n.is_read ? 'opacity-60' : ''
+                }`}
+                onClick={() => handleNotificationClick(n)}
+                role="link"
+              >
+                <div className="mt-0.5">
+                  {n.type === 'defense_approved' && <FiCheckCircle className="text-success-600" />}
+                  {n.type === 'defense_rejected' && <FiX className="text-error-600" />}
+                  {n.type === 'defense_moved' && <FiInfo className="text-warning-600" />}
+                  {(n.type === 'invitation' || n.type === 'schedule' || n.type === 'event') && (
+                    <FiCalendar className="text-primary-500" />
+                  )}
+                  {n.type !== 'defense_approved' &&
+                    n.type !== 'defense_rejected' &&
+                    n.type !== 'defense_moved' &&
+                    n.type !== 'invitation' &&
+                    n.type !== 'schedule' &&
+                    n.type !== 'event' && <FiBell className="text-primary-500" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-neutral-800 truncate">{n.title}</p>
+                  <p className="text-xs text-neutral-500 line-clamp-2 mt-0.5">{n.message}</p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {new Date(n.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                {!n.is_read && (
+                  <span className="mt-1.5 h-2 w-2 rounded-full bg-primary-500 flex-shrink-0" />
+                )}
+              </div>
+            ))
           )}
         </div>
+      )}
+    </div>
+  ) : null;
+
+  const profileDropdown = user ? (
+    <Dropdown
+      align="right"
+      trigger={
+        <div className="flex cursor-pointer items-center rounded-lg transition-colors hover:bg-white/10 p-1 lg:gap-3 lg:px-3 lg:py-2">
+          <div className="hidden text-right lg:block">
+            <div className="font-serif text-lg font-medium text-snow">{user.name}</div>
+            <div className="text-xs text-gray-400">{user.role}</div>
+          </div>
+          <Avatar src={user.avatar} name={user.name} size="md" />
+        </div>
+      }
+      items={userMenuItems}
+    />
+  ) : (
+    <Link href="/login">
+      <button className="px-4 py-2 bg-archivumRed text-white rounded-lg hover:bg-archivumRed/90 transition-colors">
+        Sign In
+      </button>
+    </Link>
+  );
+
+  return (
+    <header className="sticky top-0 z-50 flex h-20 w-full flex-shrink-0 items-center border-b border-gray-800 bg-oxfordBlue px-4 shadow-[0_1px_6px_rgba(0,0,0,0.34)] lg:px-7">
+      {/* Mobile: hamburger | logo (center) | profile */}
+      <div className="grid h-full w-full grid-cols-3 items-center lg:hidden">
+        <button
+          onClick={toggle}
+          className="justify-self-start rounded-lg p-2 text-snow transition-colors hover:bg-white/10"
+          aria-label="Toggle navigation menu"
+        >
+          <FiMenu className="text-xl" />
+        </button>
+
+        <Link
+          href={homeHref}
+          className="flex items-center justify-center gap-2 justify-self-center min-w-0"
+        >
+          <ArchivumBrand compact />
+        </Link>
+
+        <div className="justify-self-end">{profileDropdown}</div>
+      </div>
+
+      {/* Desktop: logo (left) | notifications + user (right) */}
+      <div className="hidden h-full w-full items-center justify-between lg:flex">
+        <Link href={homeHref} className="flex items-center gap-3 min-w-0">
+          <ArchivumBrand />
+        </Link>
+
+        <div className="flex items-center gap-4">
+          <div className="hidden lg:block">{notificationsDropdown}</div>
+          {profileDropdown}
+        </div>
+      </div>
     </header>
   );
 }

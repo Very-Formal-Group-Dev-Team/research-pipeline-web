@@ -27,7 +27,28 @@
   }
 
   body {
-    @apply bg-ivory text-neutral-900;
+    @apply bg-snow text-eerieBlack;
+  }
+
+  /* Headings only — section/page/card titles */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-dm-serif-text), Georgia, serif;
+  }
+
+  /* UI copy stays DM Sans (do not inherit serif from surrounding layout) */
+  p,
+  label,
+  input,
+  textarea,
+  select,
+  button,
+  option {
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
   }
 
   * {
@@ -48,7 +69,103 @@
   }
 }
 
+/* Tighter corners on login/register — scoped via .auth-ui on (auth) layout */
+@layer utilities {
+  .auth-ui .rounded-xl {
+    border-radius: 0.25rem !important;
+  }
+
+  .auth-ui .rounded-lg {
+    border-radius: 0.1875rem !important;
+  }
+
+  .auth-ui .rounded-md {
+    border-radius: 0.125rem !important;
+  }
+
+  .auth-ui .rounded-sm {
+    border-radius: 0.125rem !important;
+  }
+
+  .auth-ui .rounded {
+    border-radius: 0.125rem !important;
+  }
+}
+
+/* Responsive form control text on student project detail */
 @layer components {
+  .project-detail-forms input:not([type='hidden']):not([type='file']),
+  .project-detail-forms textarea,
+  .project-detail-forms select {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .project-detail-forms input:not([type='hidden']):not([type='file']),
+    .project-detail-forms textarea,
+    .project-detail-forms select {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+  }
+}
+
+/* Tighter corners on onboarding modal — scoped via .onboarding-ui on /onboarding */
+@layer utilities {
+  .onboarding-ui .rounded-xl {
+    border-radius: 0.25rem !important;
+  }
+
+  .onboarding-ui .rounded-lg {
+    border-radius: 0.1875rem !important;
+  }
+
+  .onboarding-ui .rounded-md {
+    border-radius: 0.125rem !important;
+  }
+
+  .onboarding-ui .rounded-sm {
+    border-radius: 0.125rem !important;
+  }
+
+  .onboarding-ui .rounded {
+    border-radius: 0.125rem !important;
+  }
+}
+
+/* Tighter corners in dashboard/app UI — landing page (/) is not wrapped in .dashboard-ui */
+@layer utilities {
+  .dashboard-ui .rounded-3xl {
+    border-radius: 0.625rem !important;
+  }
+
+  .dashboard-ui .rounded-2xl {
+    border-radius: 0.5rem !important;
+  }
+
+  .dashboard-ui .rounded-xl {
+    border-radius: 0.375rem !important;
+  }
+
+  .dashboard-ui .rounded-lg {
+    border-radius: 0.25rem !important;
+  }
+
+  .dashboard-ui .rounded-md {
+    border-radius: 0.1875rem !important;
+  }
+
+  .dashboard-ui .rounded-sm {
+    border-radius: 0.125rem !important;
+  }
+}
+
+@layer components {
+  .dashboard-ui {
+    --radius: 0.375rem;
+  }
+
   ::-webkit-scrollbar {
     @apply w-2 h-2;
   }
@@ -104,7 +221,7 @@
 }
 
 .coordinator-theme aside.coordinator-sidebar {
-  background-color: #2c3e6b;
+  background-color: #1f2b4b; /* deepSpaceBlue — matches header */
   border-color: #243456;
 }
 
@@ -143,24 +260,28 @@
   color: #5a5556;
 }
 
-.coordinator-theme .coordinator-btn-primary.bg-darkSlateBlue,
+.coordinator-theme .coordinator-btn-primary.bg-oxfordBlue,
+.coordinator-theme .coordinator-btn-primary.bg-oxfordBlue,
 .coordinator-theme button.coordinator-btn-primary {
   background-color: #9b4455 !important;
   color: #ffffff !important;
 }
 
-.coordinator-theme .coordinator-btn-primary.bg-darkSlateBlue:hover,
+.coordinator-theme .coordinator-btn-primary.bg-oxfordBlue:hover,
+.coordinator-theme .coordinator-btn-primary.bg-oxfordBlue:hover,
 .coordinator-theme button.coordinator-btn-primary:hover {
   background-color: #87404f !important;
 }
 
-.coordinator-theme button.border-2.border-darkSlateBlue,
+.coordinator-theme button.border-2.border-oxfordBlue,
+.coordinator-theme button.border-2.border-oxfordBlue,
 .coordinator-theme .coordinator-btn-secondary {
   border-color: #2c3e6b !important;
   color: #2c3e6b !important;
 }
 
-.coordinator-theme button.border-2.border-darkSlateBlue:hover,
+.coordinator-theme button.border-2.border-oxfordBlue:hover,
+.coordinator-theme button.border-2.border-oxfordBlue:hover,
 .coordinator-theme .coordinator-btn-secondary:hover {
   background-color: rgba(44, 62, 107, 0.08) !important;
 }

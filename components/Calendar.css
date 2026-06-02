@@ -49,22 +49,22 @@
 
 /* Events */
 .rbc-event {
-  background: #EC1E24 !important;
+  background: #C23A46 !important;
   border: none !important;
   border-radius: 6px;
   padding: 2px 8px;
   font-size: 12px;
   font-weight: 500;
   color: white !important;
-  box-shadow: 0 1px 4px rgba(236, 30, 36, 0.3);
+  box-shadow: 0 1px 4px rgba(194, 58, 70, 0.3);
   transition: opacity 0.15s;
 }
 .rbc-event:hover {
   opacity: 0.85;
 }
 .rbc-event.rbc-selected {
-  background: #EC1E24 !important;
-  box-shadow: 0 2px 8px rgba(236, 30, 36, 0.4);
+  background: #C23A46 !important;
+  box-shadow: 0 2px 8px rgba(194, 58, 70, 0.4);
 }
 .rbc-event-label {
   color: white !important;
@@ -78,7 +78,7 @@
   color: #64748b;
 }
 .rbc-date-cell.rbc-now a {
-  background: #EC1E24;
+  background: #C23A46;
   color: white;
   border-radius: 50%;
   width: 26px;

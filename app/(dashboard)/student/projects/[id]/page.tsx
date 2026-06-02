@@ -7,7 +7,9 @@ import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Ca
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
 import Avatar from '@/components/ui/Avatar';
-import { FiFolder, FiUsers, FiCalendar, FiFileText, FiCopy, FiCheck, FiMail, FiX } from 'react-icons/fi';
+import { FiCheck, FiClock, FiCopy, FiFileText, FiX } from 'react-icons/fi';
+import { LuLink } from 'react-icons/lu';
+import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   getProject,
@@ -27,6 +29,25 @@ import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
+import { formControlResponsiveClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
+
+function formatProjectDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function statusBadgeVariant(status: string): 'primary' | 'warning' | 'success' | 'default' {
+  const s = status.toLowerCase();
+  if (s === 'draft') return 'warning';
+  if (s === 'active') return 'primary';
+  if (s === 'completed' || s === 'archived') return 'success';
+  return 'default';
+}
+
+const summaryDetailTextClass = 'text-sm md:text-md text-neutral-700';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -141,15 +162,6 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  };
-
   const handleFindRelatedStudies = async () => {
     if (!project) return;
     setFindingRelated(true);
@@ -242,111 +254,162 @@ export default function ProjectDetailPage() {
     setCrossRefLoading(false);
   };
 
-  if (loading || !project) {
+  if (loading) {
     return (
       <DashboardLayout role="student" user={user} onLogout={handleLogout}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-neutral-500">{loading ? 'Loading project...' : 'Project not found'}</p>
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
         </div>
       </DashboardLayout>
     );
   }
 
+  if (!project) {
+    return (
+      <DashboardLayout role="student" user={user} onLogout={handleLogout}>
+        <EmptyState
+          title="Project not found"
+          description="This project may have been removed or you no longer have access."
+          action={{
+            label: 'Back to My Projects',
+            onClick: () => router.push('/student/projects'),
+          }}
+        />
+      </DashboardLayout>
+    );
+  }
+
+  const headerSubtitle = project.abstract || project.description || '';
+
   return (
     <DashboardLayout role="student" user={user} onLogout={handleLogout}>
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <h1 className="text-2xl sm:text-3xl font-bold text-primary 700 break-words">{project.title}</h1>
-              <Badge variant={project.status === 'draft' ? 'warning' : 'primary'}>
+      <div className="project-detail-forms space-y-6">
+        {/* Page header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold text-primary-700 break-words sm:text-3xl">
+                {project.title}
+              </h1>
+              <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
                 {project.status}
               </Badge>
             </div>
-            <p className="text-neutral-600">{project.description || project.abstract}</p>
+            <p className="text-neutral-600 line-clamp-3">
+              {headerSubtitle || 'No description provided'}
+            </p>
           </div>
           <Button
             variant="outline"
+            className="shrink-0 self-start sm:self-auto"
             onClick={() => router.push('/student/projects')}
           >
             Back to Projects
           </Button>
         </div>
 
-        {/* Project Details */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Project Code */}
+        {/* Summary cards */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Card>
             <CardHeader>
-              <FiFolder className="text-2xl text-primary-500 mb-2" />
+              <LuLink className="mb-2 text-2xl text-primary-500" aria-hidden />
               <CardTitle>Project Code</CardTitle>
-              <CardDescription>Use this code to invite team members</CardDescription>
+              <CardDescription>Share this code to invite team members and advisers</CardDescription>
             </CardHeader>
-            <div className="mt-4">
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-neutral-100 px-3 py-2 rounded font-mono text-sm break-all">
-                  {project.project_code}
-                </code>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="self-start sm:self-auto"
-                  onClick={copyProjectCode}
-                >
-                  {codeCopied ? <FiCheck className="text-success-600" /> : <FiCopy />}
-                </Button>
-              </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <code className="flex-1 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-sm text-primary-700">
+                {project.project_code}
+              </code>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={copyProjectCode}
+                aria-label={codeCopied ? 'Copied to clipboard' : 'Copy project code'}
+              >
+                {codeCopied ? (
+                  <FiCheck className="text-success-600" aria-hidden />
+                ) : (
+                  <FiCopy aria-hidden />
+                )}
+              </Button>
             </div>
           </Card>
 
-          {/* Project Type & Standard */}
           <Card>
             <CardHeader>
-              <FiFileText className="text-2xl text-accent-500 mb-2" />
+              <FiFileText className="mb-2 text-2xl text-primary-500" aria-hidden />
               <CardTitle>Project Details</CardTitle>
             </CardHeader>
-            <div className="mt-4 space-y-2 text-neutral-700">
-              <p><span className="font-medium">Type:</span> <span className="capitalize">{project.project_type}</span></p>
-              <p><span className="font-medium">Standard:</span> <span className="uppercase">{project.paper_standard}</span></p>
-              {project.program && <p><span className="font-medium">Program:</span> {project.program}</p>}
-              {project.course && <p><span className="font-medium">Course:</span> {project.course}</p>}
-              {project.section && <p><span className="font-medium">Section:</span> {project.section}</p>}
+            <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
+              <p>
+                <span className="font-medium text-neutral-900">Type:</span>{' '}
+                <span className="capitalize">{project.project_type}</span>
+              </p>
+              <p>
+                <span className="font-medium text-neutral-900">Paper standard:</span>{' '}
+                <span className="uppercase">{project.paper_standard}</span>
+              </p>
+              {project.program ? (
+                <p>
+                  <span className="font-medium text-neutral-900">Program:</span> {project.program}
+                </p>
+              ) : null}
+              {project.course ? (
+                <p>
+                  <span className="font-medium text-neutral-900">Course:</span> {project.course}
+                </p>
+              ) : null}
+              {project.section ? (
+                <p>
+                  <span className="font-medium text-neutral-900">Section:</span> {project.section}
+                </p>
+              ) : null}
             </div>
           </Card>
 
-          {/* Created Date */}
           <Card>
             <CardHeader>
-              <FiCalendar className="text-2xl text-success-500 mb-2" />
-              <CardTitle>Created</CardTitle>
+              <FiClock className="mb-2 text-2xl text-primary-500" aria-hidden />
+              <CardTitle>Timeline</CardTitle>
             </CardHeader>
-            <p className="mt-4 text-neutral-700">{formatDate(project.created_at)}</p>
+            <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
+              <p>
+                <span className="font-medium text-neutral-900">Created:</span>{' '}
+                {formatProjectDate(project.created_at)}
+              </p>
+              <p>
+                <span className="font-medium text-neutral-900">Last updated:</span>{' '}
+                {formatProjectDate(project.updated_at)}
+              </p>
+            </div>
           </Card>
         </div>
 
         {/* Abstract */}
         <Card>
           <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>Abstract</CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={commitAbstract}
-                  disabled={savingAbstract}
-                >
-                  {savingAbstract ? 'Saving...' : 'Save Abstract'}
-                </Button>
+            <div className="flex w-full flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>Abstract</CardTitle>
+                <CardDescription>Edit your project summary</CardDescription>
               </div>
+              <Button
+                size="sm"
+                variant="primary"
+                className="shrink-0"
+                onClick={commitAbstract}
+                disabled={savingAbstract}
+              >
+                {savingAbstract ? 'Saving...' : 'Save Abstract'}
+              </Button>
             </div>
           </CardHeader>
 
-          <div className="mt-4">
+          <div>
             <textarea
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
-                abstractError ? 'border-error-500' : 'border-neutral-300'
+              className={`${formTextareaResponsiveClassName} focus:ring-2 focus:ring-primary-500 ${
+                abstractError ? 'border-error-500' : ''
               }`}
               placeholder="Write a concise abstract of your project"
               rows={6}
@@ -355,7 +418,7 @@ export default function ProjectDetailPage() {
             />
 
             {abstractError && (
-              <p className="mt-2 text-sm text-error-700">{abstractError}</p>
+              <p className="mt-2 text-sm text-archivumRed">{abstractError}</p>
             )}
           </div>
         </Card>
@@ -363,9 +426,12 @@ export default function ProjectDetailPage() {
         {/* Keywords */}
         <Card>
           <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>Keywords</CardTitle>
-              <div className="flex flex-wrap gap-2">
+            <div className="flex w-full flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>Keywords</CardTitle>
+                <CardDescription>Extract, edit, and cross-reference related studies</CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <Button
                   size="sm"
                   variant="primary"
@@ -406,7 +472,7 @@ export default function ProjectDetailPage() {
                 }
               }}
               placeholder="Type keyword then press Enter"
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
+              className={`${formControlResponsiveClassName} focus:ring-2 focus:ring-primary-400`}
             />
           </div>
 
@@ -415,7 +481,7 @@ export default function ProjectDetailPage() {
               {editableKeywords.map((keyword, idx) => (
                 <span
                   key={`${keyword}-${idx}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-800"
+                  className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1 text-md text-neutral-800"
                 >
                   {keyword}
                   <button
@@ -434,11 +500,11 @@ export default function ProjectDetailPage() {
           )}
 
           {relatedStudiesError && (
-            <p className="mt-3 text-sm text-error-700">{relatedStudiesError}</p>
+            <p className="mt-3 text-sm text-archivumRed">{relatedStudiesError}</p>
           )}
 
           {keywordsError && (
-            <p className="mt-3 text-sm text-error-700">{keywordsError}</p>
+            <p className="mt-3 text-sm text-archivumRed">{keywordsError}</p>
           )}
 
           {relatedStudiesResult && (
@@ -458,9 +524,9 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
-          <div className="mt-6 border-t pt-4">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="font-semibold text-neutral-900">Cross-referencing</h3>
+          <div className="mt-6 border-t border-neutral-300 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-serif text-lg font-semibold text-eerieBlack">Cross-referencing</h3>
               <Button
                 size="sm"
                 variant="primary"
@@ -472,7 +538,7 @@ export default function ProjectDetailPage() {
             </div>
 
             {crossRefError && (
-              <p className="mt-2 text-sm text-error-700">{crossRefError}</p>
+              <p className="mt-2 text-sm text-archivumRed">{crossRefError}</p>
             )}
 
             {crossRefResult && (
@@ -497,7 +563,7 @@ export default function ProjectDetailPage() {
                         : null;
 
                       return (
-                        <div key={`${study.display_name}-${index}`} className="rounded-md border border-neutral-200 bg-white p-3">
+                        <div key={`${study.display_name}-${index}`} className="rounded-lg border border-neutral-300 bg-white p-3">
                           <p className="font-medium text-sm text-neutral-900">{study.display_name}</p>
                           <p className="text-xs text-neutral-600 mt-1">
                             {authorNames || 'Unknown authors'}
@@ -531,127 +597,135 @@ export default function ProjectDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle>Attached Document</CardTitle>
+              <CardDescription>Initial document uploaded with this project</CardDescription>
             </CardHeader>
-            <div className="mt-4">
-              <a
-                href={project.document_reference}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-600 hover:text-primary-700 underline flex items-center gap-2"
-              >
-                <FiFileText />
-                View Document
-              </a>
-            </div>
+            <a
+              href={project.document_reference}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-oxfordBlue hover:underline break-all text-sm md:text-md"
+            >
+              View document
+            </a>
           </Card>
         )}
 
-        {/* Team Members Section */}
+        {/* Team members */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex w-full flex-wrap items-start justify-between gap-3">
               <div>
                 <CardTitle>Team Members</CardTitle>
                 <CardDescription>
                   {members.length} {members.length === 1 ? 'member' : 'members'}
-                  {pendingInvites.length > 0 && ` · ${pendingInvites.length} pending`}
+                  {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
                 </CardDescription>
               </div>
-              <Button variant="primary" size="sm" onClick={() => setInviteOpen(true)}>
-                <FiUsers className="mr-2" />
+              <Button variant="primary" size="sm" className="shrink-0" onClick={() => setInviteOpen(true)}>
                 Invite Members
               </Button>
             </div>
           </CardHeader>
 
           {(inviteSuccess || inviteError) && (
-            <div className={`mx-4 mb-2 px-3 py-2 rounded text-sm ${
-              inviteSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-error-700'
-            }`}>
+            <div
+              className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+                inviteSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
+              }`}
+            >
               {inviteSuccess || inviteError}
             </div>
           )}
 
-          <div className="mt-4">
-            {members.length > 0 || pendingInvites.length > 0 ? (
-              <div className="space-y-3">
-                {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className={`flex items-center gap-4 p-3 border rounded-lg transition-colors ${
-                      member.role === 'leader'
-                        ? 'border-primary-300 bg-primary-50/50'
+          {members.length > 0 || pendingInvites.length > 0 ? (
+            <div className="space-y-3">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className={`flex items-center gap-4 rounded-lg border p-3 transition-colors ${
+                    member.role === 'leader'
+                      ? 'border-primary-300 bg-primary-50/50'
+                      : member.role === 'adviser'
+                        ? 'border-neutral-200 bg-neutral-50'
                         : 'border-neutral-200 hover:bg-neutral-50'
-                    }`}
-                  >
-                    <Avatar
-                      src={member.users?.avatar_url}
-                      name={member.users?.full_name || member.users?.email || 'Unknown'}
-                      size="md"
-                    />
-                    <div className="flex-1 min w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="font-semibold text-neutral-900 truncate">
-                          {member.users?.full_name || 'Unknown User'}
-                        </h4>
-                        {member.role === 'leader' && (
-                          <span className="text-xs text-primary-600 font-medium whitespace-nowrap">
-                            (Leader)
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-neutral-600 break-all mt-0.5">{member.users?.email}</p>
+                  }`}
+                >
+                  <Avatar
+                    src={member.users?.avatar_url}
+                    name={member.users?.full_name || member.users?.email || 'Unknown'}
+                    size="md"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="font-semibold text-neutral-900 truncate">
+                        {member.users?.full_name || 'Unknown User'}
+                      </h4>
+                      {member.role === 'leader' ? (
+                        <span className="text-xs font-medium text-primary-600 whitespace-nowrap">
+                          (Leader)
+                        </span>
+                      ) : null}
                     </div>
-                    <Badge variant={
-                      member.role === 'leader' ? 'primary' :
-                      member.role === 'adviser' ? 'success' : 'default'
-                    }>
-                      {member.role === 'adviser' ? 'adviser' :
-                       member.role === 'leader' ? 'leader' : 'collaborator'}
-                    </Badge>
+                    <p className="mt-0.5 text-sm text-neutral-600 break-all">{member.users?.email}</p>
                   </div>
-                ))}
+                  <Badge
+                    variant={
+                      member.role === 'leader'
+                        ? 'primary'
+                        : member.role === 'adviser'
+                          ? 'success'
+                          : 'default'
+                    }
+                    className="capitalize shrink-0"
+                  >
+                    {member.role === 'adviser'
+                      ? 'adviser'
+                      : member.role === 'leader'
+                        ? 'leader'
+                        : 'collaborator'}
+                  </Badge>
+                </div>
+              ))}
 
-                {pendingInvites.length > 0 && (
-                  <>
-                    <div className="pt-2 pb-1">
-                      <p className="text-xs font-medium text-neutral-400 uppercase tracking-wide">
-                        Pending Invitations
-                      </p>
-                    </div>
-                    {pendingInvites.map((invite) => (
-                      <div
-                        key={invite.id}
-                        className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border rounded-lg"
-                      >
-                        <Avatar
-                          src={invite.users?.avatar_url}
-                          name={invite.users?.full_name || invite.users?.email || 'Unknown'}
-                          size="md"
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-neutral-700">
-                            {invite.users?.full_name || 'Unknown User'}
-                          </h4>
-                          <p className="text-sm text-neutral-500">{invite.users?.email}</p>
-                        </div>
-                        <div className="self-start sm:self-auto">
-                          <Badge variant="warning">pending</Badge>
-                          <Badge variant={invite.role === 'adviser' ? 'success' : 'default'}>
-                            {invite.role === 'adviser' ? 'adviser' : 'collaborator'}
-                          </Badge>
-                        </div>
+              {pendingInvites.length > 0 ? (
+                <>
+                  <div className="pt-2 pb-1">
+                    <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                      Pending invitations
+                    </p>
+                  </div>
+                  {pendingInvites.map((invite) => (
+                    <div
+                      key={invite.id}
+                      className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3 sm:flex-row sm:items-center"
+                    >
+                      <Avatar
+                        src={invite.users?.avatar_url}
+                        name={invite.users?.full_name || invite.users?.email || 'Unknown'}
+                        size="md"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-semibold text-neutral-800">
+                          {invite.users?.full_name || 'Unknown User'}
+                        </h4>
+                        <p className="mt-0.5 text-sm text-neutral-600 break-all">{invite.users?.email}</p>
                       </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            ) : (
-              <p className="text-neutral-500 text-sm">
-                No team members yet. Click &quot;Invite Members&quot; to search and invite collaborators.
-              </p>
-            )}
-          </div>
+                      <div className="flex flex-wrap gap-1.5 shrink-0">
+                        <Badge variant="warning">pending</Badge>
+                        <Badge variant={invite.role === 'adviser' ? 'success' : 'default'} className="capitalize">
+                          {invite.role}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <p className="py-4 text-center text-sm text-neutral-500">
+              No team members yet. Use Invite Members to add collaborators or advisers.
+            </p>
+          )}
         </Card>
 
         <UserSearchModal
@@ -662,17 +736,15 @@ export default function ProjectDetailPage() {
           excludeIds={existingUserIds}
         />
 
-        {/* Paper Version Control */}
-        <Card className="p-4 sm:p-6">
-          <div className="p-4 sm:p-6 overflow-x-auto">
-            <PaperVersionTimeline
-              projectId={project.id}
-              paperStandard={project.paper_standard}
-              versions={paperVersions}
-              loading={versionsLoading}
-              onRefresh={loadPaperVersions}
-            />
-          </div>
+        {/* Paper versions */}
+        <Card>
+          <PaperVersionTimeline
+            projectId={project.id}
+            paperStandard={project.paper_standard}
+            versions={paperVersions}
+            loading={versionsLoading}
+            onRefresh={loadPaperVersions}
+          />
         </Card>
       </div>
     </DashboardLayout>

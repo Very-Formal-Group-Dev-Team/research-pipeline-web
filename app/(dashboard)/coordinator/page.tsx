@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import Card, { CardTitle, CardDescription } from '@/components/ui/Card';
-import { FiUsers, FiFolder, FiCalendar, FiBookOpen } from 'react-icons/fi';
+import Card, { CARD_BODY_FLUSH_CLASS, CARD_HEADER_SECTION_CLASS } from '@/components/ui/Card';
+import CardIconHeader from '@/components/ui/CardIconHeader';
+import { FiFolder, FiCalendar, FiBookOpen, FiShield, FiUsers } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import CoordinatorFullCalendar from '@/components/coordinator/CoordinatorFullCalendar';
@@ -46,10 +47,34 @@ export default function CoordinatorDashboardPage() {
 
   const statCards = stats
     ? [
-        { icon: <FiFolder />, label: 'Total Projects', value: String(stats.totalProjects), color: 'bg-primary-100 text-primary-600', href: '/coordinator/projects' },
-        { icon: <FiCalendar />, label: 'Pending Defenses', value: String(stats.pendingDefenses), color: 'bg-warning-100 text-warning-600', href: '/coordinator/events?tab=pending' },
-        { icon: <FiBookOpen />, label: 'Courses', value: String(stats.totalCourses), color: 'bg-success-100 text-success-600', href: '/coordinator/courses' },
-        { icon: <FiUsers />, label: 'Faculty Advisers', value: String(stats.totalAdvisers), color: 'bg-accent-100 text-accent-600', href: '/coordinator/courses' },
+        {
+          icon: <FiFolder />,
+          label: 'Total Projects',
+          value: String(stats.totalProjects),
+          color: 'bg-primary-100 text-primary-600',
+          href: '/coordinator/projects',
+        },
+        {
+          icon: <FiCalendar />,
+          label: 'Pending Defenses',
+          value: String(stats.pendingDefenses),
+          color: 'bg-warning-100 text-warning-600',
+          href: '/coordinator/events?tab=pending',
+        },
+        {
+          icon: <FiBookOpen />,
+          label: 'Courses',
+          value: String(stats.totalCourses),
+          color: 'bg-success-100 text-success-600',
+          href: '/coordinator/courses',
+        },
+        {
+          icon: <FiUsers />,
+          label: 'Faculty Advisers',
+          value: String(stats.totalAdvisers),
+          color: 'bg-accent-100 text-accent-600',
+          href: '/coordinator/courses',
+        },
       ]
     : [];
 
@@ -57,9 +82,11 @@ export default function CoordinatorDashboardPage() {
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-primary-700">Coordinator Dashboard</h1>
+          <h1 className="text-3xl font-bold text-primary-700">Welcome back, {user.name}!</h1>
           <p className="text-neutral-600 mt-1">
-            {institution ? `${institution.name} — Institution-wide overview` : 'System-wide overview and management'}
+            {institution
+              ? `${institution.name} — institution-wide overview and management`
+              : 'System-wide overview and management'}
           </p>
         </div>
 
@@ -69,60 +96,52 @@ export default function CoordinatorDashboardPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               {statCards.map((stat, idx) => (
-                <Card key={idx} padding="md" hover onClick={() => router.push(stat.href)}>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color}`}>
-                      <div className="text-2xl">{stat.icon}</div>
+                <Card key={idx} hover onClick={() => router.push(stat.href)}>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center shrink-0 ${stat.color}`}>
+                      <div className="text-xl sm:text-2xl">{stat.icon}</div>
                     </div>
-                    <div>
-                      <p className="text-sm text-neutral-600">{stat.label}</p>
-                      <p className="text-2xl font-bold text-primary-700">{stat.value}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm text-neutral-600 truncate">{stat.label}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-primary-700">{stat.value}</p>
                     </div>
                   </div>
                 </Card>
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card hover onClick={() => router.push('/coordinator/events?tab=pending')}>
-                <CardTitle>Defense Verification</CardTitle>
-                <CardDescription>Review and approve defense schedules proposed by advisers</CardDescription>
-                <div className="mt-4">
-                  {stats && stats.pendingDefenses > 0 ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-warning-100 text-warning-700">
-                      {stats.pendingDefenses} pending verification
-                    </span>
-                  ) : (
-                    <span className="text-sm text-neutral-500">No pending defenses</span>
-                  )}
-                </div>
-              </Card>
-
-              <Card hover onClick={() => router.push('/coordinator/courses')}>
-                <CardTitle>Courses</CardTitle>
-                <CardDescription>
-                  Manage courses and assign faculty advisers to each course
-                </CardDescription>
-                <div className="mt-4">
-                  <span className="text-sm text-neutral-500">
-                    {stats
-                      ? `${stats.totalCourses} courses · ${stats.totalAdvisers} advisers`
-                      : '0 courses'}
+            <Card hover onClick={() => router.push('/coordinator/events?tab=pending')}>
+              <CardIconHeader
+                title="Defense Verification"
+                description="Review and approve defense schedules proposed by advisers"
+                icon={<FiShield className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+              />
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                {stats && stats.pendingDefenses > 0 ? (
+                  <span className="inline-flex min-w-0 shrink items-center px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-warning-100 text-warning-700 truncate">
+                    {stats.pendingDefenses} pending verification
                   </span>
-                </div>
-              </Card>
-            </div>
+                ) : (
+                  <span className="text-sm text-neutral-600 min-w-0 truncate">No pending defenses</span>
+                )}
+                <span className="text-sm font-medium text-primary-600 shrink-0">
+                  Review defenses →
+                </span>
+              </div>
+            </Card>
 
             <Card padding="none" className="overflow-hidden">
-              <div className="border-b border-neutral-200 px-6 py-4">
-                <CardTitle>Schedule Calendar</CardTitle>
-                <CardDescription>
-                  Defenses and institution events in month, week, day, year, and agenda views
-                </CardDescription>
+              <div className={CARD_HEADER_SECTION_CLASS}>
+                <CardIconHeader
+                  className="mb-0"
+                  title="Schedule Calendar"
+                  description="Defenses and institution events in month, week, day, year, and agenda views"
+                  icon={<FiCalendar className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+                />
               </div>
-              <div className="p-3 pt-0 sm:p-4">
+              <div className={CARD_BODY_FLUSH_CLASS}>
                 <CoordinatorFullCalendar
                   defenses={defenses ?? []}
                   institutionEvents={institutionEvents ?? []}

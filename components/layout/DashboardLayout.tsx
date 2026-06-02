@@ -24,23 +24,25 @@ export default function DashboardLayout({ children, role, user, onLogout }: Dash
   return (
     <SidebarProvider>
       <div
-        className={`min-h-screen overflow-x-hidden ${
+        className={`dashboard-ui min-h-screen overflow-x-hidden flex flex-col ${
           usesPortalChrome ? 'coordinator-theme coordinator-main-bg' : 'bg-neutral-50'
         }`}
       >
-        <Sidebar role={role} />
+        <Header user={user} onLogout={onLogout} />
 
-        <div className="flex min-h-screen flex-col lg:pl-64">
-          <Header user={user} onLogout={onLogout} />
+        <div className="flex flex-1 items-stretch">
+          <Sidebar role={role} />
 
-          <main className="flex flex-1 flex-col min-w-0 coordinator-main-bg">
-            <div className="flex-1 p-6">
-              <div className="max-w-7xl mx-auto">
-                {children}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <main className="flex flex-1 flex-col coordinator-main-bg">
+              <div className="flex-1 px-6 pb-6 pt-10">
+                <div className="max-w-7xl mx-auto">
+                  {children}
+                </div>
               </div>
-            </div>
-            <Footer />
-          </main>
+              <Footer />
+            </main>
+          </div>
         </div>
       </div>
     </SidebarProvider>

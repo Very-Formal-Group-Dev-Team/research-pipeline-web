@@ -78,7 +78,7 @@ export default function CoordinatorRubricPage() {
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Rubrics</h1>
             <p className="text-neutral-600 mt-1">
@@ -106,12 +106,12 @@ export default function CoordinatorRubricPage() {
               <table className="w-full text-sm text-left">
                 <thead className="bg-neutral-50 border-b border-neutral-200">
                   <tr>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Rubric name</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Description</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Defense type</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Criteria</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Total weight</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600 text-right">Actions</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Rubric name</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Description</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Defense type</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Criteria</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Total weight</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
@@ -120,22 +120,22 @@ export default function CoordinatorRubricPage() {
                     const weightOk = Math.abs(total - 100) < 0.01;
                     return (
                       <tr key={rubric.id} className="hover:bg-neutral-50">
-                        <td className="px-4 py-3 font-medium text-neutral-800">{rubric.name}</td>
-                        <td className="px-4 py-3 text-neutral-600 max-w-xs truncate" title={rubric.description}>
+                        <td className="px-4 py-3 sm:px-6 font-medium text-neutral-800">{rubric.name}</td>
+                        <td className="px-4 py-3 sm:px-6 text-neutral-600 max-w-xs truncate" title={rubric.description}>
                           {rubric.description || '—'}
                         </td>
-                        <td className="px-4 py-3 text-neutral-600 capitalize">
+                        <td className="px-4 py-3 sm:px-6 text-neutral-600 capitalize">
                           {DEFENSE_LABELS[rubric.defense_type] || rubric.defense_type}
                         </td>
-                        <td className="px-4 py-3 text-neutral-600">
+                        <td className="px-4 py-3 sm:px-6 text-neutral-600">
                           {rubric.criteria_count ?? 0}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 sm:px-6">
                           <span className={weightOk ? 'text-green-700' : 'text-amber-700'}>
                             {Math.round(total * 100) / 100}%
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 sm:px-6 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"

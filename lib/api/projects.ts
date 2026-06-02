@@ -38,6 +38,12 @@ export interface ProjectMember {
   } | null;
 }
 
+export interface CreateProjectInvite {
+  userId: string;
+  role: 'member' | 'adviser';
+  contributorRole?: string;
+}
+
 export interface CreateProjectPayload {
   title: string;
   researchType: string;
@@ -47,6 +53,7 @@ export interface CreateProjectPayload {
   course?: string;
   section?: string;
   file?: File | null;
+  invites?: CreateProjectInvite[];
 }
 
 export interface JoinProjectPayload {
@@ -64,6 +71,7 @@ export interface Invitation {
   id: string;
   project_id: string;
   role: string;
+  contributor_role?: string | null;
   status: string;
   invited_at: string;
   project_title: string;
@@ -74,7 +82,8 @@ export interface Invitation {
 
 export interface InvitePayload {
   userId: string;
-  role?: string;
+  role?: 'member' | 'adviser';
+  contributorRole?: string;
 }
 
 export interface ScheduleDefensePayload {
@@ -161,8 +170,14 @@ export async function createProject(payload: CreateProjectPayload) {
   if (payload.course) formData.append('course', payload.course);
   if (payload.section) formData.append('section', payload.section);
   if (payload.file) formData.append('file', payload.file);
+  if (payload.invites?.length) {
+    formData.append('invites', JSON.stringify(payload.invites));
+  }
 
-  return post<{ projectId: string; projectCode: string }>('/projects', formData);
+  return post<{ projectId: string; projectCode: string; inviteErrors?: { userId: string; error: string }[] }>(
+    '/projects',
+    formData,
+  );
 }
 
 /** Join a project using a project code. */
@@ -173,6 +188,71 @@ export async function joinProject(payload: JoinProjectPayload) {
 /** Fetch projects the current user advises. */
 export function getAdvisedProjects() {
   return get<Project[]>('/projects/advised');
+}
+
+export interface AdviserDashboardStats {
+  totalAdvisees: number;
+  activeProjects: number;
+  completedProjects: number;
+  upcomingEvents: number;
+}
+
+export interface AdvisedProjectsWithStats {
+  projects: Project[];
+  stats: AdviserDashboardStats;
+}
+
+/** Advised projects plus dashboard stats (single request). */
+export function getAdvisedProjectsWithStats() {
+  return get<AdvisedProjectsWithStats>('/projects/advised?includeStats=1');
+}
+
+/** Adviser dashboard analytics (distinct advisees, project statuses, upcoming schedule). */
+export function getAdviserDashboardStats() {
+  return get<AdviserDashboardStats>('/projects/advised/stats');
+}
+
+/** Derive active/completed counts from advised project rows. */
+export function deriveAdviserProjectStats(projects: Project[]) {
+  let activeProjects = 0;
+  let completedProjects = 0;
+  for (const project of projects) {
+    const status = String(project.status || 'draft').toLowerCase();
+    if (status === 'completed' || status === 'archived') {
+      completedProjects += 1;
+    } else {
+      activeProjects += 1;
+    }
+  }
+  return { activeProjects, completedProjects };
+}
+
+/**
+ * Prefer API stats when present; fill project counts from the advised list when missing or zero.
+ */
+export function resolveAdviserDashboardStats(
+  stats: AdviserDashboardStats | null | undefined,
+  projects: Project[],
+  upcomingEventsFallback = 0,
+): AdviserDashboardStats {
+  const derived = deriveAdviserProjectStats(projects);
+  const base: AdviserDashboardStats = stats ?? {
+    totalAdvisees: 0,
+    activeProjects: derived.activeProjects,
+    completedProjects: derived.completedProjects,
+    upcomingEvents: upcomingEventsFallback,
+  };
+
+  const missingProjectCounts =
+    projects.length > 0 && base.activeProjects === 0 && base.completedProjects === 0;
+
+  return {
+    totalAdvisees: base.totalAdvisees,
+    activeProjects: missingProjectCounts ? derived.activeProjects : base.activeProjects,
+    completedProjects: missingProjectCounts ? derived.completedProjects : base.completedProjects,
+    upcomingEvents:
+      base.upcomingEvents > 0 ? base.upcomingEvents : upcomingEventsFallback,
+  };
 }
 
 /** Fetch project owner / creator profile. */

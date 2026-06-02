@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import Button from '@/components/Button';
 import { FiArrowRight, FiBook, FiUsers, FiCalendar, FiFileText } from 'react-icons/fi';
@@ -10,8 +11,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FiBook className="text-2xl text-coordinator-navy" />
-              <h1 className="text-xl font-bold text-coordinator-navy">Student Research Portal</h1>
+              <Image src="/archivum.svg" alt="" width={32} height={32} className="h-8 w-8 shrink-0" priority />
+              <h1 className="text-xl font-bold text-coordinator-navy">Archivum</h1>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/login">
@@ -135,7 +136,7 @@ export default function Home() {
       <footer className="border-t border-[#E5DFDF] bg-coordinator-cream mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center text-neutral-600">
-            <p>© {new Date().getFullYear()} Student Research Portal. Built for Mapúa Malayan Colleges Mindanao.</p>
+            <p>© {new Date().getFullYear()} Archivum. Built for Mapúa Malayan Colleges Mindanao.</p>
           </div>
         </div>
       </footer>

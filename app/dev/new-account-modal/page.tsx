@@ -60,7 +60,7 @@ export default function NewAccountModalDemo() {
         {/* Test Scenarios */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {scenarios.map((scenario, index) => (
-            <Card key={index} className="p-6 space-y-4">
+            <Card key={index} className="space-y-4">
               <h3 className="font-semibold text-lg text-neutral-900">
                 {scenario.title}
               </h3>
@@ -102,7 +102,7 @@ export default function NewAccountModalDemo() {
         </div>
 
         {/* Custom Test Form */}
-        <Card className="p-6 space-y-4">
+        <Card className="space-y-4">
           <h2 className="text-xl font-semibold text-neutral-900">
             Custom Test Configuration
           </h2>
@@ -171,7 +171,7 @@ export default function NewAccountModalDemo() {
         </Card>
 
         {/* Instructions */}
-        <Card className="p-6 bg-warning-50 border-warning-200">
+        <Card className="bg-warning-50 border-warning-200">
           <h3 className="font-semibold text-warning-900 mb-2">
             Testing Instructions
           </h3>

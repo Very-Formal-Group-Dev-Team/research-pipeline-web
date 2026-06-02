@@ -99,7 +99,7 @@ export default function StudentProjectsPage() {
               {invitations.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center gap-4 p-3 border border-primary-200 bg-primary-50/30 rounded-lg"
+                  className="flex items-center gap-4 p-4 border border-neutral-200 rounded-lg transition-all hover:border-oxfordBlue/40 hover:bg-oxfordBlue/5"
                 >
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-neutral-900 truncate">
@@ -111,7 +111,7 @@ export default function StudentProjectsPage() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
-                      variant="primary"
+                      variant="accept"
                       size="sm"
                       disabled={respondingId === inv.id}
                       onClick={() => handleRespond(inv.id, true)}
@@ -120,7 +120,7 @@ export default function StudentProjectsPage() {
                       Accept
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="decline"
                       size="sm"
                       disabled={respondingId === inv.id}
                       onClick={() => handleRespond(inv.id, false)}

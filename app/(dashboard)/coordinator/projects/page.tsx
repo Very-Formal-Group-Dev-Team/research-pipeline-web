@@ -125,7 +125,7 @@ export default function CoordinatorProjectsPage() {
                   <Card key={adviser.id} padding="none">
                     <button
                       onClick={() => toggleExpand(adviser.id)}
-                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-neutral-50 transition-colors text-left"
+                      className="w-full px-4 py-3 sm:px-6 flex items-center gap-3 hover:bg-neutral-50 transition-colors text-left"
                     >
                       {isOpen ? <FiChevronDown className="text-neutral-400" /> : <FiChevronRight className="text-neutral-400" />}
                       <div className="w-9 h-9 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0">
@@ -142,13 +142,13 @@ export default function CoordinatorProjectsPage() {
                     {isOpen && (
                       <div className="border-t border-neutral-100">
                         {adviser.projects.length === 0 ? (
-                          <p className="px-4 py-3 text-sm text-neutral-400 italic">No projects assigned</p>
+                          <p className="px-4 py-3 sm:px-6 text-sm text-neutral-400 italic">No projects assigned</p>
                         ) : (
                           <div className="divide-y divide-neutral-50">
                             {adviser.projects.map((proj) => {
                               const badge = projectStatusBadge(proj.status);
                               return (
-                                <div key={proj.id} className="px-4 py-3 pl-14 flex items-center gap-3">
+                                <div key={proj.id} className="px-4 py-3 sm:px-6 pl-14 flex items-center gap-3">
                                   <FiFolder className="text-neutral-300 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-neutral-800 truncate">{proj.title}</p>
@@ -180,11 +180,11 @@ export default function CoordinatorProjectsPage() {
               <table className="w-full text-sm text-left">
                 <thead className="bg-neutral-50 border-b border-neutral-200">
                   <tr>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Title</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Code</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Course</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Status</th>
-                    <th className="px-4 py-3 font-medium text-neutral-600">Created</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Title</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Code</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Course</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Status</th>
+                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Created</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
@@ -192,11 +192,11 @@ export default function CoordinatorProjectsPage() {
                     const badge = projectStatusBadge(project.status);
                     return (
                       <tr key={project.id} className="hover:bg-neutral-50">
-                        <td className="px-4 py-3 font-medium text-neutral-800 truncate max-w-xs">{project.title}</td>
-                        <td className="px-4 py-3 text-neutral-600">{project.project_code}</td>
-                        <td className="px-4 py-3 text-neutral-600">{project.course_name ? `${project.course_name} (${project.course_code})` : '—'}</td>
-                        <td className="px-4 py-3"><Badge variant={badge.variant}>{badge.label}</Badge></td>
-                        <td className="px-4 py-3 text-neutral-500">{formatDate(project.created_at)}</td>
+                        <td className="px-4 py-3 sm:px-6 font-medium text-neutral-800 truncate max-w-xs">{project.title}</td>
+                        <td className="px-4 py-3 sm:px-6 text-neutral-600">{project.project_code}</td>
+                        <td className="px-4 py-3 sm:px-6 text-neutral-600">{project.course_name ? `${project.course_name} (${project.course_code})` : '—'}</td>
+                        <td className="px-4 py-3 sm:px-6"><Badge variant={badge.variant}>{badge.label}</Badge></td>
+                        <td className="px-4 py-3 sm:px-6 text-neutral-500">{formatDate(project.created_at)}</td>
                       </tr>
                     );
                   })}

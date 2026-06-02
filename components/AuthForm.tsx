@@ -19,7 +19,7 @@ function GoogleSignInButton() {
     return (
       <button
         onClick={handleGoogleSignIn}
-        className="w-full flex items-center justify-center gap-3 px-6 py-2.5 bg-velvetWine border border-velvetWine rounded-sm hover:bg-velvetWine/90 transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 font-medium text-snow group"
+        className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-velvetWine border border-velvetWine rounded-[3px] hover:bg-velvetWine/90 transform transition-all duration-200 font-medium text-snow group min-h-[48px]"
         aria-label="Sign in with Google"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -84,7 +84,7 @@ function AuthForm({ mode }: { mode: Mode }) {
 
   if (checkingSession) {
     return (
-      <div className="w-full flex items-center justify-center p-4">
+      <div className="w-full flex items-center justify-center py-12 px-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-velvetWine" />
       </div>
     );
@@ -149,8 +149,8 @@ function AuthForm({ mode }: { mode: Mode }) {
 
   if (pendingVerification) {
     return (
-      <div className="w-full flex items-center justify-center p-4">
-        <div className="w-full max-w-[448px] bg-antiFlashWhite rounded-md shadow-medium p-8 border border-snow/60 text-center space-y-6">
+      <div className="w-full">
+        <div className="w-full bg-antiFlashWhite rounded-sm shadow-medium px-6 py-8 sm:p-8 border border-snow/60 text-center space-y-6">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-velvetWine/15 rounded-full">
             <svg className="w-7 h-7 text-velvetWine" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
@@ -162,10 +162,10 @@ function AuthForm({ mode }: { mode: Mode }) {
             Click the link in the email to verify your account.
           </p>
           {message && (
-            <div className={`p-3 rounded-lg text-sm font-medium border ${
+            <div className={`p-3 rounded-sm text-sm font-medium border ${
               message.includes('error') || message.includes('Failed') || message.includes('failed')
-                ? 'bg-crimsonRed/10 text-crimsonRed border-crimsonRed/30'
-                : 'bg-mutedGreen/10 text-mutedGreen border-mutedGreen/30'
+                ? 'bg-archivumRed/10 text-archivumRed border-archivumRed/30'
+                : 'bg-deepSeaGreen/10 text-deepSeaGreen border-deepSeaGreen/30'
             }`}>
               {message}
             </div>
@@ -174,7 +174,7 @@ function AuthForm({ mode }: { mode: Mode }) {
             <button
               onClick={handleResend}
               disabled={loading || resendCooldown > 0}
-              className="w-full py-2.5 bg-velvetWine text-snow font-medium rounded-sm hover:bg-velvetWine/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full py-3.5 bg-velvetWine text-snow font-medium rounded-[3px] hover:bg-velvetWine/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[48px]"
             >
               {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}
             </button>
@@ -191,25 +191,24 @@ function AuthForm({ mode }: { mode: Mode }) {
   }
 
   return (
-    <div className="w-full flex items-center justify-center p-4">
-      <div className="w-full max-w-[448px]">
-        <form onSubmit={handleSubmit} className="bg-antiFlashWhite p-6 md:p-12 rounded-md shadow-medium border border-snow/60">
+    <div className="w-full">
+        <form onSubmit={handleSubmit} className="bg-antiFlashWhite px-10 py-12 md:px-12 rounded-xl shadow-medium border border-snow/60">
           {/* Logo + Header */}
-          <div className="w-full mb-6">
+          <div className="w-full mb-8 sm:mb-6">
             <div className="flex justify-center">
               <img src="/brand/student-research-portal-logo-alt.png" alt="logo" className="w-12 h-12 sm:w-16 sm:h-16" />
             </div>
             <div className="text-center mt-3">
-              <h1 className="text-2xl md:text-3xl font-bold text-eerieBlack">{mode === 'login' ? 'Welcome back' : 'Get Started'}</h1>
-              <p className="text-sm md:text-base text-eerieBlack/80 mt-1">{mode === 'login' ? 'Sign in to your account' : 'Create your account to continue'}</p>
+              <h1 className="text-3xl font-bold text-eerieBlack">{mode === 'login' ? 'Welcome back' : 'Get Started'}</h1>
+              <p className="text-sm text-eerieBlack/80 mt-1">{mode === 'login' ? 'Sign in to your account' : 'Create your account to continue'}</p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {mode === 'register' && (
               <div>
-                <label className="block text-xs text-eerieBlack mb-2">Full Name</label>
-                <div className="flex items-center bg-snow border border-eerieBlack/15 rounded-sm px-2 py-2 sm:px-3 sm:py-3 focus-within:border-velvetWine focus-within:ring-1 focus-within:ring-velvetWine/40 transition-colors">
+                <label className="block text-sm text-eerieBlack mb-2.5">Full Name</label>
+                <div className="flex items-center min-h-[48px] bg-snow border border-eerieBlack/15 rounded-[3px] px-4 py-3 focus-within:border-velvetWine focus-within:ring-1 focus-within:ring-velvetWine/40 transition-colors">
                   <FaUser className="text-eerieBlack/70 mr-3" />
                   <input className="flex-1 bg-transparent outline-none text-sm text-eerieBlack placeholder:text-eerieBlack/40" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </div>
@@ -217,60 +216,59 @@ function AuthForm({ mode }: { mode: Mode }) {
             )}
 
             <div>
-              <label className="block text-xs text-eerieBlack mb-2">Email Address</label>
-              <div className="flex items-center bg-snow border border-eerieBlack/15 rounded-sm px-2 py-2 sm:px-3 sm:py-3 focus-within:border-velvetWine focus-within:ring-1 focus-within:ring-velvetWine/40 transition-colors">
+              <label className="block text-sm text-eerieBlack mb-2.5">Email Address</label>
+              <div className="flex items-center min-h-[42px] bg-snow border border-eerieBlack/15 rounded-[3px] px-4 py-3 focus-within:border-velvetWine focus-within:ring-1 focus-within:ring-velvetWine/40 transition-colors">
                 <svg className="w-4 h-4 text-eerieBlack/70 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
-                <input className="flex-1 bg-transparent outline-none text-sm text-eerieBlack placeholder:text-eerieBlack/40" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input className="flex-1 bg-transparent outline-none text-sm sm:text-md text-eerieBlack placeholder:text-eerieBlack/50" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-eerieBlack mb-2">Password</label>
-              <div className="flex items-center bg-snow border border-eerieBlack/15 rounded-sm px-2 py-2 sm:px-3 sm:py-3 focus-within:border-velvetWine focus-within:ring-1 focus-within:ring-velvetWine/40 transition-colors">
+              <label className="block text-sm text-eerieBlack mb-2.5">Password</label>
+              <div className="flex items-center min-h-[42px] bg-snow border border-eerieBlack/15 rounded-[3px] px-4 py-3 focus-within:border-velvetWine focus-within:ring-1 focus-within:ring-velvetWine/40 transition-colors">
                 <FaLock className="text-eerieBlack/70 mr-3" />
-                <input className="flex-1 bg-transparent outline-none text-sm text-eerieBlack placeholder:text-eerieBlack/40" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                <input className="flex-1 bg-transparent outline-none text-sm sm:text-md text-eerieBlack placeholder:text-eerieBlack/40" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
               </div>
             </div>
 
             {mode === 'login' && (
-              <div className="flex items-center justify-between text-sm mt-1">
-                <label className="flex items-center gap-2 text-eerieBlack/80">
-                  <input id="rememberMe" className="w-4 h-4 bg-snow border border-eerieBlack/20 accent-velvetWine" type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
-                  <span className="text-sm">Remember me</span>
+              <div className="flex justify-between gap-3 sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm pt-1">
+                <label className="flex items-center gap-2.5 text-eerieBlack/80">
+                  <input id="rememberMe" className="w-4 h-4 shrink-0 bg-snow border border-eerieBlack/20 accent-velvetWine" type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+                  <span>Remember me</span>
                 </label>
-                <a href="#" className="text-eerieBlack/80 hover:text-eerieBlack transition-colors">Forgot Password?</a>
+                <a href="#" className="text-eerieBlack/80 hover:text-eerieBlack transition-colors sm:text-right">Forgot Password?</a>
               </div>
             )}
           </div>
 
           {message && (
-            <div className={`p-3 rounded text-sm mt-4 text-center font-medium border ${message.includes('error') || message.includes('Failed') || message.includes('invalid') || message.includes('already') ? 'bg-[rgba(236,30,36,0.08)] text-[#EC1E24] border-[rgba(236,30,36,0.12)]' : 'bg-[rgba(118,212,116,0.08)] text-[#76D474] border-[rgba(118,212,116,0.12)]'}`}>
+            <div className={`p-4 rounded-[3px] text-sm mt-5 text-center font-medium border ${message.includes('error') || message.includes('Failed') || message.includes('invalid') || message.includes('already') ? 'bg-archivumRed/10 text-archivumRed border-archivumRed/20' : 'bg-deepSeaGreen/10 text-deepSeaGreen border-deepSeaGreen/20'}`}>
               {message}
             </div>
           )}
 
-          <div className="mt-6">
-            <button type="submit" disabled={loading} className="w-full py-3 bg-velvetWine text-snow text-sm rounded-sm shadow-sm hover:bg-velvetWine/90 transition-colors disabled:opacity-50">
+          <div className="mt-8">
+            <button type="submit" disabled={loading} className="w-full py-3 min-h-[42px] bg-velvetWine text-snow text-md rounded-[3px] shadow-sm hover:bg-velvetWine/90 transition-colors disabled:opacity-50">
               {loading ? 'Loading...' : mode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </div>
 
-          <div className="flex items-center my-4 opacity-70">
+          <div className="flex items-center my-6 sm:my-5 opacity-70">
             <div className="flex-1 h-px bg-eerieBlack/20"></div>
-            <div className="px-4 text-sm text-eerieBlack/70">Or continue with</div>
+            <div className="px-4 text-sm text-eerieBlack">Or</div>
             <div className="flex-1 h-px bg-eerieBlack/20"></div>
           </div>
 
-          <div className="mb-4">
+          <div className="mb-6 sm:mb-4">
             <GoogleSignInButton />
           </div>
 
-          <p className="text-center text-sm text-eerieBlack/80">
+          <p className="text-center text-sm text-eerieBlack/80 px-1 pb-1">
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <a href={mode === 'login' ? '/register' : '/login'} className="font-semibold text-eerieBlack hover:text-velvetWine transition-colors">{mode === 'login' ? 'Sign up' : 'Sign in'}</a>
           </p>
         </form>
-      </div>
     </div>
   );
 }

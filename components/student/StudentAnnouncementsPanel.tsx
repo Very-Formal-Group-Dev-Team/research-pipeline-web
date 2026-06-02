@@ -9,8 +9,10 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { RiMegaphoneLine } from 'react-icons/ri';
 
-import Card, { CardDescription, CardTitle } from '@/components/ui/Card';
+import Card, { CARD_HEADER_SECTION_CLASS, CARD_PADDING_CLASS } from '@/components/ui/Card';
+import CardIconHeader from '@/components/ui/CardIconHeader';
 import type { Defense } from '@/lib/api/defenses';
 import type { InstitutionEvent } from '@/lib/api/events';
 import {
@@ -79,14 +81,14 @@ export default function StudentAnnouncementsPanel({
 
   return (
     <Card padding="none" className="overflow-hidden">
-      <div className="border-b border-neutral-200 px-4 py-4 sm:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle>Announcements</CardTitle>
-            <CardDescription>
-              Upcoming events, meetings, and defenses — open Events for full details
-            </CardDescription>
-          </div>
+      <div className={CARD_HEADER_SECTION_CLASS}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardIconHeader
+            className="mb-0"
+            title="Announcements"
+            description="Upcoming events, meetings, and defenses — open Events for full details"
+            icon={<RiMegaphoneLine className="h-8 w-8" strokeWidth={0.30} aria-hidden />}
+          />
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex rounded-lg border border-neutral-200 p-1 bg-neutral-50">
               {(['week', 'month'] as ViewMode[]).map((mode) => (
@@ -129,7 +131,7 @@ export default function StudentAnnouncementsPanel({
         </div>
       </div>
 
-      <div className="p-4 sm:p-6">
+      <div className={CARD_PADDING_CLASS}>
         {loading ? (
           <div className="flex h-40 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />

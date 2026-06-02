@@ -2,7 +2,15 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Modal from '@/components/ui/Modal';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import Button from '@/components/Button';
+import {
+  formLabelClassName,
+  formTextareaResponsiveClassName,
+  rubricCriteriaInputClassName,
+  rubricCriteriaWeightInputClassName,
+} from '@/lib/utils/formControls';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import {
   SAMPLE_COORDINATOR_RUBRIC,
@@ -193,45 +201,34 @@ export default function RubricEditorModal({
       ) : (
         <div className="space-y-5 p-6 pt-0">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-neutral-700">
-                Rubric name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                placeholder="e.g. Proposal Defense Rubric"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-neutral-700">
-                Defense type
-              </label>
-              <select
-                value={defenseType}
-                onChange={(e) => setDefenseType(e.target.value as DefenseType)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              >
-                {DEFENSE_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Input
+              label="Rubric name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Proposal Defense Rubric"
+              responsiveText
+              fullWidth
+            />
+            <Select
+              label="Defense type"
+              value={defenseType}
+              onChange={(e) => setDefenseType(e.target.value as DefenseType)}
+              options={DEFENSE_TYPES}
+              responsiveText
+              fullWidth
+            />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">
+            <label className={formLabelClassName}>
               Rubric description <span className="text-error-500">*</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className={formTextareaResponsiveClassName}
               placeholder="Describe the purpose and scope of this rubric"
               required
             />
@@ -250,19 +247,19 @@ export default function RubricEditorModal({
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-neutral-200">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs md:text-sm">
                 <thead className="bg-neutral-50">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium text-neutral-600">
+                    <th className="px-2 py-1.5 md:px-3 md:py-2 text-left font-medium text-neutral-600">
                       Criterion
                     </th>
-                    <th className="min-w-[12rem] px-3 py-2 text-left font-medium text-neutral-600">
+                    <th className="min-w-[12rem] px-2 py-1.5 md:px-3 md:py-2 text-left font-medium text-neutral-600">
                       Description
                     </th>
-                    <th className="w-28 px-3 py-2 text-left font-medium text-neutral-600">
+                    <th className="w-[4.5rem] px-2 py-1.5 md:px-3 md:py-2 text-left font-medium text-neutral-600">
                       Weight (%)
                     </th>
-                    <th className="w-14 px-3 py-2" aria-label="Actions" />
+                    <th className="w-14 px-2 py-1.5 md:px-3 md:py-2" aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
@@ -275,25 +272,25 @@ export default function RubricEditorModal({
                   ) : (
                     rows.map((row) => (
                       <tr key={row.key}>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-1.5 md:px-3 md:py-2">
                           <input
                             type="text"
                             value={row.criterionName}
                             onChange={(e) => updateRow(row.key, 'criterionName', e.target.value)}
-                            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            className={rubricCriteriaInputClassName}
                             placeholder="Criterion name"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-1.5 md:px-3 md:py-2">
                           <input
                             type="text"
                             value={row.description}
                             onChange={(e) => updateRow(row.key, 'description', e.target.value)}
-                            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            className={rubricCriteriaInputClassName}
                             placeholder="Optional"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="w-[4.5rem] px-2 py-1.5 md:px-3 md:py-2">
                           <input
                             type="number"
                             min={0}
@@ -301,11 +298,11 @@ export default function RubricEditorModal({
                             step={0.01}
                             value={row.weight}
                             onChange={(e) => updateRow(row.key, 'weight', e.target.value)}
-                            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            className={rubricCriteriaWeightInputClassName}
                             placeholder="0"
                           />
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-2 py-1.5 md:px-3 md:py-2 text-center">
                           <button
                             type="button"
                             onClick={() => removeRow(row.key)}

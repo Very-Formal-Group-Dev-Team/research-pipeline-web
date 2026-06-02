@@ -53,9 +53,9 @@ export default function AdviserAdviseesPage() {
         ) : projects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
-              <Card 
-                key={project.id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
+              <Card
+                key={project.id}
+                hover
                 onClick={() => router.push(`/adviser/advisees/${project.id}`)}
               >
                 <CardHeader>

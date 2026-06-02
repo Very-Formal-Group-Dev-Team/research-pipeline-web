@@ -46,11 +46,14 @@ module.exports = {
         deepSeaGreen : '#49766C' ,
         frenchRose : '#F06880' ,
         malachite : '#5ED86D' ,
+        malachiteDark: '#4CBD5C',
+        /** Between legacy crimsonRed (#EC1E24) and velvetWine (#9B4455) — UI accent red */
+        archivumRed: '#C23A46',
 
-        // Student Research Portal Original Colors
+        // Student Research Portal Original Colors (legacy — prefer Archivum tokens above)
         ivory: '#FEFBF5',
         darkSlateBlue: '#19374C',
-        crimsonRed: '#EC1E24',
+        crimsonRed: '#EC1E24', // notification badge only
         lightGray: '#D5D5D5',
         skyBlue: '#A1C1D9',
         mutedGreen: '#76D474',
@@ -59,16 +62,16 @@ module.exports = {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
-          50: '#f0f4f8',
-          100: '#d9e6f2',
-          200: '#b3cce5',
-          300: '#8db3d8',
-          400: '#6799cb',
-          500: '#19374C', // darkSlateBlue
-          600: '#142c3d',
-          700: '#0f212e',
-          800: '#0a161f',
-          900: '#050b0f',
+          50: '#f4f5f9',
+          100: '#e8ebf2',
+          200: '#d1d8e5',
+          300: '#a3b0c9',
+          400: '#6b7fa3',
+          500: '#2C3E6B', // oxfordBlue
+          600: '#243456',
+          700: '#1F2B4B', // deepSpaceBlue
+          800: '#182238',
+          900: '#111827',
         },
         accent: {
           50: '#f5f9fc',
@@ -83,28 +86,28 @@ module.exports = {
           900: '#111d25',
         },
         success: {
-          50: '#f2fbf2',
-          100: '#e5f7e5',
-          200: '#cbefcb',
-          300: '#b1e7b1',
-          400: '#94df93',
-          500: '#76D474', // mutedGreen
-          600: '#5eba5c',
-          700: '#47a045',
-          800: '#2f862e',
-          900: '#186c17',
+          50: '#f2f7f6',
+          100: '#e0ebe8',
+          200: '#c2d7d2',
+          300: '#94b5ad',
+          400: '#6b9489',
+          500: '#49766C', // deepSeaGreen
+          600: '#3d635b',
+          700: '#32504a',
+          800: '#273d39',
+          900: '#1c2a28',
         },
         error: {
-          50: '#fef2f2',
-          100: '#fee5e5',
-          200: '#fdcbcb',
-          300: '#fca5a5',
-          400: '#fb7575',
-          500: '#EC1E24', // crimsonRed
-          600: '#dc1a20',
-          700: '#b8161b',
-          800: '#941216',
-          900: '#700e11',
+          50: '#fdf4f5',
+          100: '#f9e4e7',
+          200: '#f2c8cd',
+          300: '#e5a0a9',
+          400: '#d46b78',
+          500: '#C23A46', // archivumRed
+          600: '#ad3340',
+          700: '#922b36',
+          800: '#77232d',
+          900: '#5c1b23',
         },
         warning: {
           50: '#fffbeb',
@@ -125,7 +128,7 @@ module.exports = {
           cream: '#F0ECEC',
         },
         neutral: {
-          50: '#FEFBF5', // ivory
+          50: '#FAF8F8', // snow
           100: '#f5f5f5',
           200: '#e5e5e5',
           300: '#D5D5D5', // lightGray
@@ -138,13 +141,14 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        serif: ['Georgia', 'serif'],
+        sans: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-dm-serif-text)', 'Georgia', 'serif'],
         mono: ['Fira Code', 'monospace'],
       },
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],
         'sm': ['0.875rem', { lineHeight: '1.25rem' }],
+        'md': ['0.9375rem', { lineHeight: '1.375rem' }],
         'base': ['1rem', { lineHeight: '1.5rem' }],
         'lg': ['1.125rem', { lineHeight: '1.75rem' }],
         'xl': ['1.25rem', { lineHeight: '1.75rem' }],
@@ -169,9 +173,12 @@ module.exports = {
         '3xl': '2rem',
       },
       boxShadow: {
-        'soft': '0 2px 15px rgba(0, 0, 0, 0.08)',
-        'medium': '0 4px 25px rgba(0, 0, 0, 0.12)',
-        'hard': '0 10px 40px rgba(0, 0, 0, 0.15)',
+        sm: '0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.06)',
+        md: '0 4px 10px -1px rgba(0, 0, 0, 0.12), 0 2px 6px -2px rgba(0, 0, 0, 0.08)',
+        lg: '0 10px 22px -3px rgba(0, 0, 0, 0.14), 0 4px 10px -4px rgba(0, 0, 0, 0.08)',
+        'soft': '0 2px 15px rgba(0, 0, 0, 0.11)',
+        'medium': '0 4px 25px rgba(0, 0, 0, 0.15)',
+        'hard': '0 10px 40px rgba(0, 0, 0, 0.19)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

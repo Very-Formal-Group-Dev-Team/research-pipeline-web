@@ -57,7 +57,7 @@ export default function ScheduleFullCalendar({
       readOnly
     >
       <CalendarDndShell enabled={false}>
-        <div className="portal-calendar w-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-soft">
+        <div className="portal-calendar w-full overflow-hidden rounded-xl mt-1.5 bg-white">
           <CalendarHeader />
           <div className="min-h-[min(24rem,55vh)] sm:min-h-[28rem] lg:min-h-[32rem] max-h-[min(75vh,calc(100vh-12rem))] overflow-auto">
             <CalendarBody />
