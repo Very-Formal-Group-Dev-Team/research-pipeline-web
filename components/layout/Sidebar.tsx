@@ -40,7 +40,6 @@ const menuItems: Record<string, MenuItem[]> = {
   student: [
     { label: 'Dashboard', href: '/student', icon: <FiHome /> },
     { label: 'My Projects', href: '/student/projects', icon: <FiFolder /> },
-    { label: 'Create Project', href: '/student/projects/create', icon: <FiPlus /> },
     { label: 'Notifications', href: '/student/notifications', icon: <FiBell />, mobileOnly: true },
     { label: 'Events', href: '/student/events', icon: <FiCalendar />, tooltip: 'Defenses, meetings, and institution events' },
     { label: 'Profile', href: '/student/profile', icon: <FiUser /> },
@@ -60,6 +59,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
     { label: 'Rubrics', href: '/coordinator/rubrics', icon: <FiClipboard /> },
+    { label: 'Profile', href: '/coordinator/profile', icon: <FiUser /> },
   ],
 };
 

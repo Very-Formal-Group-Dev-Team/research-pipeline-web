@@ -84,7 +84,7 @@ export function CardTitle({ children, className = '' }: { children: React.ReactN
 
 export function CardDescription({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={`font-sans text-sm text-neutral-600 mt-1 ${className}`}>
+    <p className={`w-full overflow-hidden text-ellipsis line-clamp-3 text-justify font-sans text-sm text-neutral-600 mt-1 ${className}`}>
       {children}
     </p>
   );

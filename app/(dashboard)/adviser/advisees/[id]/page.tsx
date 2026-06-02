@@ -209,9 +209,6 @@ export default function AdviserProjectDetailPage() {
                 {project.status}
               </Badge>
             </div>
-            <p className="text-neutral-600 line-clamp-3">
-              {abstractText || 'No description provided'}
-            </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:shrink-0">
             <Button variant="outline" onClick={() => router.push('/adviser/advisees')}>
