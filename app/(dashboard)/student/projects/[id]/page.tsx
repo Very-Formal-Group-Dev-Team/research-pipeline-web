@@ -39,6 +39,16 @@ function formatProjectDate(iso: string) {
   });
 }
 
+function formatProjectDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function statusBadgeVariant(status: string): 'primary' | 'warning' | 'success' | 'default' {
   const s = status.toLowerCase();
   if (s === 'draft') return 'warning';
@@ -295,9 +305,11 @@ export default function ProjectDetailPage() {
                 {project.status}
               </Badge>
             </div>
-            <p className="text-neutral-600 line-clamp-3">
-              {headerSubtitle || 'No description provided'}
-            </p>
+            {headerSubtitle ? (
+              <p className="text-neutral-600 line-clamp-3">
+                {headerSubtitle}
+              </p>
+            ) : null}
           </div>
           <Button
             variant="outline"
@@ -376,11 +388,11 @@ export default function ProjectDetailPage() {
             <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
               <p>
                 <span className="font-medium text-neutral-900">Created:</span>{' '}
-                {formatProjectDate(project.created_at)}
+                {formatProjectDateTime(project.created_at)}
               </p>
               <p>
                 <span className="font-medium text-neutral-900">Last updated:</span>{' '}
-                {formatProjectDate(project.updated_at)}
+                {formatProjectDateTime(project.updated_at)}
               </p>
             </div>
           </Card>
