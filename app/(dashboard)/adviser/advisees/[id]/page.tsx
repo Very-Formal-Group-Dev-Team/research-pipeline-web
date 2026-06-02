@@ -6,7 +6,7 @@ import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Ca
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
-import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText, FiMoreVertical } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import { useRouter, useParams } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -27,17 +27,17 @@ import {
   normalizeDefenseSchedule,
   type Defense,
 } from '@/lib/api/defenses';
-import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
-import {
-  formatMeetingStatusLabel,
-  formatMeetingVenueDisplay,
-  meetingStatusBadgeVariant,
-} from '@/lib/meetings/display';
+import MeetingScheduleCard from '@/components/meetings/MeetingScheduleCard';
 import { PROJECT_MEETINGS_SECTION_ID } from '@/lib/meetings/navigation';
-import Dropdown from '@/components/ui/Dropdown';
+import {
+  MEETING_STATUS_FILTER_OPTIONS,
+  MEETINGS_FILTER_CONTROL_CLASS,
+  meetingMatchesStatusFilter,
+  meetingStatusFilterEmptyLabel,
+  type MeetingStatusFilter,
+} from '@/lib/meetings/statusFilter';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
-import { isOnlineModality, normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
 import EmptyState from '@/components/layout/EmptyState';
 import {
   formatPaperStandard,
@@ -52,22 +52,6 @@ import {
   projectSummaryDetailTextClassName,
 } from '@/lib/utils/formControls';
 
-function formatMeetingTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-function formatMeetingDateCompact(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
 function formatProjectDateTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
     month: 'long',
@@ -78,45 +62,10 @@ function formatProjectDateTime(iso: string) {
   });
 }
 
-function formatModalityLabel(modality?: string | null) {
-  if (!modality) return 'Not specified';
-  const normalized = modality.trim().toLowerCase();
-  if (normalized === 'face-to-face' || normalized === 'face to face') return 'Face to face';
-  if (normalized === 'online') return 'Online';
-  if (normalized === 'hybrid') return 'Hybrid';
-  return modality;
-}
-
 const projectSummaryBodyTextClass = `${projectSummaryDetailTextClassName} text-neutral-700`;
 
-/** Meeting card typography — body text-md from md up; title one step above (xl at lg) */
-const MEETING_CARD_BODY_CLASS = 'text-sm leading-tight md:text-md';
-const MEETING_CARD_TITLE_CLASS =
-  'text-md font-semibold leading-tight sm:text-lg md:text-xl';
-
 /** Shared height for Meetings card toolbar filter + primary action */
-const MEETINGS_TOOLBAR_CONTROL_CLASS =
-  'h-9 min-h-9 max-h-9 shrink-0 box-border !py-0 inline-flex items-center';
-
-type MeetingStatusFilter = 'scheduled' | 'completed' | 'cancelled' | 'all';
-
-const MEETING_STATUS_FILTER_OPTIONS: { value: MeetingStatusFilter; label: string }[] = [
-  { value: 'scheduled', label: 'Scheduled' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
-  { value: 'all', label: 'Show all' },
-];
-
-function meetingMatchesStatusFilter(
-  meeting: Defense,
-  filter: MeetingStatusFilter,
-): boolean {
-  const status = (meeting.status || '').toLowerCase();
-  if (filter === 'all') return true;
-  if (filter === 'completed') return status === 'completed';
-  if (filter === 'cancelled') return status === 'cancelled';
-  return status === 'scheduled' || status === 'pending' || status === 'rescheduled';
-}
+const MEETINGS_TOOLBAR_CONTROL_CLASS = MEETINGS_FILTER_CONTROL_CLASS;
 
 const PROJECT_TITLE_CLASS =
   'font-serif text-2xl font-bold leading-tight text-primary-700 sm:text-3xl';
@@ -656,127 +605,23 @@ export default function AdviserProjectDetailPage() {
           ) : meetings.length > 0 ? (
             filteredMeetings.length > 0 ? (
             <div className="space-y-3">
-              {filteredMeetings.map((meeting) => {
-                const online = isOnlineModality(meeting.modality);
-                const joinUrl = normalizeJitsiJoinUrl(
-                  meeting.meeting_url,
-                  meeting.meeting_room,
-                );
-                const venueDisplay = formatMeetingVenueDisplay(
-                  meeting.location,
-                  meeting.venue,
-                );
-                const meetingHeading =
-                  meeting.meeting_title?.trim() ||
-                  `${meeting.defense_type} meeting`;
-                const timeRange = meeting.end_time
-                  ? `${formatMeetingTime(meeting.start_time)} – ${formatMeetingTime(meeting.end_time)}`
-                  : formatMeetingTime(meeting.start_time);
-                const statusKey = (meeting.status || '').toLowerCase();
-                const isTerminalStatus =
-                  statusKey === 'cancelled' || statusKey === 'completed';
-
-                const locationLine = online
-                  ? formatModalityLabel(meeting.modality)
-                  : [formatModalityLabel(meeting.modality), venueDisplay || 'Venue not specified']
-                      .filter(Boolean)
-                      .join(' · ');
-
-                return (
-                  <article
-                    key={meeting.id}
-                    className="rounded-lg border border-neutral-300 bg-white px-4 py-3"
-                  >
-                    <div className="flex items-start justify-between gap-2.5">
-                      <h4
-                        className={`min-w-0 flex-1 font-serif text-eerieBlack ${MEETING_CARD_TITLE_CLASS} ${
-                          meeting.meeting_title?.trim() ? '' : 'capitalize'
-                        }`}
-                      >
-                        {meetingHeading}
-                      </h4>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <Badge
-                          variant={meetingStatusBadgeVariant(meeting.status)}
-                          size="sm"
-                          className="capitalize md:px-2.5 md:py-1 md:text-sm"
-                        >
-                          {formatMeetingStatusLabel(meeting.status, meeting.status_label)}
-                        </Badge>
-                        <Dropdown
-                          align="right"
-                          trigger={
-                            <button
-                              type="button"
-                              className="rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
-                              aria-label="Meeting options"
-                            >
-                              <FiMoreVertical className="h-5 w-5 md:h-6 md:w-6" aria-hidden />
-                            </button>
-                          }
-                          items={[
-                            {
-                              label: 'Edit',
-                              value: 'edit',
-                              onClick: () => handleEditMeeting(meeting),
-                              disabled: isTerminalStatus || meetingActionLoading,
-                            },
-                            {
-                              label: 'Cancel',
-                              value: 'cancel',
-                              danger: true,
-                              onClick: () => setCancelMeetingId(meeting.id),
-                              disabled: isTerminalStatus || meetingActionLoading,
-                            },
-                            {
-                              label: 'Mark as complete',
-                              value: 'complete',
-                              onClick: () => void handleCompleteMeeting(meeting.id),
-                              disabled: isTerminalStatus || meetingActionLoading,
-                            },
-                          ]}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex items-end justify-between gap-3">
-                      <div className={`min-w-0 space-y-0.5 ${MEETING_CARD_BODY_CLASS}`}>
-                        <p className="text-neutral-600">{locationLine}</p>
-                        <p className="font-medium text-neutral-900 tabular-nums">
-                          {formatMeetingDateCompact(meeting.start_time)}
-                        </p>
-                        <p className="text-neutral-600 tabular-nums">{timeRange}</p>
-                      </div>
-
-                      <div className="flex shrink-0 flex-col items-end justify-end">
-                        {online && joinUrl && !isTerminalStatus ? (
-                          <JoinMeetingButton
-                            meeting_url={meeting.meeting_url}
-                            meeting_room={meeting.meeting_room}
-                            label="Join Meeting"
-                            size="sm"
-                            className="md:!text-base"
-                          />
-                        ) : online && !joinUrl && !isTerminalStatus ? (
-                          <p
-                            className={`max-w-[11rem] text-right text-neutral-500 ${MEETING_CARD_BODY_CLASS}`}
-                          >
-                            Link available when confirmed
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+              {filteredMeetings.map((meeting) => (
+                <MeetingScheduleCard
+                  key={meeting.id}
+                  meeting={meeting}
+                  actions={{
+                    onEdit: () => handleEditMeeting(meeting),
+                    onCancel: () => setCancelMeetingId(meeting.id),
+                    onComplete: () => void handleCompleteMeeting(meeting.id),
+                    disabled: meetingActionLoading,
+                  }}
+                />
+              ))}
             </div>
             ) : (
               <p className="py-8 text-center text-sm text-neutral-500">
                 No{' '}
-                {meetingStatusFilter === 'all'
-                  ? 'meetings'
-                  : `${MEETING_STATUS_FILTER_OPTIONS.find((o) => o.value === meetingStatusFilter)?.label.toLowerCase() ?? meetingStatusFilter} meetings`}{' '}
-                to show.
+                {meetingStatusFilterEmptyLabel(meetingStatusFilter)} to show.
               </p>
             )
           ) : (
