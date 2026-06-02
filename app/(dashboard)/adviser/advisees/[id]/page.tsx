@@ -28,6 +28,13 @@ import {
   formatProjectType,
   statusBadgeVariant,
 } from '@/lib/utils/projectDisplay';
+import {
+  projectDetailFieldRowClassName,
+  projectDetailLabelLgClassName,
+  projectDetailMetadataBodyTextClassName,
+  projectDetailValueWrapClassName,
+  projectSummaryDetailTextClassName,
+} from '@/lib/utils/formControls';
 
 function formatMeetingDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -64,7 +71,29 @@ function formatModalityLabel(modality?: string | null) {
   return modality;
 }
 
-const summaryDetailTextClass = 'text-sm md:text-md text-neutral-700';
+const projectSummaryBodyTextClass = `${projectSummaryDetailTextClassName} text-neutral-700`;
+
+const PROJECT_TITLE_CLASS =
+  'font-serif text-2xl font-bold leading-tight text-primary-700 sm:text-3xl';
+
+const PROJECT_TITLE_END_BLEED_CLASS = 'pe-[0.75ch] sm:pe-[1ch]';
+
+function ProjectDetailReadOnlyRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={projectDetailFieldRowClassName}>
+      <span className={projectDetailLabelLgClassName}>{label}</span>
+      <div className={`${projectDetailValueWrapClassName} ${projectDetailMetadataBodyTextClassName}`}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function AdviserProjectDetailPage() {
   const router = useRouter();
@@ -222,11 +251,13 @@ export default function AdviserProjectDetailPage() {
 
   return (
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
-      <div className="space-y-6">
+      <div className="project-detail-forms space-y-6">
         {/* Page header */}
         <header className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <h1 className="min-w-0 truncate text-2xl font-bold text-primary-700 sm:text-3xl">
+            <h1
+              className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+            >
               {project.title}
             </h1>
             <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
@@ -236,7 +267,7 @@ export default function AdviserProjectDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 text-primary-700 hover:bg-primary-50"
+            className="text-sm sm:text-md shrink-0 text-primary-700 hover:bg-primary-50"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => router.push('/adviser/advisees')}
           >
@@ -244,16 +275,18 @@ export default function AdviserProjectDetailPage() {
           </Button>
         </header>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <Card>
+        {/* Summary cards — left: code + timeline; right: details (full height) */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:grid-rows-2 md:items-stretch">
+          <Card className="md:col-start-1 md:row-start-1">
             <CardHeader>
               <LuLink className="mb-2 text-2xl text-primary-500" aria-hidden />
               <CardTitle>Project Code</CardTitle>
               <CardDescription>Reference for this research group</CardDescription>
             </CardHeader>
             <div className="mt-4 flex min-w-0 items-center gap-2">
-              <code className="flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-sm text-primary-700">
+              <code
+                className={`flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-primary-700 ${projectSummaryDetailTextClassName}`}
+              >
                 {project.project_code}
               </code>
               <Button
@@ -272,79 +305,78 @@ export default function AdviserProjectDetailPage() {
             </div>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <FiFileText className="mb-2 text-2xl text-primary-500" aria-hidden />
-              <CardTitle>Project Details</CardTitle>
-            </CardHeader>
-            <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
-              <p>
-                <span className="font-medium text-neutral-900">Type:</span>{' '}
-                {formatProjectType(project.project_type)}
-              </p>
-              <p>
-                <span className="font-medium text-neutral-900">Paper standard:</span>{' '}
-                {formatPaperStandard(project.paper_standard)}
-              </p>
-              {project.program ? (
-                <p>
-                  <span className="font-medium text-neutral-900">Program:</span> {project.program}
-                </p>
-              ) : null}
-              {project.course ? (
-                <p>
-                  <span className="font-medium text-neutral-900">Course:</span> {project.course}
-                </p>
-              ) : null}
-              {project.section ? (
-                <p>
-                  <span className="font-medium text-neutral-900">Section:</span> {project.section}
-                </p>
-              ) : null}
-            </div>
-          </Card>
-
-          <Card>
+          <Card className="md:col-start-1 md:row-start-2">
             <CardHeader>
               <FiClock className="mb-2 text-2xl text-primary-500" aria-hidden />
               <CardTitle>Timeline</CardTitle>
             </CardHeader>
-            <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
-              <p>
+            <div className="mt-4 space-y-2">
+              <p className={projectSummaryBodyTextClass}>
                 <span className="font-medium text-neutral-900">Created:</span>{' '}
                 {formatProjectDateTime(project.created_at)}
               </p>
-              <p>
+              <p className={projectSummaryBodyTextClass}>
                 <span className="font-medium text-neutral-900">Last updated:</span>{' '}
                 {formatProjectDateTime(project.updated_at)}
               </p>
             </div>
           </Card>
+
+          <Card className="flex h-full min-h-0 flex-col md:col-start-2 md:row-span-2 md:row-start-1">
+            <CardHeader className="!mb-0 shrink-0">
+              <FiFileText className="mb-2 text-2xl text-primary-500" aria-hidden />
+              <CardTitle>Project Details</CardTitle>
+              <CardDescription>Project type, paper standard, and class information</CardDescription>
+            </CardHeader>
+            <div className="mt-5 flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 flex-1 flex-col justify-center">
+                <div className="project-detail-inline-fields flex flex-col gap-3 md:gap-3.5">
+                  <ProjectDetailReadOnlyRow label="Program">
+                    {project.program?.trim() || '—'}
+                  </ProjectDetailReadOnlyRow>
+                  <ProjectDetailReadOnlyRow label="Course">
+                    {project.course?.trim() || '—'}
+                  </ProjectDetailReadOnlyRow>
+                  <ProjectDetailReadOnlyRow label="Section">
+                    {project.section?.trim() || '—'}
+                  </ProjectDetailReadOnlyRow>
+                  <ProjectDetailReadOnlyRow label="Project Type">
+                    {formatProjectType(project.project_type) || '—'}
+                  </ProjectDetailReadOnlyRow>
+                  <ProjectDetailReadOnlyRow label="Paper Standard">
+                    {formatPaperStandard(project.paper_standard) || '—'}
+                  </ProjectDetailReadOnlyRow>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
           {/* Abstract */}
-          <Card className="h-full">
-            <CardHeader>
+          <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+            <CardHeader className="shrink-0">
               <CardTitle>Abstract</CardTitle>
               <CardDescription>Project summary from the student team</CardDescription>
             </CardHeader>
-            <p className="text-neutral-700 whitespace-pre-wrap">
+            <p
+              className={`project-detail-abstract-text min-h-[12rem] flex-1 whitespace-pre-wrap text-neutral-700 lg:min-h-0 ${projectSummaryBodyTextClass}`}
+            >
               {abstractText || 'No abstract provided'}
             </p>
           </Card>
 
           {/* Team members */}
           <Card className="h-full">
-          <CardHeader>
-            <CardTitle>Team Members</CardTitle>
-            <CardDescription>
-              {members.length} {members.length === 1 ? 'member' : 'members'}
-              {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
-            </CardDescription>
-          </CardHeader>
+            <CardHeader>
+              <CardTitle>Team Members</CardTitle>
+              <CardDescription>
+                {members.length} {members.length === 1 ? 'member' : 'members'}
+                {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
+              </CardDescription>
+            </CardHeader>
 
-          {members.length > 0 || pendingInvites.length > 0 ? (
+            {members.length > 0 || pendingInvites.length > 0 ? (
             <div className="space-y-3">
               {members.map((member) => (
                 <div

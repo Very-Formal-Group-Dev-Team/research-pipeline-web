@@ -4,6 +4,46 @@ export const formLabelClassName = 'block text-sm font-medium text-primary-700 mb
 /** text-sm on small screens, text-md from md breakpoint up */
 export const formControlTextSizeClassName = 'text-sm md:text-md';
 
+/** Summary cards: project code and timeline (use inside `.project-detail-forms`) */
+export const projectSummaryDetailTextClassName = [
+  'project-summary-detail-text',
+  formControlTextSizeClassName,
+].join(' ');
+
+/** Project Details card metadata: text-sm → text-md from md (student / default) */
+export const projectDetailMetadataTextClassName = [
+  'project-detail-metadata-text',
+  formControlTextSizeClassName,
+].join(' ');
+
+/** Adviser read-only metadata: also text-lg from lg */
+export const projectDetailMetadataLgTextClassName = [
+  'project-detail-metadata-text-lg',
+  'text-sm md:text-md lg:text-lg',
+].join(' ');
+
+export const projectDetailMetadataBodyTextClassName = `${projectDetailMetadataLgTextClassName} text-neutral-700`;
+
+/** Inline label + value rows in the Project Details card (all breakpoints) */
+export const projectDetailFieldRowClassName =
+  'project-detail-field-row flex min-w-0 flex-row items-center gap-2 md:gap-3';
+
+const projectDetailLabelLayoutClassName =
+  'shrink-0 whitespace-nowrap font-medium leading-tight text-primary-700 w-[10.25rem] md:w-40 md:leading-snug';
+
+export const projectDetailLabelClassName = [
+  projectDetailMetadataTextClassName,
+  projectDetailLabelLayoutClassName,
+].join(' ');
+
+export const projectDetailLabelLgClassName = [
+  projectDetailMetadataLgTextClassName,
+  projectDetailLabelLayoutClassName,
+  'lg:w-44',
+].join(' ');
+
+export const projectDetailValueWrapClassName = 'min-w-0 flex-1';
+
 /** Focus glow aligned with oxfordBlue / primary actions */
 export const formControlFocusGlowClassName =
   'focus:outline-none focus:shadow-[0_0_12px_rgba(44,62,107,0.2)]';

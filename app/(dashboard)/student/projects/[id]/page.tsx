@@ -29,12 +29,20 @@ import {
 } from '@/lib/api/projects';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
-import { formControlResponsiveClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
+import {
+  formControlResponsiveClassName,
+  formSelectResponsiveClassName,
+  formTextareaResponsiveClassName,
+  projectDetailFieldRowClassName,
+  projectDetailLabelClassName,
+  projectDetailMetadataTextClassName,
+  projectDetailValueWrapClassName,
+  projectSummaryDetailTextClassName,
+} from '@/lib/utils/formControls';
 import {
   PAPER_STANDARD_FORM_OPTIONS,
   PROJECT_TYPE_FORM_OPTIONS,
@@ -60,7 +68,7 @@ function formatProjectDateTime(iso: string) {
   });
 }
 
-const summaryDetailTextClass = 'text-sm md:text-md text-neutral-700';
+const projectSummaryBodyTextClass = `${projectSummaryDetailTextClassName} text-neutral-700`;
 
 /** Shared display styles for the page title (view + inline edit). */
 const PROJECT_TITLE_CLASS =
@@ -71,6 +79,30 @@ const PROJECT_TITLE_INPUT_SHELL_CLASS =
 
 /** Serif ink extends past the layout box; padding avoids clipping the last glyph. */
 const PROJECT_TITLE_END_BLEED_CLASS = 'pe-[0.75ch] sm:pe-[1ch]';
+
+const PROJECT_DETAIL_CONTROL_CLASS = [
+  projectDetailMetadataTextClassName,
+  'h-9 !min-h-0 w-full !py-1.5 !px-3 !text-sm !leading-snug md:h-10 md:!py-2 md:!text-md md:!leading-normal',
+].join(' ');
+
+function ProjectDetailFieldRow({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={projectDetailFieldRowClassName}>
+      <label htmlFor={htmlFor} className={projectDetailLabelClassName}>
+        {label}
+      </label>
+      <div className={projectDetailValueWrapClassName}>{children}</div>
+    </div>
+  );
+}
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -537,92 +569,18 @@ export default function ProjectDetailPage() {
           </Button>
         </header>
 
-        <Card>
-            <CardHeader>
-              <div className="flex w-full flex-wrap items-start justify-between gap-3">
-                <div>
-                  <FiFileText className="mb-2 text-2xl text-primary-500" aria-hidden />
-                  <CardTitle>Project Details</CardTitle>
-                  <CardDescription>Edit type, paper standard, and class information</CardDescription>
-                </div>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="shrink-0"
-                  onClick={commitProjectDetails}
-                  disabled={savingDetails}
-                  loading={savingDetails}
-                >
-                  {savingDetails ? 'Saving...' : 'Save Details'}
-                </Button>
-              </div>
-            </CardHeader>
-            <div className="mt-4 space-y-4">
-              {(detailsSuccess || detailsError) && (
-                <div
-                  className={`rounded-lg px-3 py-2 text-sm ${
-                    detailsSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
-                  }`}
-                >
-                  {detailsSuccess || detailsError}
-                </div>
-              )}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Input
-                  label="Program"
-                  value={detailsProgram}
-                  onChange={(e) => setDetailsProgram(e.target.value)}
-                  placeholder="Enter program name"
-                  responsiveText
-                />
-                <Input
-                  label="Course"
-                  value={detailsCourse}
-                  onChange={(e) => setDetailsCourse(e.target.value)}
-                  placeholder="Enter course name"
-                  responsiveText
-                />
-                <Input
-                  label="Section"
-                  value={detailsSection}
-                  onChange={(e) => setDetailsSection(e.target.value)}
-                  placeholder="Enter section"
-                  responsiveText
-                />
-                <Select
-                  label="Project Type"
-                  placeholder="Select project type"
-                  value={detailsProjectType}
-                  onChange={(e) => setDetailsProjectType(e.target.value)}
-                  options={[...PROJECT_TYPE_FORM_OPTIONS]}
-                  responsiveText
-                  required
-                />
-              </div>
-              <div className="max-w-xs sm:max-w-sm">
-                <Select
-                  label="Paper Standard"
-                  placeholder="Select paper standard"
-                  value={detailsPaperStandard}
-                  onChange={(e) => setDetailsPaperStandard(e.target.value)}
-                  options={[...PAPER_STANDARD_FORM_OPTIONS]}
-                  responsiveText
-                  required
-                />
-              </div>
-            </div>
-        </Card>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <Card>
+        {/* Summary cards — left: code + timeline; right: details (full height) */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:grid-rows-2 md:items-stretch">
+          <Card className="md:col-start-1 md:row-start-1">
             <CardHeader>
               <LuLink className="mb-2 text-2xl text-primary-500" aria-hidden />
               <CardTitle>Project Code</CardTitle>
               <CardDescription>Share this code to invite team members and advisers</CardDescription>
             </CardHeader>
             <div className="mt-4 flex min-w-0 items-center gap-2">
-              <code className="flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-sm text-primary-700">
+              <code
+                className={`flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-primary-700 ${projectSummaryDetailTextClassName}`}
+              >
                 {project.project_code}
               </code>
               <Button
@@ -641,20 +599,114 @@ export default function ProjectDetailPage() {
             </div>
           </Card>
 
-          <Card>
+          <Card className="md:col-start-1 md:row-start-2">
             <CardHeader>
               <FiClock className="mb-2 text-2xl text-primary-500" aria-hidden />
               <CardTitle>Timeline</CardTitle>
             </CardHeader>
-            <div className={`mt-4 space-y-2 ${summaryDetailTextClass}`}>
-              <p>
+            <div className="mt-4 space-y-2">
+              <p className={projectSummaryBodyTextClass}>
                 <span className="font-medium text-neutral-900">Created:</span>{' '}
                 {formatProjectDateTime(project.created_at)}
               </p>
-              <p>
+              <p className={projectSummaryBodyTextClass}>
                 <span className="font-medium text-neutral-900">Last updated:</span>{' '}
                 {formatProjectDateTime(project.updated_at)}
               </p>
+            </div>
+          </Card>
+
+          <Card className="flex h-full min-h-0 flex-col md:col-start-2 md:row-span-2 md:row-start-1">
+            <CardHeader className="!mb-0 shrink-0">
+              <div className="flex w-full flex-wrap items-start justify-between gap-2">
+                <div>
+                  <FiFileText className="mb-2 text-2xl text-primary-500" aria-hidden />
+                  <CardTitle>Project Details</CardTitle>
+                  <CardDescription>Edit type, paper standard, and class information</CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="shrink-0"
+                  onClick={commitProjectDetails}
+                  disabled={savingDetails}
+                  loading={savingDetails}
+                >
+                  {savingDetails ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            </CardHeader>
+            <div className="mt-5 flex min-h-0 flex-1 flex-col">
+              {(detailsSuccess || detailsError) && (
+                <div
+                  className={`mb-3 shrink-0 rounded-lg px-3 py-1.5 text-sm ${
+                    detailsSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
+                  }`}
+                >
+                  {detailsSuccess || detailsError}
+                </div>
+              )}
+              <div className="flex min-h-0 flex-1 flex-col justify-center">
+                <div className="project-detail-inline-fields flex flex-col gap-3 md:gap-3.5">
+                <ProjectDetailFieldRow label="Program" htmlFor="project-detail-program">
+                  <Input
+                    id="project-detail-program"
+                    value={detailsProgram}
+                    onChange={(e) => setDetailsProgram(e.target.value)}
+                    placeholder="Program name"
+                    className={PROJECT_DETAIL_CONTROL_CLASS}
+                  />
+                </ProjectDetailFieldRow>
+                <ProjectDetailFieldRow label="Course" htmlFor="project-detail-course">
+                  <Input
+                    id="project-detail-course"
+                    value={detailsCourse}
+                    onChange={(e) => setDetailsCourse(e.target.value)}
+                    placeholder="Course name"
+                    className={PROJECT_DETAIL_CONTROL_CLASS}
+                  />
+                </ProjectDetailFieldRow>
+                <ProjectDetailFieldRow label="Section" htmlFor="project-detail-section">
+                  <Input
+                    id="project-detail-section"
+                    value={detailsSection}
+                    onChange={(e) => setDetailsSection(e.target.value)}
+                    placeholder="Section"
+                    className={PROJECT_DETAIL_CONTROL_CLASS}
+                  />
+                </ProjectDetailFieldRow>
+                <ProjectDetailFieldRow label="Project Type" htmlFor="project-detail-type">
+                  <select
+                    id="project-detail-type"
+                    value={detailsProjectType}
+                    onChange={(e) => setDetailsProjectType(e.target.value)}
+                    required
+                    className={`${formSelectResponsiveClassName} ${PROJECT_DETAIL_CONTROL_CLASS} !pr-8 bg-[length:0.875rem_0.875rem] bg-[right_0.5rem_center]`}
+                  >
+                    {PROJECT_TYPE_FORM_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </ProjectDetailFieldRow>
+                <ProjectDetailFieldRow label="Paper Standard" htmlFor="project-detail-paper-standard">
+                  <select
+                    id="project-detail-paper-standard"
+                    value={detailsPaperStandard}
+                    onChange={(e) => setDetailsPaperStandard(e.target.value)}
+                    required
+                    className={`${formSelectResponsiveClassName} ${PROJECT_DETAIL_CONTROL_CLASS} !pr-8 bg-[length:0.875rem_0.875rem] bg-[right_0.5rem_center]`}
+                  >
+                    {PAPER_STANDARD_FORM_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </ProjectDetailFieldRow>
+                </div>
+              </div>
             </div>
           </Card>
         </div>
