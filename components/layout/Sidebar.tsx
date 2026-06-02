@@ -60,6 +60,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
     { label: 'Rubrics', href: '/coordinator/rubrics', icon: <FiClipboard /> },
+    { label: 'Profile', href: '/coordinator/profile', icon: <FiUser /> },
   ],
 };
 

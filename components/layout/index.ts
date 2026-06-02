@@ -5,6 +5,7 @@ export { default as EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 
 export { default as Footer } from './Footer';
+export type { FooterProps, FooterVariant } from './Footer';
 
 export { default as Header } from './Header';
 export type { HeaderProps } from './Header';

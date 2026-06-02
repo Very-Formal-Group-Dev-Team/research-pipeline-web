@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import Button from '@/components/Button';
 import Input from '@/components/ui/Input';
 import Avatar from '@/components/ui/Avatar';
 import { updateUserProfile, uploadUserAvatar } from '@/lib/api/users';
+import {
+  formControlClassName,
+  formControlTextSizeClassName,
+  formLabelClassName,
+} from '@/lib/utils/formControls';
 
-interface UserProfile {
+export interface EditProfileUser {
   name: string;
   email: string;
   role: string;
@@ -14,12 +19,30 @@ interface UserProfile {
   statusText?: string;
 }
 
-interface EditProfileProps {
-  user: UserProfile;
+export interface EditProfileFormProps {
+  user: EditProfileUser;
   onClose: () => void;
+  statusPlaceholder?: string;
 }
 
-export default function EditProfile({ user, onClose }: EditProfileProps) {
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className={formLabelClassName}>{label}</p>
+      <p
+        className={`${formControlClassName} ${formControlTextSizeClassName} bg-neutral-50 text-neutral-700`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+export default function EditProfileForm({
+  user,
+  onClose,
+  statusPlaceholder = 'Add a short status',
+}: EditProfileFormProps) {
   const [name, setName] = useState(user.name);
   const [statusText, setStatusText] = useState(user.statusText || '');
   const [avatarPreview, setAvatarPreview] = useState(user.avatarUrl || '');
@@ -68,10 +91,6 @@ export default function EditProfile({ user, onClose }: EditProfileProps) {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleUpdate();
-  };
-
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -83,82 +102,76 @@ export default function EditProfile({ user, onClose }: EditProfileProps) {
     reader.readAsDataURL(file);
   };
 
-  const openFilePicker = () => {
-    fileInputRef.current?.click();
-  };
-
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col items-center gap-3 pb-4 border-b border-neutral-200">
+    <form
+      className="space-y-6"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void handleUpdate();
+      }}
+    >
+      <p className="text-sm text-neutral-600">
+        Update your display name, status, and profile photo.
+      </p>
+
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50/50 px-4 py-5">
         <Avatar src={avatarPreview} name={name} size="lg" />
-        <Button variant="secondary" size="sm" onClick={openFilePicker}>
-          Change Avatar
+        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+          Change photo
         </Button>
+        <p className="text-xs text-neutral-500">JPG, PNG, or WebP</p>
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
           className="hidden"
           ref={fileInputRef}
           onChange={handleAvatarChange}
+          aria-label="Upload profile photo"
         />
       </div>
 
-      <div className="space-y-3">
-        <div>
-          <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
-            Display Name
-          </label>
+      <div className="space-y-4">
+        <Input
+          label="Display name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Enter your display name"
+          responsiveText
+          fullWidth
+          required
+        />
+
+        <ReadOnlyField label="Email" value={user.email} />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <ReadOnlyField label="Role" value={user.role} />
           <Input
+            label="Status"
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter your display name"
+            value={statusText}
+            onChange={(e) => setStatusText(e.target.value)}
+            placeholder={statusPlaceholder}
+            responsiveText
+            fullWidth
           />
         </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
-            Email
-          </label>
-          <div className="px-3 py-2.5 bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-700">
-            {user.email}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
-              Role
-            </label>
-            <div className="px-3 py-2.5 bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-700">
-              {user.role}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-neutral-900 mb-1.5">
-              Status
-            </label>
-            <Input
-              type="text"
-              value={statusText}
-              onChange={(e) => setStatusText(e.target.value)}
-              placeholder="e.g. Available for consult"
-            />
-          </div>
-        </div>
       </div>
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error ? (
+        <div className="rounded-lg border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
+          {error}
+        </div>
+      ) : null}
 
-      <div className="flex justify-end gap-2 pt-4 border-t border-neutral-200">
-        <Button variant="outline" onClick={onClose} disabled={loading}>
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-2">
+        <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
           Cancel
         </Button>
-        <Button variant="error" onClick={handleUpdate} disabled={loading}>
-          {loading ? 'Updating...' : 'Update Profile'}
+        <Button type="submit" variant="primary" disabled={loading} loading={loading}>
+          {loading ? 'Saving…' : 'Save changes'}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
