@@ -19,6 +19,16 @@ import {
   type Invitation,
 } from '@/lib/api/projects';
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export default function StudentProjectsPage() {
   const router = useRouter();
   const { user, isLoading: profileLoading, handleLogout } = useDashboardUser('Student');
@@ -166,15 +176,15 @@ export default function StudentProjectsPage() {
                   </div>
                 </CardHeader>
                 <CardTitle>{project.title}</CardTitle>
-                <CardDescription>
-                  {project.description || 'No description'}
-                </CardDescription>
+                {project.description?.trim() ? (
+                  <CardDescription>{project.description}</CardDescription>
+                ) : null}
                 <div className="mt-4 space-y-2 text-sm text-neutral-600">
                   <div>Type: {project.project_type}</div>
                   <div>Standard: {project.paper_standard}</div>
                   <div className="flex items-center gap-1">
                     <FiClock className="text-neutral-500" />
-                    {new Date(project.created_at).toLocaleDateString()}
+                    {formatDateTime(project.created_at)}
                   </div>
                 </div>
               </Card>
