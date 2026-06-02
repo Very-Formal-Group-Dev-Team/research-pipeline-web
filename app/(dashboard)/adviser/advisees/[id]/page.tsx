@@ -238,7 +238,7 @@ export default function AdviserProjectDetailPage() {
     }
   };
 
-  const loadPaperVersions = async () => {
+  const loadPaperVersions = useCallback(async () => {
     setVersionsLoading(true);
     try {
       const res = await getPaperVersions(projectId);
@@ -250,13 +250,22 @@ export default function AdviserProjectDetailPage() {
     } finally {
       setVersionsLoading(false);
     }
-  };
+  }, [projectId]);
+
+  const reloadProject = useCallback(async () => {
+    const res = await getProject(projectId);
+    if (res.data) setProject(res.data);
+  }, [projectId]);
+
+  const refreshPaperTimeline = useCallback(async () => {
+    await Promise.all([loadPaperVersions(), reloadProject()]);
+  }, [loadPaperVersions, reloadProject]);
 
   useEffect(() => {
     if (projectId) {
-      loadPaperVersions();
+      void loadPaperVersions();
     }
-  }, [projectId]);
+  }, [projectId, loadPaperVersions]);
 
   const handleBookMeeting = () => {
     if (!project) return;
@@ -675,7 +684,7 @@ export default function AdviserProjectDetailPage() {
             paperStandard={project.paper_standard}
             versions={paperVersions}
             loading={versionsLoading}
-            onRefresh={loadPaperVersions}
+            onRefresh={refreshPaperTimeline}
           />
         </Card>
       </div>

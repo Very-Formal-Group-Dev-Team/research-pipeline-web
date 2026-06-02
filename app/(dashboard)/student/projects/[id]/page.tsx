@@ -158,6 +158,16 @@ export default function ProjectDetailPage() {
     setVersionsLoading(false);
   }, [params.id]);
 
+  const reloadProject = useCallback(async () => {
+    if (!params.id) return;
+    const res = await getProject(params.id as string);
+    if (res.data) setProject(res.data);
+  }, [params.id]);
+
+  const refreshPaperTimeline = useCallback(async () => {
+    await Promise.all([loadPaperVersions(), reloadProject()]);
+  }, [loadPaperVersions, reloadProject]);
+
   const loadMembers = async () => {
     if (!params.id) return;
     const [membersRes, invitesRes] = await Promise.all([
@@ -1060,7 +1070,7 @@ export default function ProjectDetailPage() {
             paperStandard={project.paper_standard}
             versions={paperVersions}
             loading={versionsLoading}
-            onRefresh={loadPaperVersions}
+            onRefresh={refreshPaperTimeline}
           />
         </Card>
 
