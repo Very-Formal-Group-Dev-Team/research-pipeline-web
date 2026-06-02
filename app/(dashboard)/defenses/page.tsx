@@ -14,6 +14,11 @@ import Button from '@/components/Button';
 import { FiArrowLeft } from 'react-icons/fi';
 import { formControlTextSizeClassName, formLabelClassName } from '@/lib/utils/formControls';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
+import Badge from '@/components/ui/Badge';
+import {
+  formatMeetingStatusLabel,
+  meetingStatusBadgeVariant,
+} from '@/lib/meetings/display';
 import { buildMeetingBookingPayload, meetingToBookingForm } from '@/lib/meetings/bookingForm';
 import { adviserProjectMeetingsUrl } from '@/lib/meetings/navigation';
 import { getMeeting } from '@/lib/api/defenses';
@@ -104,14 +109,6 @@ function formatMinutes(minutes: number) {
   if (hours > 0) return `${hours}h`;
   return `${mins}m`;
 }
-
-const statusColors: Record<string, string> = {
-  Scheduled: 'bg-success-100 text-success-700',
-  Pending: 'bg-warning-100 text-warning-700',
-  Cancelled: 'bg-error-100 text-error-700',
-  Rescheduled: 'bg-accent-100 text-accent-700',
-  Completed: 'bg-primary-100 text-primary-700',
-};
 
 export default function MeetingSchedule() {
   const { user, isLoading, handleLogout } = useDashboardUser('Adviser');
@@ -686,11 +683,13 @@ export default function MeetingSchedule() {
                           <th className="px-4 py-3 font-medium text-neutral-600">Start Time</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">End Time</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Total Time</th>
+                          <th className="px-4 py-3 font-medium text-neutral-600">Modality</th>
+                          <th className="px-4 py-3 font-medium text-neutral-600">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
                           <tr>
-                            <td colSpan={5} className="py-12">
+                            <td colSpan={7} className="py-12">
                               <div className="flex flex-col items-center justify-center">
                                 <p className="text-neutral-500">No scheduled meetings yet</p>
                               </div>
@@ -709,18 +708,11 @@ export default function MeetingSchedule() {
                           <th className="px-4 py-3 font-medium text-neutral-600">End Time</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Total Time</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Modality</th>
+                          <th className="px-4 py-3 font-medium text-neutral-600">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
-                        {defenses.map((d) => {
-                          const statusStyles: Record<string, string> = {
-                            pending: 'bg-warning-100 text-warning-700',
-                            approved: 'bg-success-100 text-success-700',
-                            moved: 'bg-accent-100 text-accent-700',
-                            rejected: 'bg-error-100 text-error-700',
-                          };
-                          const style = statusStyles[d.status] || 'bg-neutral-200 text-neutral-600';
-                          return (
+                        {defenses.map((d) => (
                             <tr key={d.id} className="hover:bg-coordinator-neutral-50 cursor-pointer">
                               <td className="px-4 py-3 text-neutral-800">{d.project_title}</td>
                               <td className="px-4 py-3 text-neutral-600">{d.project_code}</td>
@@ -728,9 +720,13 @@ export default function MeetingSchedule() {
                               <td className="px-4 py-3 text-neutral-600">{d.end_time ? formatDateTime(d.end_time) : '-'}</td>
                               <td className="px-4 py-3 text-neutral-600">{d.end_time ? computeTotalTime(d.start_time, d.end_time) : '-'}</td>
                               <td className="px-4 py-3 text-neutral-600">{d.modality || 'Online'}</td>
+                              <td className="px-4 py-3">
+                                <Badge variant={meetingStatusBadgeVariant(d.status)} size="sm">
+                                  {formatMeetingStatusLabel(d.status, d.status_label)}
+                                </Badge>
+                              </td>
                             </tr>
-                          );
-                        })}
+                        ))}
                       </tbody>
                     </table>
                   </div>
