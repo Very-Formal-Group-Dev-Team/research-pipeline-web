@@ -276,7 +276,7 @@ export function getMyInvitations() {
 
 /** Respond to an invitation (accept or decline). */
 export function respondToInvitation(invitationId: string, accept: boolean) {
-  return post<{ success: boolean; status: string }>(
+  return post<{ success: boolean; status: string; projectId?: string; role?: string }>(
     `/projects/invitations/${invitationId}/respond`,
     { accept },
   );

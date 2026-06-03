@@ -109,3 +109,7 @@ export function cancelMeeting(meetingId: string) {
 export function completeMeeting(meetingId: string) {
   return patch<{ success: boolean; defense: Defense }>(`/defenses/${meetingId}/complete`);
 }
+
+export function restoreMeeting(meetingId: string) {
+  return patch<{ success: boolean; defense: Defense }>(`/defenses/${meetingId}/restore`);
+}

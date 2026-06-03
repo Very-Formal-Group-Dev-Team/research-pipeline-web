@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardTitle, CardDescription } from '@/components/ui/Card';
@@ -13,6 +13,10 @@ import { FiClock, FiFolder, FiTag, FiUsers, FiX } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { getAdvisedProjects, getProjectMembers, type Project, type ProjectMember } from '@/lib/api/projects';
+import PendingInvitationsCard, {
+  PROJECT_INVITATION_RESPONDED_EVENT,
+  type ProjectInvitationRespondedDetail,
+} from '@/components/projects/PendingInvitationsCard';
 import { formatProjectCardDate, formatProjectCardMeta } from '@/lib/utils/projectDisplay';
 
 const ABSTRACT_PREVIEW_MAX_CHARS = 92;
@@ -55,24 +59,35 @@ export default function AdviserAdviseesPage() {
   const [expandedMembersError, setExpandedMembersError] = useState<string | null>(null);
   const expandedMembersRequestRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const res = await getAdvisedProjects();
-        if (res.data) {
-          setProjects([...res.data].sort((a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          ));
-        }
-      } catch (err) {
-        console.error('Failed to fetch advised projects:', err);
-      } finally {
-        setLoading(false);
+  const fetchProjects = useCallback(async () => {
+    try {
+      const res = await getAdvisedProjects();
+      if (res.data) {
+        setProjects([...res.data].sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        ));
       }
-    };
-
-    fetchProjects();
+    } catch (err) {
+      console.error('Failed to fetch advised projects:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    function handleInvitationResponded(event: Event) {
+      const detail = (event as CustomEvent<ProjectInvitationRespondedDetail>).detail;
+      if (detail?.accept) {
+        void fetchProjects();
+      }
+    }
+    window.addEventListener(PROJECT_INVITATION_RESPONDED_EVENT, handleInvitationResponded);
+    return () => window.removeEventListener(PROJECT_INVITATION_RESPONDED_EVENT, handleInvitationResponded);
+  }, [fetchProjects]);
 
   useEffect(() => {
     if (!expandedProject) return;
@@ -282,6 +297,15 @@ export default function AdviserAdviseesPage() {
             <p className="text-neutral-600 mt-1">Projects you are advising</p>
           </div>
         </div>
+
+        <PendingInvitationsCard
+          emptyMessage="No pending invitations. When a team invites you as an adviser, accept it here to join the project."
+          onInvitationResponded={(detail) => {
+            if (detail.accept) {
+              void fetchProjects();
+            }
+          }}
+        />
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
