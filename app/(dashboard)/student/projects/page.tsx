@@ -387,53 +387,55 @@ export default function StudentProjectsPage() {
             {projects.map((project) => {
               const abstractText = projectAbstract(project);
               return (
-                <div key={project.id}>
+                <div key={project.id} className="h-full">
                 <Card
                   hover
-                  className="h-full"
+                  className="flex h-full flex-col justify-between"
                   onClick={() => router.push(`/student/projects/${project.id}`)}
                 >
-                  <div className="flex items-start justify-between">
-                    <FiFolder className="text-2xl text-primary-500" />
-                    <div className="flex items-center gap-2">
-                      {project.member_role && (
-                        <Badge
-                          variant={project.member_role === 'adviser' ? 'success' : 'primary'}
-                          size="sm"
-                          className="capitalize"
-                        >
-                          {project.member_role === 'adviser' ? 'adviser' :
-                           project.member_role === 'leader' ? 'leader' : 'contributor'}
-                        </Badge>
-                      )}
-                      <StatusIcon status={project.status} />
+                  <div className="min-w-0">
+                    <div className="flex items-start justify-between">
+                      <FiFolder className="text-2xl text-primary-500" />
+                      <div className="flex items-center gap-2">
+                        {project.member_role && (
+                          <Badge
+                            variant={project.member_role === 'adviser' ? 'success' : 'primary'}
+                            size="sm"
+                            className="capitalize"
+                          >
+                            {project.member_role === 'adviser' ? 'adviser' :
+                             project.member_role === 'leader' ? 'leader' : 'contributor'}
+                          </Badge>
+                        )}
+                        <StatusIcon status={project.status} />
+                      </div>
                     </div>
+                    <CardTitle className="mt-3">{project.title}</CardTitle>
+                    <CardDescription
+                      lines={2}
+                      uniformHeight
+                      className={`italic ${
+                        abstractText
+                          ? ''
+                          : 'text-neutral-500/60'
+                      }`}
+                    >
+                      <>
+                        <span>{abstractText ? buildAbstractPreview(abstractText) : 'No abstract available'}</span>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void openExpandedProject(project);
+                          }}
+                          className="ml-1.5 font-sans not-italic text-primary-700 underline underline-offset-2 hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm"
+                        >
+                          See more
+                        </button>
+                      </>
+                    </CardDescription>
                   </div>
-                  <CardTitle className="mt-4">{project.title}</CardTitle>
-                  <CardDescription
-                    lines={2}
-                    uniformHeight
-                    className={`italic ${
-                      abstractText
-                        ? ''
-                        : 'text-neutral-500/60'
-                    }`}
-                  >
-                    <>
-                      <span>{abstractText ? buildAbstractPreview(abstractText) : 'No abstract available'}</span>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          void openExpandedProject(project);
-                        }}
-                        className="ml-1.5 font-sans not-italic text-primary-700 underline underline-offset-2 hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm"
-                      >
-                        See more
-                      </button>
-                    </>
-                  </CardDescription>
                   <div className="mt-4 flex items-center justify-between gap-4 border-t border-neutral-300 pt-4 text-sm text-neutral-600">
                     <div className="min-w-0 flex-1">
                       <span>{formatProjectCardMeta(project)}</span>

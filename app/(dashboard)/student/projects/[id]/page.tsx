@@ -510,7 +510,7 @@ export default function ProjectDetailPage() {
       <div className="project-detail-forms space-y-6">
         {/* Page header */}
         <header className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <div className="min-w-0 flex-1">
               {isEditingTitle ? (
                 <div className="min-w-0 max-w-full">
@@ -539,31 +539,34 @@ export default function ProjectDetailPage() {
                   ) : null}
                 </div>
               ) : (
-                <div className="inline-flex w-max max-w-full min-w-0 items-center gap-1.5">
-                  <h1
-                    className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
-                  >
-                    {project.title}
-                  </h1>
-                  <button
-                    type="button"
-                    onClick={startEditingTitle}
-                    className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
-                    aria-label="Edit project title"
-                  >
-                    <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
-                  </button>
-                </div>
+                <h1
+                  className={`min-w-0 break-words ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+                >
+                  {project.title}
+                </h1>
               )}
             </div>
-            <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
+            {!isEditingTitle ? (
+              <button
+                type="button"
+                onClick={startEditingTitle}
+                className="shrink-0 self-center rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                aria-label="Edit project title"
+              >
+                <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+              </button>
+            ) : null}
+            <Badge
+              variant={statusBadgeVariant(project.status)}
+              className="shrink-0 self-center capitalize"
+            >
               {project.status}
             </Badge>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="text-sm sm:text-md shrink-0 text-primary-700 hover:bg-primary-50"
+            className="shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:text-md"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => router.push('/student/projects')}
           >

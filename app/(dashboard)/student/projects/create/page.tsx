@@ -11,6 +11,7 @@ import { FiUpload, FiX, FiTrash2 } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { createProject, inviteToProject } from '@/lib/api/projects';
 import type { SearchUserResult } from '@/lib/api/users';
+import { toast } from 'sonner';
 
 type InviteMembershipRole = 'member' | 'adviser';
 
@@ -219,6 +220,8 @@ export default function CreateProjectPage() {
       }
 
       const inviteFailures = await sendInvitationsAfterCreate(res.data.projectId);
+
+      toast.success('Project created successfully');
 
       if (inviteFailures.length > 0) {
         setErrors({
