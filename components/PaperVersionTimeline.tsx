@@ -611,6 +611,8 @@ export interface PaperVersionTimelineProps {
   versions: PaperVersion[];
   loading: boolean;
   onRefresh: () => void;
+  /** When false, hides upload/generate actions (e.g. adviser read-only view). */
+  allowUpload?: boolean;
 }
 
 export default function PaperVersionTimeline({
@@ -619,6 +621,7 @@ export default function PaperVersionTimeline({
   versions,
   loading,
   onRefresh,
+  allowUpload = true,
 }: PaperVersionTimelineProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -647,40 +650,40 @@ export default function PaperVersionTimeline({
           </h2>
           <p className="text-sm text-neutral-500 mt-0.5">
             {versions.length === 0
-              ? 'No versions yet — upload your draft or generate a template to get started.'
+              ? allowUpload
+                ? 'No versions yet — upload your draft or generate a template to get started.'
+                : 'No versions uploaded yet.'
               : `${versions.length} version${versions.length !== 1 ? 's' : ''} · ${paperStandard.toUpperCase()} format`}
           </p>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          {versions.length === 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleGenerate}
-              disabled={generating}
-            >
-              {generating ? (
-                <span className="flex items-center gap-1.5">
-                  <FiRefreshCw className="animate-spin w-3.5 h-3.5" /> Generating…
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5">
-                  <FiZap className="w-3.5 h-3.5" />
-                  Generate {paperStandard.toUpperCase()} Template
-                </span>
-              )}
+        {allowUpload ? (
+          <div className="flex gap-2 flex-wrap">
+            {versions.length === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerate}
+                disabled={generating}
+              >
+                {generating ? (
+                  <span className="flex items-center gap-1.5">
+                    <FiRefreshCw className="animate-spin w-3.5 h-3.5" /> Generating…
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <FiZap className="w-3.5 h-3.5" />
+                    Generate {paperStandard.toUpperCase()} Template
+                  </span>
+                )}
+              </Button>
+            )}
+            <Button variant="primary" size="sm" onClick={() => setUploadOpen(true)}>
+              <FiUploadCloud className="w-3.5 h-3.5 mr-1.5" />
+              Upload New Version
             </Button>
-          )}
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setUploadOpen(true)}
-          >
-            <FiUploadCloud className="w-3.5 h-3.5 mr-1.5" />
-            Upload New Version
-          </Button>
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {genError && (
@@ -719,12 +722,14 @@ export default function PaperVersionTimeline({
         </div>
       )}
 
-      <UploadVersionModal
-        isOpen={uploadOpen}
-        onClose={() => setUploadOpen(false)}
-        onSuccess={onRefresh}
-        projectId={projectId}
-      />
+      {allowUpload ? (
+        <UploadVersionModal
+          isOpen={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          onSuccess={onRefresh}
+          projectId={projectId}
+        />
+      ) : null}
     </div>
   );
 }

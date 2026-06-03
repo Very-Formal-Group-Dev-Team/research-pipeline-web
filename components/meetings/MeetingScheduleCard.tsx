@@ -23,11 +23,22 @@ import { isOnlineModality, normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
 const MEETING_CARD_SURFACE_CLASS =
   'rounded-lg border border-neutral-300 bg-white px-4 py-3 shadow-sm transition-all hover:border-neutral-400 hover:shadow-lg';
 
-/** Reserved join/action column so F2F and online cards share the same height. */
-const MEETING_CARD_ACTION_SLOT_CLASS =
-  'flex min-h-[2rem] w-[7.25rem] shrink-0 flex-col items-end justify-center';
+/** Tighter vertical rhythm for student events list cards. */
+const STUDENT_MEETING_CARD_SURFACE_CLASS =
+  'rounded-lg border border-neutral-300 bg-white px-4 py-2.5 shadow-sm transition-all hover:border-neutral-400 hover:shadow-lg';
 
-const MEETING_CARD_FOOTER_CLASS = 'mt-2.5 flex min-h-[2.75rem] items-center justify-between gap-3';
+/** Join/action column — only rendered for online meetings that need it. */
+const MEETING_CARD_ACTION_SLOT_CLASS =
+  'flex shrink-0 flex-col items-end justify-center';
+
+/** Reserved width/height so face-to-face and online student cards align. */
+const STUDENT_MEETING_CARD_ACTION_SLOT_CLASS =
+  'flex h-8 min-w-[7.25rem] shrink-0 items-center justify-end';
+
+const MEETING_CARD_FOOTER_CLASS = 'mt-2 flex items-center justify-between gap-3';
+
+const STUDENT_MEETING_CARD_FOOTER_CLASS =
+  'mt-1.5 flex min-h-8 items-center justify-between gap-3';
 
 export interface MeetingScheduleCardActions {
   onEdit: () => void;
@@ -163,8 +174,14 @@ function StudentJoinAction({
   return null;
 }
 
-function MeetingCardActionSlot({ children }: { children?: React.ReactNode }) {
-  return <div className={MEETING_CARD_ACTION_SLOT_CLASS}>{children}</div>;
+function MeetingCardActionSlot({
+  children,
+  slotClassName = MEETING_CARD_ACTION_SLOT_CLASS,
+}: {
+  children?: React.ReactNode;
+  slotClassName?: string;
+}) {
+  return <div className={slotClassName}>{children}</div>;
 }
 
 function AdviserMeetingCard({
@@ -259,9 +276,10 @@ function StudentMeetingCard({
   isTerminalStatus: boolean;
 }) {
   const LocationIcon = online ? FiGlobe : FiMapPin;
+  const showJoinAction = online && !isTerminalStatus;
 
   return (
-    <article className={MEETING_CARD_SURFACE_CLASS}>
+    <article className={STUDENT_MEETING_CARD_SURFACE_CLASS}>
       <div className="flex items-start justify-between gap-3">
         <h4
           className={`min-w-0 flex-1 font-serif font-semibold text-eerieBlack ${MEETING_CARD_TITLE_CLASS}`}
@@ -271,7 +289,7 @@ function StudentMeetingCard({
         <StatusBadge meeting={meeting} />
       </div>
 
-      <div className={MEETING_CARD_FOOTER_CLASS}>
+      <div className={STUDENT_MEETING_CARD_FOOTER_CLASS}>
         <DotSeparatedRow
           parts={[
             <>
@@ -288,13 +306,15 @@ function StudentMeetingCard({
             </>,
           ]}
         />
-        <MeetingCardActionSlot>
-          <StudentJoinAction
-            online={online}
-            joinUrl={joinUrl}
-            isTerminalStatus={isTerminalStatus}
-            meeting={meeting}
-          />
+        <MeetingCardActionSlot slotClassName={STUDENT_MEETING_CARD_ACTION_SLOT_CLASS}>
+          {showJoinAction ? (
+            <StudentJoinAction
+              online={online}
+              joinUrl={joinUrl}
+              isTerminalStatus={isTerminalStatus}
+              meeting={meeting}
+            />
+          ) : null}
         </MeetingCardActionSlot>
       </div>
     </article>

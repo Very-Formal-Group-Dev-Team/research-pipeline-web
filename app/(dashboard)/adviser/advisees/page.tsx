@@ -156,22 +156,23 @@ export default function AdviserAdviseesPage() {
             aria-modal="true"
             aria-label={`${expandedProject.title} details`}
           >
-            <Card padding="none" shadow="hard" className="overflow-hidden rounded-xl border-neutral-300">
-              <div className="flex items-start justify-between gap-4 border-b border-neutral-200 bg-neutral-50 px-5 py-4 sm:px-6 sm:py-5">
+            <Card
+              padding="none"
+              shadow="hard"
+              hoverShadow={false}
+              className="overflow-hidden rounded-md border border-neutral-300"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-neutral-300 bg-neutral-50 px-5 py-4 sm:px-6 sm:py-5">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs uppercase tracking-[0.14em] text-primary-600">Project overview</p>
                   <h2 className="mt-1 font-serif text-2xl text-primary-700 break-words">{expandedProject.title}</h2>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {expandedProject.member_role && (
-                      <Badge
-                        variant={expandedProject.member_role === 'adviser' ? 'success' : 'primary'}
-                        size="sm"
-                        className="capitalize"
-                      >
-                        {expandedProject.member_role === 'adviser' ? 'adviser' :
-                         expandedProject.member_role === 'leader' ? 'leader' : 'contributor'}
+                    {expandedProject.member_role &&
+                    expandedProject.member_role !== 'adviser' ? (
+                      <Badge variant="primary" size="sm" className="capitalize">
+                        {expandedProject.member_role === 'leader' ? 'leader' : 'contributor'}
                       </Badge>
-                    )}
+                    ) : null}
                     <StatusIcon status={expandedProject.status} />
                   </div>
                 </div>
@@ -186,7 +187,7 @@ export default function AdviserAdviseesPage() {
               </div>
 
               <div className="max-h-[72vh] space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
-                <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 sm:p-5">
+                <section className="rounded-sm border border-neutral-300 bg-neutral-50 p-4 transition-all hover:border-neutral-400 hover:shadow-lg sm:p-5">
                   <p className="text-xs uppercase tracking-[0.14em] text-primary-600">Abstract</p>
                   <p className="mt-2 text-sm leading-relaxed text-neutral-700 sm:text-base">
                     {projectAbstract(expandedProject) || 'No abstract available yet.'}
@@ -220,7 +221,7 @@ export default function AdviserAdviseesPage() {
                         return (
                           <li
                             key={member.id}
-                            className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-2"
+                            className="flex items-center justify-between gap-3 rounded-sm border border-neutral-300 bg-white px-3 py-2 transition-all hover:border-neutral-400 hover:shadow-lg"
                           >
                             <div className="flex min-w-0 items-center gap-3">
                               <Avatar
@@ -310,7 +311,6 @@ export default function AdviserAdviseesPage() {
                   >
                     <>
                       <span>{abstractText ? buildAbstractPreview(abstractText) : 'No abstract available'}</span>
-                      <span>{' '}</span>
                       <button
                         type="button"
                         onClick={(event) => {
@@ -318,7 +318,7 @@ export default function AdviserAdviseesPage() {
                           event.stopPropagation();
                           void openExpandedProject(project);
                         }}
-                        className="font-sans not-italic text-primary-700 underline underline-offset-2 hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm"
+                        className="ml-1.5 font-sans not-italic text-primary-700 underline underline-offset-2 hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm"
                       >
                         See more
                       </button>
