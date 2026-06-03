@@ -287,6 +287,13 @@ export function getProjectInvitations(projectId: string) {
   return get<ProjectMember[]>(`/projects/${projectId}/invitations`);
 }
 
+/** Remove an accepted member or revert a pending invitation. */
+export function removeProjectMember(projectId: string, memberId: string) {
+  return del<{ success: boolean; reverted?: boolean; removed?: boolean }>(
+    `/projects/${projectId}/members/${memberId}`,
+  );
+}
+
 /** Create a defense schedule for a project. */
 export function scheduleProjectDefense(projectId: string, payload: ScheduleDefensePayload) {
   return post<ScheduleDefenseResult>(`/projects/${projectId}/schedule`, payload);
