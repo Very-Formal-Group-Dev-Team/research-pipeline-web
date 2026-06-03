@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
-import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiFileText } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import { useRouter, useParams } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -32,6 +32,7 @@ import {
   type Defense,
 } from '@/lib/api/defenses';
 import MeetingScheduleCard from '@/components/meetings/MeetingScheduleCard';
+import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
 import { meetingUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import { PROJECT_MEETINGS_SECTION_ID } from '@/lib/meetings/navigation';
@@ -113,7 +114,6 @@ export default function AdviserProjectDetailPage() {
   const [meetings, setMeetings] = useState<Defense[]>([]);
   const [meetingsLoading, setMeetingsLoading] = useState(true);
   const [meetingsError, setMeetingsError] = useState<string | null>(null);
-  const [codeCopied, setCodeCopied] = useState(false);
   const [cancelMeetingId, setCancelMeetingId] = useState<string | null>(null);
   const [meetingActionLoading, setMeetingActionLoading] = useState(false);
   const [meetingActionError, setMeetingActionError] = useState<string | null>(null);
@@ -240,14 +240,6 @@ export default function AdviserProjectDetailPage() {
     const timer = window.setTimeout(scrollToMeetings, 100);
     return () => window.clearTimeout(timer);
   }, [meetingsLoading]);
-
-  const copyProjectCode = () => {
-    if (project?.project_code) {
-      navigator.clipboard.writeText(project.project_code);
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 2000);
-    }
-  };
 
   const existingUserIds = [
     ...members.map((m) => m.user_id),
@@ -445,26 +437,7 @@ export default function AdviserProjectDetailPage() {
               <CardTitle>Project Code</CardTitle>
               <CardDescription>Reference for this research group</CardDescription>
             </CardHeader>
-            <div className="mt-4 flex min-w-0 items-center gap-2">
-              <code
-                className={`flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-primary-700 ${projectSummaryDetailTextClassName}`}
-              >
-                {project.project_code}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={copyProjectCode}
-                aria-label={codeCopied ? 'Copied to clipboard' : 'Copy project code'}
-              >
-                {codeCopied ? (
-                  <FiCheck className="text-success-600" aria-hidden />
-                ) : (
-                  <FiCopy aria-hidden />
-                )}
-              </Button>
-            </div>
+            <ProjectCodeCopyRow projectCode={project.project_code} />
           </Card>
 
           <Card className="md:col-start-1 md:row-start-2">

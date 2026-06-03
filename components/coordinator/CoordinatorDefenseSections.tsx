@@ -1,28 +1,34 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
 import Dropdown from '@/components/ui/Dropdown';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import { CoordinatorTimeRangeFields } from '@/components/coordinator/CoordinatorTimeRangeFields';
+import {
+  COORDINATOR_DATE_FIELD_WRAPPER_CLASS,
+  COORDINATOR_DATE_TIME_ROW_CLASS,
+  COORDINATOR_TIME_FIELD_WRAPPER_CLASS,
+  COORDINATOR_SCHEDULE_FORM_CLASS,
+  COORDINATOR_SCHEDULE_MODAL_SIZE,
+  CoordinatorTimeRangeFields,
+} from '@/components/coordinator/CoordinatorTimeRangeFields';
 import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
 import { coordinatorDefenseUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import {
   FiCheck,
   FiX,
-  FiCalendar,
-  FiClock,
   FiChevronDown,
   FiChevronUp,
   FiEdit2,
   FiMove,
   FiMoreVertical,
-  FiUser,
+  FiSave,
 } from 'react-icons/fi';
+import { sortDefenses, type DefenseSortBy } from '@/lib/defenses/sort';
 import { formatStatusLabel } from '@/lib/utils/formatStatus';
 import {
   getAllDefenses,
@@ -34,21 +40,8 @@ import {
   revertCoordinatorDefense,
   type Defense,
 } from '@/lib/api/coordinator';
-import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
-import ModalityIcon from '@/components/meetings/ModalityIcon';
-import {
-  formatMeetingDateCompact,
-  formatMeetingTime,
-  formatModalityLabel,
-} from '@/lib/meetings/display';
-import { isOnlineModality } from '@/lib/meetings/jitsi';
-
-function formatDefenseScheduleTimeRange(start?: string | null, end?: string | null) {
-  const startLabel = formatMeetingTime(start);
-  if (!end) return startLabel;
-  const endLabel = formatMeetingTime(end);
-  return endLabel !== '-' ? `${startLabel} – ${endLabel}` : startLabel;
-}
+import DefenseCardExpandContent from '@/components/defenses/DefenseCardExpandContent';
+import DefenseSortControls from '@/components/defenses/DefenseSortControls';
 
 function formatDateTime(iso?: string | null) {
   if (!iso) return '-';
@@ -77,7 +70,7 @@ type DefenseModality = 'Online' | 'In-Person' | 'Hybrid';
 
 const DEFENSE_MODALITY_OPTIONS: { value: DefenseModality; label: string }[] = [
   { value: 'Online', label: 'Online' },
-  { value: 'In-Person', label: 'In-Person' },
+  { value: 'In-Person', label: 'Face-to-Face' },
   { value: 'Hybrid', label: 'Hybrid' },
 ];
 
@@ -163,7 +156,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     conflicts: Array<{ domain: string; defense_id: string; project_id: string; start_time: string; end_time: string | null }>;
   } | null>(null);
   const [conflictAction, setConflictAction] = useState<'hold' | 'confirm' | null>(null);
-  const [sortBy, setSortBy] = useState<'time' | 'status'>('time');
+  const [sortBy, setSortBy] = useState<DefenseSortBy>('time');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Defense | null>(null);
   const [defenseActionLoading, setDefenseActionLoading] = useState(false);
@@ -407,21 +400,13 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     }
   }
 
-  const displayedDefenses = (() => {
-    const list = section === 'pending'
-      ? pendingDefenses
-      : allDefenses.filter((d) => d.status !== 'pending');
-    const statusOrder: Record<string, number> = {
-      pending: 0, moved: 1, approved: 2, rejected: 3, scheduled: 4, completed: 5, cancelled: 6,
-    };
-    return [...list].sort((a, b) => {
-      if (sortBy === 'status') {
-        return (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
-      }
-      return new Date((a.start_time || '').replace(/Z$/i, '')).getTime()
-        - new Date((b.start_time || '').replace(/Z$/i, '')).getTime();
-    });
-  })();
+  const displayedDefenses = useMemo(() => {
+    const list =
+      section === 'pending'
+        ? pendingDefenses
+        : allDefenses.filter((d) => d.status !== 'pending');
+    return sortDefenses(list, sortBy);
+  }, [section, pendingDefenses, allDefenses, sortBy]);
 
   const uniqueConflictSchedules = conflictPrompt
     ? Array.from(new Map(conflictPrompt.conflicts.map((item) => [item.defense_id, item])).values())
@@ -448,174 +433,114 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-neutral-500">Sort by:</span>
-          <button
-            type="button"
-            onClick={() => setSortBy('time')}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              sortBy === 'time' ? 'bg-coordinator-navy/10 text-coordinator-ink' : 'bg-neutral-100 text-neutral-600'
-            }`}
-          >
-            Time
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortBy('status')}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              sortBy === 'status' ? 'bg-coordinator-navy/10 text-coordinator-ink' : 'bg-neutral-100 text-neutral-600'
-            }`}
-          >
-            Status
-          </button>
-        </div>
+        <DefenseSortControls sortBy={sortBy} onSortByChange={setSortBy} tone="coordinator" />
 
         {displayedDefenses.map((defense) => {
           const badge = statusBadge(defense.status);
           const isExpanded = expandedId === defense.id;
+          const pendingMenu =
+            defense.status === 'pending' ? (
+              <Dropdown
+                align="right"
+                trigger={
+                  <button
+                    type="button"
+                    className="rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                    aria-label="Defense options"
+                  >
+                    <FiMoreVertical className="h-5 w-5 md:h-6 md:w-6" aria-hidden />
+                  </button>
+                }
+                items={[
+                  {
+                    label: 'Approve',
+                    value: 'approve',
+                    icon: <FiCheck className="h-4 w-4" aria-hidden />,
+                    onClick: () => openModal(defense, 'approve'),
+                    disabled: submitting,
+                  },
+                  {
+                    label: 'Move',
+                    value: 'move',
+                    icon: <FiMove className="h-4 w-4" aria-hidden />,
+                    onClick: () => openModal(defense, 'move'),
+                    disabled: submitting,
+                  },
+                  {
+                    label: 'Reject',
+                    value: 'reject',
+                    icon: <FiX className="h-4 w-4" aria-hidden />,
+                    danger: true,
+                    onClick: () => openModal(defense, 'reject'),
+                    disabled: submitting,
+                  },
+                ]}
+              />
+            ) : null;
+          const approvedMenu =
+            section === 'approved' && ACTIVE_DEFENSE_ACTION_STATUSES.has(defense.status) ? (
+              <Dropdown
+                align="right"
+                trigger={
+                  <button
+                    type="button"
+                    className="rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                    aria-label="Defense options"
+                  >
+                    <FiMoreVertical className="h-5 w-5 md:h-6 md:w-6" aria-hidden />
+                  </button>
+                }
+                items={[
+                  {
+                    label: 'Edit',
+                    value: 'edit',
+                    icon: <FiEdit2 className="h-4 w-4" aria-hidden />,
+                    onClick: () => openModal(defense, 'edit'),
+                    disabled: defenseActionLoading,
+                  },
+                  {
+                    label: 'Mark as complete',
+                    value: 'complete',
+                    icon: <FiCheck className="h-4 w-4" aria-hidden />,
+                    onClick: () => void handleCompleteDefense(defense),
+                    disabled: defenseActionLoading,
+                  },
+                  {
+                    label: 'Cancel',
+                    value: 'cancel',
+                    icon: <FiX className="h-4 w-4" aria-hidden />,
+                    danger: true,
+                    onClick: () => setCancelTarget(defense),
+                    disabled: defenseActionLoading,
+                  },
+                ]}
+              />
+            ) : null;
+
           return (
-            <Card key={defense.id} padding="md">
-              <div
-                className="flex cursor-pointer flex-col gap-4 sm:flex-row sm:items-center"
-                onClick={() => setExpandedId(isExpanded ? null : defense.id)}
-              >
-                <div className="min-w-0 flex-1">
-                  <h3 className="mb-2.5 truncate font-semibold text-coordinator-ink">
-                    {defense.project_title}
-                  </h3>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-neutral-600">
-                    <span className="flex items-center gap-1">
-                      <FiCalendar className="text-neutral-400 shrink-0" aria-hidden />
-                      <span className="tabular-nums">{formatMeetingDateCompact(defense.start_time)}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <FiClock className="text-neutral-400 shrink-0" aria-hidden />
-                      <span className="tabular-nums">
-                        {formatDefenseScheduleTimeRange(defense.start_time, defense.end_time)}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <ModalityIcon modality={defense.modality} />
-                      {formatModalityLabel(defense.modality)}
-                    </span>
-                    {defense.created_by_name && (
-                      <span className="flex items-center gap-1 text-neutral-500">
-                        <FiUser className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
-                        <span>Proposed by {defense.created_by_name}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div
-                  className="flex shrink-0 items-center gap-2 self-end sm:self-auto"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Badge size="sm" variant={badge.variant}>
-                      {badge.label}
-                    </Badge>
-                    <Badge size="sm" variant="default">
-                      {formatStatusLabel(defense.defense_type)}
-                    </Badge>
-                  </div>
-                  {defense.status === 'pending' && (
-                    <Dropdown
-                      align="right"
-                      trigger={
-                        <button
-                          type="button"
-                          className="rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
-                          aria-label="Defense options"
-                        >
-                          <FiMoreVertical className="h-5 w-5 md:h-6 md:w-6" aria-hidden />
-                        </button>
-                      }
-                      items={[
-                        {
-                          label: 'Approve',
-                          value: 'approve',
-                          icon: <FiCheck className="h-4 w-4" aria-hidden />,
-                          onClick: () => openModal(defense, 'approve'),
-                          disabled: submitting,
-                        },
-                        {
-                          label: 'Move',
-                          value: 'move',
-                          icon: <FiMove className="h-4 w-4" aria-hidden />,
-                          onClick: () => openModal(defense, 'move'),
-                          disabled: submitting,
-                        },
-                        {
-                          label: 'Reject',
-                          value: 'reject',
-                          icon: <FiX className="h-4 w-4" aria-hidden />,
-                          danger: true,
-                          onClick: () => openModal(defense, 'reject'),
-                          disabled: submitting,
-                        },
-                      ]}
-                    />
-                  )}
-                  {section === 'approved' && ACTIVE_DEFENSE_ACTION_STATUSES.has(defense.status) && (
-                    <Dropdown
-                      align="right"
-                      trigger={
-                        <button
-                          type="button"
-                          className="rounded-md p-1 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
-                          aria-label="Defense options"
-                        >
-                          <FiMoreVertical className="h-5 w-5 md:h-6 md:w-6" aria-hidden />
-                        </button>
-                      }
-                      items={[
-                        {
-                          label: 'Edit',
-                          value: 'edit',
-                          icon: <FiEdit2 className="h-4 w-4" aria-hidden />,
-                          onClick: () => openModal(defense, 'edit'),
-                          disabled: defenseActionLoading,
-                        },
-                        {
-                          label: 'Mark as complete',
-                          value: 'complete',
-                          icon: <FiCheck className="h-4 w-4" aria-hidden />,
-                          onClick: () => void handleCompleteDefense(defense),
-                          disabled: defenseActionLoading,
-                        },
-                        {
-                          label: 'Cancel',
-                          value: 'cancel',
-                          icon: <FiX className="h-4 w-4" aria-hidden />,
-                          danger: true,
-                          onClick: () => setCancelTarget(defense),
-                          disabled: defenseActionLoading,
-                        },
-                      ]}
-                    />
-                  )}
-                  {isExpanded ? <FiChevronUp className="text-neutral-400" /> : <FiChevronDown className="text-neutral-400" />}
-                </div>
-              </div>
-              {isExpanded && (
-                <div className="mt-4 pt-4 border-t border-neutral-200 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div><span className="font-medium text-neutral-500">Project Code:</span> {defense.project_code}</div>
-                  <div><span className="font-medium text-neutral-500">Location:</span> {defense.venue || defense.location || 'Not set'}</div>
-                  {defense.adviser_name && (
-                    <div><span className="font-medium text-neutral-500">Adviser:</span> {defense.adviser_name}</div>
-                  )}
-                  {isOnlineModality(defense.modality) && (
-                    <div className="md:col-span-2">
-                      <JoinMeetingButton
-                        meeting_url={defense.meeting_url}
-                        meeting_room={defense.meeting_room}
-                        label="Join Defense"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
+            <CoordinatorScheduleCard
+              key={defense.id}
+              title={defense.project_title}
+              startTime={defense.start_time}
+              endTime={defense.end_time}
+              modality={defense.modality}
+              proposedBy={defense.created_by_name}
+              defenseType={defense.defense_type}
+              status={defense.status}
+              statusLabel={badge.label}
+              statusVariant={badge.variant}
+              menu={pendingMenu ?? approvedMenu}
+              onToggleExpand={() => setExpandedId(isExpanded ? null : defense.id)}
+              trailing={
+                isExpanded ? (
+                  <FiChevronUp className="text-neutral-400" aria-hidden />
+                ) : (
+                  <FiChevronDown className="text-neutral-400" aria-hidden />
+                )
+              }
+              expanded={isExpanded}
+              expandContent={<DefenseCardExpandContent defense={defense} />}
+            />
           );
         })}
         {defenseActionError ? (
@@ -666,34 +591,45 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
         </div>
       </Modal>
 
-      <Modal isOpen={modalType === 'edit' && !!selectedDefense} onClose={closeModal} title="Edit Defense" size="md">
+      <Modal
+        isOpen={modalType === 'edit' && !!selectedDefense}
+        onClose={closeModal}
+        title="Edit Defense"
+        description={
+          <>
+            Update schedule and details for <strong>{selectedDefense?.project_title}</strong>.
+          </>
+        }
+        size={COORDINATOR_SCHEDULE_MODAL_SIZE}
+      >
         <form
-          className="space-y-4"
+          className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}
           onSubmit={(e) => {
             e.preventDefault();
             void handleEdit();
           }}
         >
-          <p className="text-sm text-neutral-600">
-            Update schedule and details for <strong>{selectedDefense?.project_title}</strong>.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
-              label="Date"
-              type="date"
-              required
-              value={moveDate}
-              onChange={(e) => setMoveDate(e.target.value)}
-              responsiveText
-              fullWidth
-            />
-            <CoordinatorTimeRangeFields
-              required
-              startTime={moveStartTime}
-              endTime={moveEndTime}
-              onStartChange={setMoveStartTime}
-              onEndChange={setMoveEndTime}
-            />
+          <div className={COORDINATOR_DATE_TIME_ROW_CLASS}>
+            <div className={COORDINATOR_DATE_FIELD_WRAPPER_CLASS}>
+              <Input
+                label="Date"
+                type="date"
+                required
+                value={moveDate}
+                onChange={(e) => setMoveDate(e.target.value)}
+                responsiveText
+                fullWidth
+              />
+            </div>
+            <div className={COORDINATOR_TIME_FIELD_WRAPPER_CLASS}>
+              <CoordinatorTimeRangeFields
+                required
+                startTime={moveStartTime}
+                endTime={moveEndTime}
+                onStartChange={setMoveStartTime}
+                onEndChange={setMoveEndTime}
+              />
+            </div>
           </div>
           <Select
             fullWidth
@@ -711,7 +647,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
             responsiveText
             fullWidth
           />
-          <ModalFooter className="!mt-0 !pt-0 !border-0">
+          <ModalFooter className="mt-4">
             <Button type="button" variant="outline" onClick={closeModal} disabled={submitting}>
               Cancel
             </Button>
@@ -720,6 +656,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
               variant="primary"
               loading={submitting}
               disabled={submitting || !moveDate || !moveStartTime || !moveEndTime || !editLocation.trim()}
+              leftIcon={!submitting ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
             >
               Save changes
             </Button>

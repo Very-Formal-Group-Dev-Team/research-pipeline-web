@@ -30,13 +30,19 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-oxfordBlue text-white hover:bg-oxfordBlue/90 focus:ring-oxfordBlue/30 disabled:bg-oxfordBlue/50',
-  secondary: 'bg-neutral-200 text-neutral-900 hover:bg-neutral-300 focus:ring-neutral-300 disabled:bg-neutral-100',
-  outline: 'border-2 border-oxfordBlue text-oxfordBlue hover:bg-oxfordBlue hover:text-snow focus:ring-oxfordBlue/30 disabled:border-neutral-300 disabled:text-neutral-400 disabled:hover:bg-transparent disabled:hover:text-neutral-400',
+  primary:
+    'border-2 border-transparent bg-oxfordBlue text-white hover:bg-oxfordBlue/90 focus:ring-oxfordBlue/30 disabled:bg-oxfordBlue/50',
+  secondary:
+    'border-2 border-transparent bg-neutral-200 text-neutral-900 hover:bg-neutral-300 focus:ring-neutral-300 disabled:bg-neutral-100',
+  outline:
+    'border-2 border-oxfordBlue text-oxfordBlue hover:bg-oxfordBlue hover:text-snow focus:ring-oxfordBlue/30 disabled:border-neutral-300 disabled:text-neutral-400 disabled:hover:bg-transparent disabled:hover:text-neutral-400',
   ghost: 'text-oxfordBlue hover:bg-neutral-100 focus:ring-neutral-300 disabled:text-neutral-400',
-  success: 'bg-deepSeaGreen text-white hover:bg-deepSeaGreen/90 focus:ring-deepSeaGreen/30 disabled:bg-deepSeaGreen/50',
-  error: 'bg-archivumRed text-white hover:bg-archivumRed/90 focus:ring-archivumRed/30 disabled:bg-archivumRed/50',
-  warning: 'bg-warning-500 text-white hover:bg-warning-600 focus:ring-warning-300 disabled:bg-warning-300',
+  success:
+    'border-2 border-transparent bg-deepSeaGreen text-white hover:bg-deepSeaGreen/90 focus:ring-deepSeaGreen/30 disabled:bg-deepSeaGreen/50',
+  error:
+    'border-2 border-transparent bg-archivumRed text-white hover:bg-archivumRed/90 focus:ring-archivumRed/30 disabled:bg-archivumRed/50',
+  warning:
+    'border-2 border-transparent bg-warning-500 text-white hover:bg-warning-600 focus:ring-warning-300 disabled:bg-warning-300',
   // Legacy variants
   primaryBg: 'bg-snow text-eerieBlack hover:bg-neutral-100',
   primaryTxt: 'bg-oxfordBlue text-white hover:bg-oxfordBlue/90',
