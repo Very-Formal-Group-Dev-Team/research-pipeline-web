@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, Input, Select, Avatar, Mo
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
 import UserSearchModal from '@/components/UserSearchModal';
-import { FiUpload, FiX, FiTrash2 } from 'react-icons/fi';
+import { FiUpload, FiX, FiTrash2, FiArrowLeft, FiUserPlus, FiPlus } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { createProject, inviteToProject } from '@/lib/api/projects';
 import type { SearchUserResult } from '@/lib/api/users';
@@ -264,8 +264,10 @@ export default function CreateProjectPage() {
           </div>
           <Button
             type="button"
-            variant="outline"
-            className="shrink-0"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:text-md"
+            leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => {
               if (isDirty) {
                 setIsCancelModalOpen(true);
@@ -356,6 +358,7 @@ export default function CreateProjectPage() {
                   variant="primary"
                   size="sm"
                   className="shrink-0"
+                  leftIcon={<FiUserPlus className="h-4 w-4" aria-hidden />}
                   onClick={() => setIsInviteModalOpen(true)}
                   disabled={isSubmitting}
                 >
@@ -547,7 +550,13 @@ export default function CreateProjectPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary" disabled={isSubmitting} loading={isSubmitting}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting}
+              loading={isSubmitting}
+              leftIcon={!isSubmitting ? <FiPlus className="h-4 w-4" aria-hidden /> : undefined}
+            >
               Create Project
             </Button>
           </div>

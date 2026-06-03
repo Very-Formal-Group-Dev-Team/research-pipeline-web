@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FiSave, FiUploadCloud } from 'react-icons/fi';
 import Button from '@/components/Button';
 import Input from '@/components/ui/Input';
 import Avatar from '@/components/ui/Avatar';
 import { updateUserProfile, uploadUserAvatar } from '@/lib/api/users';
+import { toast } from 'sonner';
 import {
   formControlClassName,
   formControlTextSizeClassName,
@@ -75,7 +76,17 @@ export default function EditProfileForm({
     setAvatarFile(null);
   }, [user.name, user.statusText, user.avatarUrl]);
 
+  const profileDirty = useMemo(
+    () =>
+      name.trim() !== user.name ||
+      statusText.trim() !== (user.statusText || '') ||
+      avatarFile !== null,
+    [name, statusText, avatarFile, user.name, user.statusText],
+  );
+
   const handleUpdate = async () => {
+    if (!profileDirty) return;
+
     setError(null);
 
     if (!name.trim() || name.trim().length < 2) {
@@ -107,6 +118,7 @@ export default function EditProfileForm({
         }
       }
 
+      toast.success('Changes saved');
       onSaved();
     } catch {
       setError('An unexpected error occurred');
@@ -182,7 +194,7 @@ export default function EditProfileForm({
           variant="primary"
           size="sm"
           className="shrink-0"
-          disabled={loading}
+          disabled={loading || !profileDirty}
           loading={loading}
           leftIcon={!loading ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
         >

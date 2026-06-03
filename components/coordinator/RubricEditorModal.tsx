@@ -11,7 +11,8 @@ import {
   rubricCriteriaInputClassName,
   rubricCriteriaWeightInputClassName,
 } from '@/lib/utils/formControls';
-import { FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiPlus, FiSave, FiTrash2 } from 'react-icons/fi';
+import { toast } from 'sonner';
 import {
   SAMPLE_COORDINATOR_RUBRIC,
   createCoordinatorRubric,
@@ -59,6 +60,30 @@ function parseWeight(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+type RubricFormBaseline = {
+  name: string;
+  description: string;
+  defenseType: DefenseType;
+  rows: CriterionRow[];
+};
+
+function criteriaSnapshot(rows: CriterionRow[]) {
+  return rows.map((row) => ({
+    criterionName: row.criterionName.trim(),
+    description: row.description.trim(),
+    weight: parseWeight(row.weight),
+  }));
+}
+
+function rubricStateEquals(a: RubricFormBaseline, b: RubricFormBaseline) {
+  return (
+    a.name.trim() === b.name.trim() &&
+    a.description.trim() === b.description.trim() &&
+    a.defenseType === b.defenseType &&
+    JSON.stringify(criteriaSnapshot(a.rows)) === JSON.stringify(criteriaSnapshot(b.rows))
+  );
+}
+
 export interface RubricEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -80,6 +105,7 @@ export default function RubricEditorModal({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [editBaseline, setEditBaseline] = useState<RubricFormBaseline | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -93,6 +119,7 @@ export default function RubricEditorModal({
         setDescription(SAMPLE_COORDINATOR_RUBRIC.description);
         setDefenseType(SAMPLE_COORDINATOR_RUBRIC.defenseType);
         setRows(rowsFromTemplate(SAMPLE_COORDINATOR_RUBRIC));
+        setEditBaseline(null);
         setLoading(false);
         return;
       }
@@ -107,10 +134,21 @@ export default function RubricEditorModal({
         return;
       }
 
-      setName(res.data.name);
-      setDescription(res.data.description ?? '');
-      setDefenseType(res.data.defense_type);
-      setRows(rowsFromRubric(res.data));
+      const loadedRows = rowsFromRubric(res.data);
+      const loadedName = res.data.name;
+      const loadedDescription = res.data.description ?? '';
+      const loadedDefenseType = res.data.defense_type;
+
+      setName(loadedName);
+      setDescription(loadedDescription);
+      setDefenseType(loadedDefenseType);
+      setRows(loadedRows);
+      setEditBaseline({
+        name: loadedName,
+        description: loadedDescription,
+        defenseType: loadedDefenseType,
+        rows: loadedRows,
+      });
     }
 
     init();
@@ -123,14 +161,23 @@ export default function RubricEditorModal({
   );
 
   const weightsValid = Math.abs(totalWeight - 100) < 0.01;
-  const canSave =
+  const formValid =
     !loading &&
-    !submitting &&
     name.trim().length > 0 &&
     description.trim().length > 0 &&
     rows.length > 0 &&
     rows.every((r) => r.criterionName.trim().length > 0 && parseWeight(r.weight) > 0) &&
     weightsValid;
+
+  const rubricFormDirty = useMemo(() => {
+    if (!isEdit || !editBaseline) return false;
+    return !rubricStateEquals(
+      { name, description, defenseType, rows },
+      editBaseline,
+    );
+  }, [isEdit, editBaseline, name, description, defenseType, rows]);
+
+  const canSave = formValid && !submitting && (!isEdit || rubricFormDirty);
 
   function addRow() {
     setRows((prev) => [
@@ -154,7 +201,7 @@ export default function RubricEditorModal({
   }
 
   async function handleSave() {
-    if (!canSave) return;
+    if (!formValid || submitting || (isEdit && !rubricFormDirty)) return;
     setSubmitting(true);
     setError('');
 
@@ -181,6 +228,10 @@ export default function RubricEditorModal({
     if (res.error) {
       setError(res.error);
       return;
+    }
+
+    if (isEdit) {
+      toast.success('Changes saved');
     }
 
     onSaved();
@@ -338,7 +389,15 @@ export default function RubricEditorModal({
             <Button variant="secondary" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleSave} disabled={!canSave}>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              disabled={!canSave}
+              loading={submitting}
+              leftIcon={
+                isEdit && !submitting ? <FiSave className="h-4 w-4" aria-hidden /> : undefined
+              }
+            >
               {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Create rubric'}
             </Button>
           </div>

@@ -28,6 +28,7 @@ import {
   FiMoreVertical,
   FiSave,
 } from 'react-icons/fi';
+import { toast } from 'sonner';
 import { sortDefenses, type DefenseSortBy } from '@/lib/defenses/sort';
 import { formatStatusLabel } from '@/lib/utils/formatStatus';
 import {
@@ -179,6 +180,26 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     loadDefenses();
   }, []);
 
+  const editDefenseFormDirty = useMemo(() => {
+    if (modalType !== 'edit' || !selectedDefense) return false;
+    const baseline = defenseScheduleToFormState(selectedDefense);
+    return (
+      moveDate !== baseline.date ||
+      moveStartTime !== baseline.startTime ||
+      moveEndTime !== baseline.endTime ||
+      editLocation.trim() !== baseline.location ||
+      editModality !== baseline.modality
+    );
+  }, [
+    modalType,
+    selectedDefense,
+    moveDate,
+    moveStartTime,
+    moveEndTime,
+    editLocation,
+    editModality,
+  ]);
+
   function openModal(defense: Defense, type: 'approve' | 'move' | 'edit' | 'reject') {
     setSelectedDefense(defense);
     setModalType(type);
@@ -269,7 +290,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
   }
 
   async function handleEdit() {
-    if (!selectedDefense || !moveDate || !moveStartTime || !moveEndTime) return;
+    if (!selectedDefense || !moveDate || !moveStartTime || !moveEndTime || !editDefenseFormDirty) return;
     const verifiedSchedule = `${moveDate}T${moveStartTime}:00`;
     const verifiedEndTime = `${moveDate}T${moveEndTime}:00`;
     const location = editLocation.trim();
@@ -297,6 +318,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
         conflicts: res.data.conflicts,
       });
     } else if (!res.error) {
+      toast.success('Changes saved');
       closeModal();
       await loadDefenses();
     }
@@ -318,6 +340,9 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
       holdDefense: action === 'hold',
     });
     if (!res.error) {
+      if (modalType === 'edit') {
+        toast.success('Changes saved');
+      }
       setConflictPrompt(null);
       setConflictAction(null);
       closeModal();
@@ -655,7 +680,14 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
               type="submit"
               variant="primary"
               loading={submitting}
-              disabled={submitting || !moveDate || !moveStartTime || !moveEndTime || !editLocation.trim()}
+              disabled={
+                submitting ||
+                !moveDate ||
+                !moveStartTime ||
+                !moveEndTime ||
+                !editLocation.trim() ||
+                !editDefenseFormDirty
+              }
               leftIcon={!submitting ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
             >
               Save changes

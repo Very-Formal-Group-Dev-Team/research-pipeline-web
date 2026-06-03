@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FiCalendar, FiPlus, FiSave, FiShield } from 'react-icons/fi';
+import { toast } from 'sonner';
 
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/Button';
@@ -151,6 +152,14 @@ export default function CoordinatorEventsPage() {
     () => rubrics.filter((r) => r.defense_type === defenseForm.defenseType),
     [rubrics, defenseForm.defenseType],
   );
+
+  const editEventFormDirty = useMemo(() => {
+    if (!editEvent) return false;
+    const baseline = institutionEventToFormState(editEvent);
+    return (Object.keys(baseline) as (keyof InstitutionEventFormState)[]).some(
+      (key) => editForm[key] !== baseline[key],
+    );
+  }, [editEvent, editForm]);
 
   function openScheduleModal() {
     setShowScheduleModal(true);
@@ -308,7 +317,7 @@ export default function CoordinatorEventsPage() {
 
   async function handleSaveEditEvent(e: React.FormEvent) {
     e.preventDefault();
-    if (!editEvent) return;
+    if (!editEvent || !editEventFormDirty) return;
     setEventActionError(null);
     setEventActionLoading(true);
 
@@ -322,6 +331,7 @@ export default function CoordinatorEventsPage() {
 
     closeEditEvent();
     await loadEvents();
+    toast.success('Changes saved');
   }
 
   const tabClass = (tab: PageTab) =>
@@ -705,7 +715,7 @@ export default function CoordinatorEventsPage() {
             <Button
               type="submit"
               loading={eventActionLoading}
-              disabled={eventActionLoading}
+              disabled={eventActionLoading || !editEventFormDirty}
               leftIcon={!eventActionLoading ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
             >
               Save changes

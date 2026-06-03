@@ -6,7 +6,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
 import Avatar from '@/components/ui/Avatar';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
-import { FiTrash2 } from 'react-icons/fi';
+import { FiTrash2, FiUserPlus } from 'react-icons/fi';
 import {
   removeProjectMember,
   type ProjectMember,
@@ -103,7 +103,13 @@ export default function ProjectTeamMembersCard({
                 {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
               </CardDescription>
             </div>
-            <Button variant="primary" size="sm" className="shrink-0" onClick={onInviteClick}>
+            <Button
+              variant="primary"
+              size="sm"
+              className="shrink-0"
+              leftIcon={<FiUserPlus className="h-4 w-4" aria-hidden />}
+              onClick={onInviteClick}
+            >
               Invite Members
             </Button>
           </div>

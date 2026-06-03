@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -34,6 +34,7 @@ import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
+import { toast } from 'sonner';
 import {
   formControlResponsiveClassName,
   formSelectResponsiveClassName,
@@ -148,7 +149,6 @@ export default function ProjectDetailPage() {
   const [detailsSection, setDetailsSection] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
-  const [detailsSuccess, setDetailsSuccess] = useState<string | null>(null);
 
   const loadPaperVersions = useCallback(async () => {
     if (!params.id) return;
@@ -233,6 +233,37 @@ export default function ProjectDetailPage() {
     }
   }, [isEditingTitle]);
 
+  const detailsDirty = useMemo(() => {
+    if (!project) return false;
+    return (
+      detailsProjectType !== (project.project_type || 'thesis') ||
+      detailsPaperStandard !== paperStandardFormValue(project.paper_standard) ||
+      detailsProgram !== (project.program || '') ||
+      detailsCourse !== (project.course || '') ||
+      detailsSection !== (project.section || '')
+    );
+  }, [
+    project,
+    detailsProjectType,
+    detailsPaperStandard,
+    detailsProgram,
+    detailsCourse,
+    detailsSection,
+  ]);
+
+  const abstractDirty = useMemo(() => {
+    if (!project) return false;
+    const savedAbstract = project.description || project.abstract || '';
+    return abstractInput !== savedAbstract;
+  }, [project, abstractInput]);
+
+  const keywordsDirty = useMemo(() => {
+    if (!project) return false;
+    const savedKeywords = project.keywords || [];
+    if (savedKeywords.length !== editableKeywords.length) return true;
+    return savedKeywords.some((keyword, index) => keyword !== editableKeywords[index]);
+  }, [project, editableKeywords]);
+
   const existingUserIds = [
     ...members.map((m) => m.user_id),
     ...pendingInvites.map((m) => m.user_id),
@@ -299,7 +330,7 @@ export default function ProjectDetailPage() {
   };
 
   const commitKeywords = async () => {
-    if (!project) return;
+    if (!project || !keywordsDirty) return;
     setSavingKeywords(true);
     setKeywordsError(null);
     const res = await updateProjectKeywords(project.id, editableKeywords);
@@ -311,6 +342,7 @@ export default function ProjectDetailPage() {
     setProject((prev) => (prev ? { ...prev, keywords: res.data?.keywords || [] } : prev));
     setEditableKeywords(res.data.keywords || []);
     setSavingKeywords(false);
+    toast.success('Changes saved');
   };
 
   const startEditingTitle = () => {
@@ -372,7 +404,7 @@ export default function ProjectDetailPage() {
   };
 
   const commitProjectDetails = async () => {
-    if (!project) return;
+    if (!project || !detailsDirty) return;
     if (!detailsPaperStandard) {
       setDetailsError('Paper standard is required');
       return;
@@ -380,7 +412,6 @@ export default function ProjectDetailPage() {
 
     setSavingDetails(true);
     setDetailsError(null);
-    setDetailsSuccess(null);
 
     const res = await updateProjectDetails(project.id, {
       title: project.title,
@@ -398,13 +429,12 @@ export default function ProjectDetailPage() {
     }
 
     setProject(res.data);
-    setDetailsSuccess('Project details saved');
-    setTimeout(() => setDetailsSuccess(null), 3000);
     setSavingDetails(false);
+    toast.success('Changes saved');
   };
 
   const commitAbstract = async () => {
-    if (!project) return;
+    if (!project || !abstractDirty) return;
     setSavingAbstract(true);
     setAbstractError(null);
     const res = await updateProjectAbstract(project.id, abstractInput);
@@ -424,6 +454,7 @@ export default function ProjectDetailPage() {
       };
     });
     setSavingAbstract(false);
+    toast.success('Changes saved');
   };
 
   const handleCrossReference = async () => {
@@ -615,23 +646,19 @@ export default function ProjectDetailPage() {
                   variant="primary"
                   className="shrink-0"
                   onClick={commitProjectDetails}
-                  disabled={savingDetails}
+                  disabled={savingDetails || !detailsDirty}
                   loading={savingDetails}
                 >
-                  {savingDetails ? 'Saving...' : 'Save'}
+                  {savingDetails ? 'Saving...' : 'Save Details'}
                 </Button>
               </div>
             </CardHeader>
             <div className="mt-5 flex min-h-0 flex-1 flex-col">
-              {(detailsSuccess || detailsError) && (
-                <div
-                  className={`mb-3 shrink-0 rounded-lg px-3 py-1.5 text-sm ${
-                    detailsSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
-                  }`}
-                >
-                  {detailsSuccess || detailsError}
+              {detailsError ? (
+                <div className="mb-3 shrink-0 rounded-lg bg-error-50 px-3 py-1.5 text-sm text-archivumRed">
+                  {detailsError}
                 </div>
-              )}
+              ) : null}
               <div className="flex min-h-0 flex-1 flex-col justify-center">
                 <div className="project-detail-inline-fields flex flex-col gap-3 md:gap-3.5">
                 <ProjectDetailFieldRow label="Program" htmlFor="project-detail-program">
@@ -711,7 +738,7 @@ export default function ProjectDetailPage() {
                   variant="primary"
                   className="shrink-0"
                   onClick={commitAbstract}
-                  disabled={savingAbstract}
+                  disabled={savingAbstract || !abstractDirty}
                 >
                   {savingAbstract ? 'Saving...' : 'Save Abstract'}
                 </Button>
@@ -783,7 +810,7 @@ export default function ProjectDetailPage() {
                   size="sm"
                   variant="outline"
                   onClick={commitKeywords}
-                  disabled={savingKeywords}
+                  disabled={savingKeywords || !keywordsDirty}
                 >
                   {savingKeywords ? 'Saving...' : 'Commit'}
                 </Button>
