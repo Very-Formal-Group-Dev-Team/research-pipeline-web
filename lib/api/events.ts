@@ -29,6 +29,8 @@ export interface CreateInstitutionEventPayload {
   modality?: 'Online' | 'In-Person' | 'Hybrid';
 }
 
+export type UpdateInstitutionEventPayload = CreateInstitutionEventPayload;
+
 export function getCoordinatorEvents() {
   return get<InstitutionEvent[]>('/coordinator/events');
 }
@@ -37,6 +39,18 @@ export function createCoordinatorEvent(payload: CreateInstitutionEventPayload) {
   return post<InstitutionEvent>('/coordinator/events', payload);
 }
 
+export function updateCoordinatorEvent(eventId: string, payload: UpdateInstitutionEventPayload) {
+  return patch<InstitutionEvent>(`/coordinator/events/${eventId}`, payload);
+}
+
+export function completeCoordinatorEvent(eventId: string) {
+  return patch<InstitutionEvent>(`/coordinator/events/${eventId}/complete`, {});
+}
+
 export function cancelCoordinatorEvent(eventId: string) {
   return patch<InstitutionEvent>(`/coordinator/events/${eventId}/cancel`, {});
+}
+
+export function revertCoordinatorEvent(eventId: string) {
+  return patch<InstitutionEvent>(`/coordinator/events/${eventId}/revert`, {});
 }

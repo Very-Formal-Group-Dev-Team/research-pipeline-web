@@ -34,6 +34,7 @@ import {
   respondToInvitation,
   type Invitation,
 } from '@/lib/api/projects';
+import { PROJECT_INVITATION_RESPONDED_EVENT } from '@/components/projects/PendingInvitationsCard';
 
 export interface HeaderProps {
   user?: {
@@ -152,9 +153,20 @@ export default function Header({ user, onLogout }: HeaderProps) {
     await loadData();
   }
 
-  async function handleRespondInvitation(invitationId: string, accept: boolean) {
-    setRespondingId(invitationId);
-    await respondToInvitation(invitationId, accept);
+  async function handleRespondInvitation(invitation: Invitation, accept: boolean) {
+    setRespondingId(invitation.id);
+    const result = await respondToInvitation(invitation.id, accept);
+    if (!result.error) {
+      window.dispatchEvent(
+        new CustomEvent(PROJECT_INVITATION_RESPONDED_EVENT, {
+          detail: {
+            accept,
+            projectId: result.data?.projectId || invitation.project_id,
+            invitationId: invitation.id,
+          },
+        }),
+      );
+    }
     await loadData();
     setRespondingId(null);
   }
@@ -249,14 +261,14 @@ export default function Header({ user, onLogout }: HeaderProps) {
                   <div className="flex gap-2 mt-2">
                     <button
                       className="flex items-center gap-1 rounded-md bg-success-600 px-3 py-1 text-xs font-medium text-white hover:bg-success-700 transition-colors disabled:opacity-50"
-                      onClick={() => handleRespondInvitation(inv.id, true)}
+                      onClick={() => handleRespondInvitation(inv, true)}
                       disabled={respondingId === inv.id}
                     >
                       <FiCheck className="text-xs" /> Accept
                     </button>
                     <button
                       className="flex items-center gap-1 rounded-md bg-error-100 px-3 py-1 text-xs font-medium text-error-700 hover:bg-error-200 transition-colors disabled:opacity-50"
-                      onClick={() => handleRespondInvitation(inv.id, false)}
+                      onClick={() => handleRespondInvitation(inv, false)}
                       disabled={respondingId === inv.id}
                     >
                       <FiX className="text-xs" /> Decline

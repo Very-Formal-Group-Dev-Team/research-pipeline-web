@@ -28,9 +28,12 @@ import {
   getProjectMeetings,
   getMyDefenses,
   normalizeDefenseSchedule,
+  restoreMeeting,
   type Defense,
 } from '@/lib/api/defenses';
 import MeetingScheduleCard from '@/components/meetings/MeetingScheduleCard';
+import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
+import { meetingUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import { PROJECT_MEETINGS_SECTION_ID } from '@/lib/meetings/navigation';
 import {
   MEETING_STATUS_FILTER_OPTIONS,
@@ -114,6 +117,8 @@ export default function AdviserProjectDetailPage() {
   const [cancelMeetingId, setCancelMeetingId] = useState<string | null>(null);
   const [meetingActionLoading, setMeetingActionLoading] = useState(false);
   const [meetingActionError, setMeetingActionError] = useState<string | null>(null);
+  const { toast: meetingUndoToast, showUndoToast: showMeetingUndoToast, dismissUndoToast: dismissMeetingUndoToast } =
+    useUndoActionToast();
   const [meetingStatusFilter, setMeetingStatusFilter] =
     useState<MeetingStatusFilter>('scheduled');
 
@@ -323,9 +328,19 @@ export default function AdviserProjectDetailPage() {
     router.push(`/defenses?${query.toString()}`);
   };
 
+  const handleRevertMeeting = async (meetingId: string) => {
+    const res = await restoreMeeting(meetingId);
+    if (res.error) {
+      setMeetingActionError(res.error);
+      return;
+    }
+    await loadMeetings();
+  };
+
   const handleCompleteMeeting = async (meetingId: string) => {
     setMeetingActionLoading(true);
     setMeetingActionError(null);
+    dismissMeetingUndoToast();
     try {
       const res = await completeMeeting(meetingId);
       if (res.error) {
@@ -333,6 +348,10 @@ export default function AdviserProjectDetailPage() {
         return;
       }
       await loadMeetings();
+      showMeetingUndoToast({
+        message: meetingUndoToastMessage('complete'),
+        onUndo: () => handleRevertMeeting(meetingId),
+      });
     } catch {
       setMeetingActionError('Failed to mark meeting as complete.');
     } finally {
@@ -342,16 +361,22 @@ export default function AdviserProjectDetailPage() {
 
   const handleConfirmCancelMeeting = async () => {
     if (!cancelMeetingId) return;
+    const meetingId = cancelMeetingId;
     setMeetingActionLoading(true);
     setMeetingActionError(null);
+    dismissMeetingUndoToast();
     try {
-      const res = await cancelMeeting(cancelMeetingId);
+      const res = await cancelMeeting(meetingId);
       if (res.error) {
         setMeetingActionError(res.error);
         return;
       }
       setCancelMeetingId(null);
       await loadMeetings();
+      showMeetingUndoToast({
+        message: meetingUndoToastMessage('cancel'),
+        onUndo: () => handleRevertMeeting(meetingId),
+      });
     } catch {
       setMeetingActionError('Failed to cancel meeting.');
     } finally {
@@ -641,6 +666,8 @@ export default function AdviserProjectDetailPage() {
           />
         </Card>
       </div>
+
+      <UndoActionToastHost toast={meetingUndoToast} onDismiss={dismissMeetingUndoToast} />
     </DashboardLayout>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { FiUploadCloud } from 'react-icons/fi';
+import { FiSave, FiUploadCloud } from 'react-icons/fi';
 import Button from '@/components/Button';
 import Input from '@/components/ui/Input';
 import Avatar from '@/components/ui/Avatar';
@@ -173,9 +173,22 @@ export default function EditProfileForm({
         void handleUpdate();
       }}
     >
-      <p className="text-sm text-neutral-600">
-        Update your display name, status, and profile photo.
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <p className="min-w-0 flex-1 text-sm text-neutral-600">
+          Update your display name, status, and profile photo.
+        </p>
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          className="shrink-0"
+          disabled={loading}
+          loading={loading}
+          leftIcon={!loading ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
+        >
+          {loading ? 'Saving…' : 'Save changes'}
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2">
         <div
@@ -261,12 +274,6 @@ export default function EditProfileForm({
           {error}
         </div>
       ) : null}
-
-      <div className="flex justify-end pt-2">
-        <Button type="submit" variant="primary" disabled={loading} loading={loading}>
-          {loading ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
     </form>
   );
 }

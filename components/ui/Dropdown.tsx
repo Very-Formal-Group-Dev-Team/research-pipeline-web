@@ -75,7 +75,11 @@ export default function Dropdown({ trigger, items, align = 'left', className = '
                     }
                   `}
                 >
-                  {item.icon && <span className="text-lg">{item.icon}</span>}
+                  {item.icon ? (
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center text-neutral-500">
+                      {item.icon}
+                    </span>
+                  ) : null}
                   <span className="text-sm">{item.label}</span>
                 </button>
               )}

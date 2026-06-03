@@ -7,12 +7,15 @@ export interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   title?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  /** Tighter header/body padding and smaller title — for short confirmation dialogs */
+  dense?: boolean;
   closeOnOverlayClick?: boolean;
   showCloseButton?: boolean;
 }
 
 const sizeStyles = {
+  xs: 'max-w-sm',
   sm: 'max-w-md',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
@@ -26,9 +29,14 @@ export default function Modal({
   children, 
   title,
   size = 'md',
+  dense = false,
   closeOnOverlayClick = true,
   showCloseButton = true 
 }: ModalProps) {
+  const headerPadding = dense ? 'p-4' : 'p-6';
+  const contentPadding = dense ? 'p-4' : 'p-6';
+  const titleClass = dense ? 'text-lg font-semibold text-primary-700' : 'text-2xl font-semibold text-primary-700';
+  const closeIconClass = dense ? 'w-5 h-5' : 'w-6 h-6';
   const [isClosing, setIsClosing] = useState(false);
   const [shouldRender, setShouldRender] = useState(isOpen);
 
@@ -76,14 +84,14 @@ export default function Modal({
       }`}>
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 border-b border-neutral-200">
-            {title && <h2 className="text-2xl font-semibold text-primary-700">{title}</h2>}
+          <div className={`flex items-center justify-between border-b border-neutral-200 ${headerPadding}`}>
+            {title && <h2 className={titleClass}>{title}</h2>}
             {showCloseButton && (
               <button
                 onClick={onClose}
                 className="text-neutral-500 hover:text-neutral-700 transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={closeIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -92,7 +100,7 @@ export default function Modal({
         )}
         
         {/* Content */}
-        <div className="p-6">
+        <div className={contentPadding}>
           {children}
         </div>
       </div>

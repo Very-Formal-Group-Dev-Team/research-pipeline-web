@@ -149,7 +149,19 @@ export function getPendingDefenses() {
   return get<Defense[]>('/coordinator/defenses/pending');
 }
 
-export function verifyDefense(defenseId: string, payload: { venue?: string; verifiedSchedule?: string; verifiedEndTime?: string; notes?: string; forceApprove?: boolean; holdDefense?: boolean }) {
+export function verifyDefense(
+  defenseId: string,
+  payload: {
+    venue?: string;
+    location?: string;
+    modality?: string;
+    verifiedSchedule?: string;
+    verifiedEndTime?: string;
+    notes?: string;
+    forceApprove?: boolean;
+    holdDefense?: boolean;
+  },
+) {
   return post<Defense | VerifyDefenseConflict>(`/coordinator/defenses/${defenseId}/verify`, payload);
 }
 
@@ -162,7 +174,21 @@ export function setDefenseVenue(defenseId: string, venue: string) {
 }
 
 export function deleteDefense(defenseId: string) {
-  return del<{ success: boolean }>(`/coordinator/defenses/${defenseId}`);
+  return del<{ success: boolean; previousStatus?: string }>(`/coordinator/defenses/${defenseId}`);
+}
+
+export function cancelCoordinatorDefense(defenseId: string) {
+  return patch<{ success: boolean; previousStatus: string }>(`/coordinator/defenses/${defenseId}/cancel`, {});
+}
+
+export function completeCoordinatorDefense(defenseId: string) {
+  return patch<{ success: boolean; previousStatus: string }>(`/coordinator/defenses/${defenseId}/complete`, {});
+}
+
+export function revertCoordinatorDefense(defenseId: string, previousStatus: string) {
+  return patch<{ success: boolean; status: string }>(`/coordinator/defenses/${defenseId}/revert`, {
+    previousStatus,
+  });
 }
 
 // ─── Course Defenses ────────────────────────────────────────────────────────
@@ -318,6 +344,8 @@ export interface InstitutionProject {
   created_at: string;
   updated_at: string;
   course_id: string | null;
+  /** Course name entered on project create/edit (projects.course). */
+  course_label: string | null;
   course_name: string | null;
   course_code: string | null;
 }

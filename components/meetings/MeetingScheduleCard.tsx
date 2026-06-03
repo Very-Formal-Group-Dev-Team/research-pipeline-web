@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { FiCalendar, FiClock, FiGlobe, FiMapPin, FiMoreVertical } from 'react-icons/fi';
+import { FiCalendar, FiCheck, FiClock, FiEdit2, FiMoreVertical, FiX } from 'react-icons/fi';
+
+import ModalityIcon from '@/components/meetings/ModalityIcon';
 
 import type { Defense } from '@/lib/api/defenses';
 import Badge from '@/components/ui/Badge';
@@ -115,20 +117,23 @@ function MeetingActionsMenu({
         {
           label: 'Edit',
           value: 'edit',
+          icon: <FiEdit2 className="h-4 w-4" aria-hidden />,
           onClick: actions.onEdit,
-          disabled: isTerminalStatus || actions.disabled,
-        },
-        {
-          label: 'Cancel',
-          value: 'cancel',
-          danger: true,
-          onClick: actions.onCancel,
           disabled: isTerminalStatus || actions.disabled,
         },
         {
           label: 'Mark as complete',
           value: 'complete',
+          icon: <FiCheck className="h-4 w-4" aria-hidden />,
           onClick: actions.onComplete,
+          disabled: isTerminalStatus || actions.disabled,
+        },
+        {
+          label: 'Cancel',
+          value: 'cancel',
+          icon: <FiX className="h-4 w-4" aria-hidden />,
+          danger: true,
+          onClick: actions.onCancel,
           disabled: isTerminalStatus || actions.disabled,
         },
       ]}
@@ -275,7 +280,6 @@ function StudentMeetingCard({
   joinUrl: string | null;
   isTerminalStatus: boolean;
 }) {
-  const LocationIcon = online ? FiGlobe : FiMapPin;
   const showJoinAction = online && !isTerminalStatus;
 
   return (
@@ -301,7 +305,7 @@ function StudentMeetingCard({
               <span className="tabular-nums">{timeRange}</span>
             </>,
             <>
-              <LocationIcon className="h-4 w-4 shrink-0 text-neutral-500" aria-hidden />
+              <ModalityIcon modality={meeting.modality} className="h-4 w-4 shrink-0 text-neutral-500" />
               <span>{locationLine}</span>
             </>,
           ]}
