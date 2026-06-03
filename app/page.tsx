@@ -11,7 +11,7 @@ type PublicLandingStats = {
   finishedProjects: number;
 };
 
-function formatCount(value: number) {
+function formatCount(value: number) {    
   return new Intl.NumberFormat('en-US').format(value);
 }
 

@@ -6,7 +6,6 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
-import Avatar from '@/components/ui/Avatar';
 import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiEdit2, FiFileText, FiX } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import EmptyState from '@/components/layout/EmptyState';
@@ -31,6 +30,7 @@ import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
+import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
 import {
@@ -758,123 +758,16 @@ export default function ProjectDetailPage() {
             </div>
           </Card>
 
-          {/* Team members */}
-          <Card className="h-full">
-          <CardHeader>
-            <div className="flex w-full flex-wrap items-start justify-between gap-3">
-              <div>
-                <CardTitle>Team Members</CardTitle>
-                <CardDescription>
-                  {members.length} {members.length === 1 ? 'member' : 'members'}
-                  {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
-                </CardDescription>
-              </div>
-              <Button variant="primary" size="sm" className="shrink-0" onClick={() => setInviteOpen(true)}>
-                Invite Members
-              </Button>
-            </div>
-          </CardHeader>
-
-          {(inviteSuccess || inviteError) && (
-            <div
-              className={`mb-4 rounded-lg px-3 py-2 text-sm ${
-                inviteSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
-              }`}
-            >
-              {inviteSuccess || inviteError}
-            </div>
-          )}
-
-          {members.length > 0 || pendingInvites.length > 0 ? (
-            <div className="space-y-3">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className={`flex items-center gap-4 rounded-lg border p-3 transition-colors ${
-                    member.role === 'leader'
-                      ? 'border-primary-300 bg-primary-50/50'
-                      : member.role === 'adviser'
-                        ? 'border-neutral-200 bg-neutral-50'
-                        : 'border-neutral-200 hover:bg-neutral-50'
-                  }`}
-                >
-                  <Avatar
-                    src={member.users?.avatar_url}
-                    name={member.users?.full_name || member.users?.email || 'Unknown'}
-                    size="md"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-semibold text-neutral-900 truncate">
-                        {member.users?.full_name || 'Unknown User'}
-                      </h4>
-                      {member.role === 'leader' ? (
-                        <span className="text-xs font-medium text-primary-600 whitespace-nowrap">
-                          (Leader)
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 text-sm text-neutral-600 break-all">{member.users?.email}</p>
-                  </div>
-                  <Badge
-                    variant={
-                      member.role === 'leader'
-                        ? 'primary'
-                        : member.role === 'adviser'
-                          ? 'success'
-                          : 'default'
-                    }
-                    className="capitalize shrink-0"
-                  >
-                    {member.role === 'adviser'
-                      ? 'adviser'
-                      : member.role === 'leader'
-                        ? 'leader'
-                        : 'collaborator'}
-                  </Badge>
-                </div>
-              ))}
-
-              {pendingInvites.length > 0 ? (
-                <>
-                  <div className="pt-2 pb-1">
-                    <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                      Pending invitations
-                    </p>
-                  </div>
-                  {pendingInvites.map((invite) => (
-                    <div
-                      key={invite.id}
-                      className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
-                    >
-                      <Avatar
-                        src={invite.users?.avatar_url}
-                        name={invite.users?.full_name || invite.users?.email || 'Unknown'}
-                        size="md"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-semibold text-neutral-800 truncate">
-                          {invite.users?.full_name || 'Unknown User'}
-                        </h4>
-                        <p className="mt-0.5 text-sm text-neutral-600 break-all">{invite.users?.email}</p>
-                      </div>
-                      <Badge
-                        variant={invite.role === 'adviser' ? 'success' : 'default'}
-                        className="capitalize shrink-0"
-                      >
-                        {invite.role}
-                      </Badge>
-                    </div>
-                  ))}
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <p className="py-4 text-center text-sm text-neutral-500">
-              No team members yet. Use Invite Members to add collaborators or advisers.
-            </p>
-          )}
-          </Card>
+          <ProjectTeamMembersCard
+            projectId={project.id}
+            members={members}
+            pendingInvites={pendingInvites}
+            currentUserId={profile?.id}
+            onMembersChange={loadMembers}
+            onInviteClick={() => setInviteOpen(true)}
+            inviteSuccess={inviteSuccess}
+            inviteError={inviteError}
+          />
         </div>
 
         <UserSearchModal
