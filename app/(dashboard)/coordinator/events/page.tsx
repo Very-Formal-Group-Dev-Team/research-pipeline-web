@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FiCalendar, FiPlus, FiShield } from 'react-icons/fi';
+import { FiCalendar, FiPlus, FiSave, FiShield } from 'react-icons/fi';
 
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/Button';
@@ -10,9 +10,16 @@ import Card from '@/components/ui/Card';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import MeetingScheduleCard from '@/components/meetings/MeetingScheduleCard';
+import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
 import { formLabelClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
-import { CoordinatorTimeRangeFields } from '@/components/coordinator/CoordinatorTimeRangeFields';
+import {
+  COORDINATOR_DATE_FIELD_WRAPPER_CLASS,
+  COORDINATOR_DATE_TIME_ROW_CLASS,
+  COORDINATOR_TIME_FIELD_WRAPPER_CLASS,
+  COORDINATOR_SCHEDULE_FORM_CLASS,
+  COORDINATOR_SCHEDULE_MODAL_SIZE,
+  CoordinatorTimeRangeFields,
+} from '@/components/coordinator/CoordinatorTimeRangeFields';
 import CoordinatorDefenseSections from '@/components/coordinator/CoordinatorDefenseSections';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
@@ -29,7 +36,6 @@ import { institutionEventUndoToastMessage } from '@/lib/meetings/undoStatusMessa
 import {
   institutionEventFormToPayload,
   institutionEventToFormState,
-  institutionEventToMeetingCard,
   type InstitutionEventFormState,
 } from '@/lib/coordinator/institutionEventDisplay';
 import {
@@ -367,9 +373,15 @@ export default function CoordinatorEventsPage() {
           ) : (
             <div className="space-y-3">
               {events.map((event) => (
-                <MeetingScheduleCard
+                <CoordinatorScheduleCard
                   key={event.id}
-                  meeting={institutionEventToMeetingCard(event)}
+                  title={event.title}
+                  description={event.description}
+                  startTime={event.start_time}
+                  endTime={event.end_time}
+                  modality={event.modality}
+                  location={event.location}
+                  status={event.status}
                   actions={{
                     onEdit: () => openEditEvent(event),
                     onCancel: () => setCancelEventId(event.id),
@@ -406,31 +418,35 @@ export default function CoordinatorEventsPage() {
         isOpen={showScheduleModal}
         onClose={closeScheduleModal}
         title={scheduleKind === null ? 'What would you like to schedule?' : scheduleKind === 'event' ? 'Schedule Institution Event' : 'Schedule Defense'}
-        size="md"
+        size={scheduleKind === null ? 'lg' : COORDINATOR_SCHEDULE_MODAL_SIZE}
       >
         {scheduleKind === null ? (
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
             <button
               type="button"
               onClick={() => setScheduleKind('event')}
-              className="rounded-xl border-2 border-coordinator-navy/30 p-6 text-left hover:border-coordinator-navy hover:bg-coordinator-navy/5 transition-colors"
+              className="flex min-h-[11.5rem] w-full flex-col rounded-xl border-2 border-coordinator-navy/30 p-8 text-left transition-colors hover:border-coordinator-navy hover:bg-coordinator-navy/5 sm:min-h-[12.5rem]"
             >
-              <FiCalendar className="text-2xl text-coordinator-navy mb-2" />
-              <h3 className="font-semibold text-coordinator-ink">Event</h3>
-              <p className="text-sm text-neutral-600 mt-1">Workshops, deadlines, and institution-wide activities</p>
+              <FiCalendar className="mb-3 h-9 w-9 text-coordinator-navy" aria-hidden />
+              <h3 className="text-lg font-semibold text-coordinator-ink">Event</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                Workshops, deadlines, and institution-wide activities
+              </p>
             </button>
             <button
               type="button"
               onClick={() => setScheduleKind('defense')}
-              className="rounded-xl border-2 border-coordinator-rose/30 p-6 text-left hover:border-coordinator-rose hover:bg-coordinator-rose/5 transition-colors"
+              className="flex min-h-[11.5rem] w-full flex-col rounded-xl border-2 border-coordinator-rose/30 p-8 text-left transition-colors hover:border-coordinator-rose hover:bg-coordinator-rose/5 sm:min-h-[12.5rem]"
             >
-              <FiShield className="text-2xl text-coordinator-rose mb-2" />
-              <h3 className="font-semibold text-coordinator-ink">Defense</h3>
-              <p className="text-sm text-neutral-600 mt-1">Proposal, midterm, or final defense for a course</p>
+              <FiShield className="mb-3 h-9 w-9 text-coordinator-rose" aria-hidden />
+              <h3 className="text-lg font-semibold text-coordinator-ink">Defense</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                Proposal, midterm, or final defense for a course
+              </p>
             </button>
           </div>
         ) : scheduleKind === 'event' ? (
-          <form onSubmit={handleCreateEvent} className="space-y-4 p-1">
+          <form onSubmit={handleCreateEvent} className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}>
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
             <Input
               label="Title"
@@ -459,23 +475,27 @@ export default function CoordinatorEventsPage() {
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="Date"
-                type="date"
-                required
-                value={eventForm.date}
-                onChange={(e) => setEventForm((f) => ({ ...f, date: e.target.value }))}
-                responsiveText
-                fullWidth
-              />
-              <CoordinatorTimeRangeFields
-                required
-                startTime={eventForm.startTime}
-                endTime={eventForm.endTime}
-                onStartChange={(value) => setEventForm((f) => ({ ...f, startTime: value }))}
-                onEndChange={(value) => setEventForm((f) => ({ ...f, endTime: value }))}
-              />
+            <div className={COORDINATOR_DATE_TIME_ROW_CLASS}>
+              <div className={COORDINATOR_DATE_FIELD_WRAPPER_CLASS}>
+                <Input
+                  label="Date"
+                  type="date"
+                  required
+                  value={eventForm.date}
+                  onChange={(e) => setEventForm((f) => ({ ...f, date: e.target.value }))}
+                  responsiveText
+                  fullWidth
+                />
+              </div>
+              <div className={COORDINATOR_TIME_FIELD_WRAPPER_CLASS}>
+                <CoordinatorTimeRangeFields
+                  required
+                  startTime={eventForm.startTime}
+                  endTime={eventForm.endTime}
+                  onStartChange={(value) => setEventForm((f) => ({ ...f, startTime: value }))}
+                  onEndChange={(value) => setEventForm((f) => ({ ...f, endTime: value }))}
+                />
+              </div>
             </div>
             <Select
               fullWidth
@@ -487,7 +507,7 @@ export default function CoordinatorEventsPage() {
               }
               options={[
                 { value: 'Online', label: 'Online' },
-                { value: 'In-Person', label: 'In-Person' },
+                { value: 'In-Person', label: 'Face-to-Face' },
                 { value: 'Hybrid', label: 'Hybrid' },
               ]}
             />
@@ -505,7 +525,7 @@ export default function CoordinatorEventsPage() {
             </div>
           </form>
         ) : (
-          <form onSubmit={handleCreateDefense} className="space-y-4 p-1">
+          <form onSubmit={handleCreateDefense} className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}>
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
             <Select
               fullWidth
@@ -549,23 +569,27 @@ export default function CoordinatorEventsPage() {
                 options={filteredRubrics.map((r) => ({ value: r.id, label: r.name }))}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="Date"
-                type="date"
-                required
-                value={defenseForm.date}
-                onChange={(e) => setDefenseForm((f) => ({ ...f, date: e.target.value }))}
-                responsiveText
-                fullWidth
-              />
-              <CoordinatorTimeRangeFields
-                required
-                startTime={defenseForm.startTime}
-                endTime={defenseForm.endTime}
-                onStartChange={(value) => setDefenseForm((f) => ({ ...f, startTime: value }))}
-                onEndChange={(value) => setDefenseForm((f) => ({ ...f, endTime: value }))}
-              />
+            <div className={COORDINATOR_DATE_TIME_ROW_CLASS}>
+              <div className={COORDINATOR_DATE_FIELD_WRAPPER_CLASS}>
+                <Input
+                  label="Date"
+                  type="date"
+                  required
+                  value={defenseForm.date}
+                  onChange={(e) => setDefenseForm((f) => ({ ...f, date: e.target.value }))}
+                  responsiveText
+                  fullWidth
+                />
+              </div>
+              <div className={COORDINATOR_TIME_FIELD_WRAPPER_CLASS}>
+                <CoordinatorTimeRangeFields
+                  required
+                  startTime={defenseForm.startTime}
+                  endTime={defenseForm.endTime}
+                  onStartChange={(value) => setDefenseForm((f) => ({ ...f, startTime: value }))}
+                  onEndChange={(value) => setDefenseForm((f) => ({ ...f, endTime: value }))}
+                />
+              </div>
             </div>
             <Select
               fullWidth
@@ -577,7 +601,7 @@ export default function CoordinatorEventsPage() {
               }
               options={[
                 { value: 'Online', label: 'Online' },
-                { value: 'In-Person', label: 'In-Person' },
+                { value: 'In-Person', label: 'Face-to-Face' },
                 { value: 'Hybrid', label: 'Hybrid' },
               ]}
             />
@@ -601,9 +625,14 @@ export default function CoordinatorEventsPage() {
         isOpen={Boolean(editEvent)}
         onClose={closeEditEvent}
         title="Edit institution event"
-        size="md"
+        description={
+          <>
+            Update schedule and details for <strong>{editEvent?.title}</strong>.
+          </>
+        }
+        size={COORDINATOR_SCHEDULE_MODAL_SIZE}
       >
-        <form onSubmit={handleSaveEditEvent} className="space-y-4 p-1">
+        <form onSubmit={handleSaveEditEvent} className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}>
           {eventActionError ? (
             <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{eventActionError}</p>
           ) : null}
@@ -625,23 +654,27 @@ export default function CoordinatorEventsPage() {
               rows={2}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
-              label="Date"
-              type="date"
-              required
-              value={editForm.date}
-              onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
-              responsiveText
-              fullWidth
-            />
-            <CoordinatorTimeRangeFields
-              required
-              startTime={editForm.startTime}
-              endTime={editForm.endTime}
-              onStartChange={(value) => setEditForm((f) => ({ ...f, startTime: value }))}
-              onEndChange={(value) => setEditForm((f) => ({ ...f, endTime: value }))}
-            />
+          <div className={COORDINATOR_DATE_TIME_ROW_CLASS}>
+            <div className={COORDINATOR_DATE_FIELD_WRAPPER_CLASS}>
+              <Input
+                label="Date"
+                type="date"
+                required
+                value={editForm.date}
+                onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
+            </div>
+            <div className={COORDINATOR_TIME_FIELD_WRAPPER_CLASS}>
+              <CoordinatorTimeRangeFields
+                required
+                startTime={editForm.startTime}
+                endTime={editForm.endTime}
+                onStartChange={(value) => setEditForm((f) => ({ ...f, startTime: value }))}
+                onEndChange={(value) => setEditForm((f) => ({ ...f, endTime: value }))}
+              />
+            </div>
           </div>
           <Select
             fullWidth
@@ -653,7 +686,7 @@ export default function CoordinatorEventsPage() {
             }
             options={[
               { value: 'Online', label: 'Online' },
-              { value: 'In-Person', label: 'In-Person' },
+              { value: 'In-Person', label: 'Face-to-Face' },
               { value: 'Hybrid', label: 'Hybrid' },
             ]}
           />
@@ -669,7 +702,12 @@ export default function CoordinatorEventsPage() {
             <Button type="button" variant="outline" onClick={closeEditEvent} disabled={eventActionLoading}>
               Cancel
             </Button>
-            <Button type="submit" loading={eventActionLoading} disabled={eventActionLoading}>
+            <Button
+              type="submit"
+              loading={eventActionLoading}
+              disabled={eventActionLoading}
+              leftIcon={!eventActionLoading ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
+            >
               Save changes
             </Button>
           </ModalFooter>

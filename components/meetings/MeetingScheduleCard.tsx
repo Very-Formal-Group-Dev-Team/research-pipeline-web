@@ -7,6 +7,7 @@ import ModalityIcon from '@/components/meetings/ModalityIcon';
 
 import type { Defense } from '@/lib/api/defenses';
 import Badge from '@/components/ui/Badge';
+import DotSeparatedRow from '@/components/ui/DotSeparatedRow';
 import Dropdown from '@/components/ui/Dropdown';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import {
@@ -56,30 +57,6 @@ export interface MeetingScheduleCardProps {
   /** Adviser project detail layout (default) vs student events layout. */
   layout?: MeetingScheduleCardLayout;
   actions?: MeetingScheduleCardActions;
-}
-
-function DotSeparatedRow({ parts }: { parts: React.ReactNode[] }) {
-  const items = parts.filter(
-    (part) => part !== null && part !== undefined && part !== false && part !== '',
-  );
-  if (items.length === 0) return null;
-
-  return (
-    <div
-      className={`flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5 text-neutral-600 ${MEETING_CARD_BODY_CLASS}`}
-    >
-      {items.map((part, index) => (
-        <React.Fragment key={index}>
-          {index > 0 ? (
-            <span className="text-neutral-400 select-none" aria-hidden>
-              ·
-            </span>
-          ) : null}
-          <span className="inline-flex items-center gap-1.5">{part}</span>
-        </React.Fragment>
-      ))}
-    </div>
-  );
 }
 
 function StatusBadge({ meeting }: { meeting: Defense }) {
@@ -295,6 +272,7 @@ function StudentMeetingCard({
 
       <div className={STUDENT_MEETING_CARD_FOOTER_CLASS}>
         <DotSeparatedRow
+          className={`min-w-0 flex-1 text-neutral-600 ${MEETING_CARD_BODY_CLASS}`}
           parts={[
             <>
               <FiCalendar className="h-4 w-4 shrink-0 text-neutral-500" aria-hidden />

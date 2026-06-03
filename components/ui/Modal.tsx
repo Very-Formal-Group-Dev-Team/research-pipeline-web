@@ -7,7 +7,9 @@ export interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   title?: string;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  /** Shown below the title and above the header divider */
+  description?: React.ReactNode;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'schedule' | 'full';
   /** Tighter header/body padding and smaller title — for short confirmation dialogs */
   dense?: boolean;
   closeOnOverlayClick?: boolean;
@@ -20,6 +22,8 @@ const sizeStyles = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  /** Coordinator schedule/edit forms: 32rem content + 3rem horizontal padding */
+  schedule: 'w-full max-w-[35rem]',
   full: 'max-w-full mx-4',
 };
 
@@ -28,6 +32,7 @@ export default function Modal({
   onClose, 
   children, 
   title,
+  description,
   size = 'md',
   dense = false,
   closeOnOverlayClick = true,
@@ -83,19 +88,28 @@ export default function Modal({
         isClosing ? 'opacity-0 scale-95 translate-y-4' : 'animate-slide-up'
       }`}>
         {/* Header */}
-        {(title || showCloseButton) && (
-          <div className={`flex items-center justify-between border-b border-neutral-200 ${headerPadding}`}>
-            {title && <h2 className={titleClass}>{title}</h2>}
-            {showCloseButton && (
-              <button
-                onClick={onClose}
-                className="text-neutral-500 hover:text-neutral-700 transition-colors"
-              >
-                <svg className={closeIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+        {(title || description || showCloseButton) && (
+          <div className={`border-b border-neutral-200 ${headerPadding}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                {title ? <h2 className={titleClass}>{title}</h2> : null}
+                {description ? (
+                  <p className={`text-sm text-neutral-600 ${title ? 'mt-1.5' : ''}`}>{description}</p>
+                ) : null}
+              </div>
+              {showCloseButton ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="shrink-0 text-neutral-500 transition-colors hover:text-neutral-700"
+                  aria-label="Close"
+                >
+                  <svg className={closeIconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              ) : null}
+            </div>
           </div>
         )}
         

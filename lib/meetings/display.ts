@@ -79,6 +79,13 @@ export function formatMeetingTime(iso?: string | null): string {
   });
 }
 
+export function formatScheduleTimeRange(start?: string | null, end?: string | null): string {
+  const startLabel = formatMeetingTime(start);
+  if (!end) return startLabel;
+  const endLabel = formatMeetingTime(end);
+  return endLabel !== '-' ? `${startLabel} – ${endLabel}` : startLabel;
+}
+
 export function formatMeetingDateCompact(iso?: string | null): string {
   const parsed = parseMeetingDate(iso);
   if (!parsed) return '-';
@@ -112,7 +119,7 @@ export function formatModalityLabel(modality?: string | null): string {
   const kind = normalizeModalityKind(modality);
   if (kind === 'online') return 'Online';
   if (kind === 'hybrid') return 'Hybrid';
-  if (kind === 'in-person') return 'In-Person';
+  if (kind === 'in-person') return 'Face-to-Face';
   return modality;
 }
 
