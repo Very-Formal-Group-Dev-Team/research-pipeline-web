@@ -17,6 +17,7 @@ export interface CoordinatorScheduleMetadataRowProps {
   modality?: string | null;
   location?: string | null;
   proposedBy?: string | null;
+  className?: string;
 }
 
 export default function CoordinatorScheduleMetadataRow({
@@ -25,11 +26,12 @@ export default function CoordinatorScheduleMetadataRow({
   modality,
   location,
   proposedBy,
+  className = 'text-sm text-neutral-600',
 }: CoordinatorScheduleMetadataRowProps) {
   const locationLabel = formatMeetingVenueDisplay(location) || location?.trim() || '';
   return (
     <DotSeparatedRow
-      className="text-sm text-neutral-600"
+      className={className}
       parts={[
         <>
           <FiCalendar className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />

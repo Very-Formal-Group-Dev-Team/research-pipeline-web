@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
@@ -28,6 +28,7 @@ import {
   FiMoreVertical,
   FiSave,
 } from 'react-icons/fi';
+import { sortDefenses, type DefenseSortBy } from '@/lib/defenses/sort';
 import { formatStatusLabel } from '@/lib/utils/formatStatus';
 import {
   getAllDefenses,
@@ -39,8 +40,8 @@ import {
   revertCoordinatorDefense,
   type Defense,
 } from '@/lib/api/coordinator';
-import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
-import { isOnlineModality } from '@/lib/meetings/jitsi';
+import DefenseCardExpandContent from '@/components/defenses/DefenseCardExpandContent';
+import DefenseSortControls from '@/components/defenses/DefenseSortControls';
 
 function formatDateTime(iso?: string | null) {
   if (!iso) return '-';
@@ -155,7 +156,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     conflicts: Array<{ domain: string; defense_id: string; project_id: string; start_time: string; end_time: string | null }>;
   } | null>(null);
   const [conflictAction, setConflictAction] = useState<'hold' | 'confirm' | null>(null);
-  const [sortBy, setSortBy] = useState<'time' | 'status'>('time');
+  const [sortBy, setSortBy] = useState<DefenseSortBy>('time');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Defense | null>(null);
   const [defenseActionLoading, setDefenseActionLoading] = useState(false);
@@ -399,21 +400,13 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     }
   }
 
-  const displayedDefenses = (() => {
-    const list = section === 'pending'
-      ? pendingDefenses
-      : allDefenses.filter((d) => d.status !== 'pending');
-    const statusOrder: Record<string, number> = {
-      pending: 0, moved: 1, approved: 2, rejected: 3, scheduled: 4, completed: 5, cancelled: 6,
-    };
-    return [...list].sort((a, b) => {
-      if (sortBy === 'status') {
-        return (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
-      }
-      return new Date((a.start_time || '').replace(/Z$/i, '')).getTime()
-        - new Date((b.start_time || '').replace(/Z$/i, '')).getTime();
-    });
-  })();
+  const displayedDefenses = useMemo(() => {
+    const list =
+      section === 'pending'
+        ? pendingDefenses
+        : allDefenses.filter((d) => d.status !== 'pending');
+    return sortDefenses(list, sortBy);
+  }, [section, pendingDefenses, allDefenses, sortBy]);
 
   const uniqueConflictSchedules = conflictPrompt
     ? Array.from(new Map(conflictPrompt.conflicts.map((item) => [item.defense_id, item])).values())
@@ -440,27 +433,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-neutral-500">Sort by:</span>
-          <button
-            type="button"
-            onClick={() => setSortBy('time')}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              sortBy === 'time' ? 'bg-coordinator-navy/10 text-coordinator-ink' : 'bg-neutral-100 text-neutral-600'
-            }`}
-          >
-            Time
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortBy('status')}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              sortBy === 'status' ? 'bg-coordinator-navy/10 text-coordinator-ink' : 'bg-neutral-100 text-neutral-600'
-            }`}
-          >
-            Status
-          </button>
-        </div>
+        <DefenseSortControls sortBy={sortBy} onSortByChange={setSortBy} tone="coordinator" />
 
         {displayedDefenses.map((defense) => {
           const badge = statusBadge(defense.status);
@@ -566,33 +539,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
                 )
               }
               expanded={isExpanded}
-              expandContent={
-                <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-                  <div>
-                    <span className="font-medium text-neutral-500">Project Code:</span>{' '}
-                    {defense.project_code}
-                  </div>
-                  <div>
-                    <span className="font-medium text-neutral-500">Location:</span>{' '}
-                    {defense.venue || defense.location || 'Not set'}
-                  </div>
-                  {defense.adviser_name ? (
-                    <div>
-                      <span className="font-medium text-neutral-500">Adviser:</span>{' '}
-                      {defense.adviser_name}
-                    </div>
-                  ) : null}
-                  {isOnlineModality(defense.modality) ? (
-                    <div className="md:col-span-2">
-                      <JoinMeetingButton
-                        meeting_url={defense.meeting_url}
-                        meeting_room={defense.meeting_room}
-                        label="Join Defense"
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              }
+              expandContent={<DefenseCardExpandContent defense={defense} />}
             />
           );
         })}

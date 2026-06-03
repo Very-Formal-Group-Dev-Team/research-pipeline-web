@@ -10,6 +10,12 @@ export const projectSummaryDetailTextClassName = [
   formControlTextSizeClassName,
 ].join(' ');
 
+/** Project code value box — border lighter than summary `Card` (neutral-400) */
+export const projectCodeDisplayClassName = [
+  'flex-1 min-w-0 break-all rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 font-mono text-primary-700',
+  projectSummaryDetailTextClassName,
+].join(' ');
+
 /** Project Details card metadata: text-sm → text-md from md (student / default) */
 export const projectDetailMetadataTextClassName = [
   'project-detail-metadata-text',

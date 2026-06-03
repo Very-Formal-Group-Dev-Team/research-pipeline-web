@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
-import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiEdit2, FiFileText, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiEdit2, FiFileText, FiX } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -30,6 +30,7 @@ import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
+import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
@@ -107,7 +108,6 @@ function ProjectDetailFieldRow({
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [codeCopied, setCodeCopied] = useState(false);
   const { user, profile, handleLogout } = useDashboardUser('Student');
 
   const [project, setProject] = useState<Project | null>(null);
@@ -232,14 +232,6 @@ export default function ProjectDetailPage() {
       titleInputRef.current.select();
     }
   }, [isEditingTitle]);
-
-  const copyProjectCode = () => {
-    if (project?.project_code) {
-      navigator.clipboard.writeText(project.project_code);
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 2000);
-    }
-  };
 
   const existingUserIds = [
     ...members.map((m) => m.user_id),
@@ -587,26 +579,7 @@ export default function ProjectDetailPage() {
               <CardTitle>Project Code</CardTitle>
               <CardDescription>Share this code to invite team members and advisers</CardDescription>
             </CardHeader>
-            <div className="mt-4 flex min-w-0 items-center gap-2">
-              <code
-                className={`flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-primary-700 ${projectSummaryDetailTextClassName}`}
-              >
-                {project.project_code}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={copyProjectCode}
-                aria-label={codeCopied ? 'Copied to clipboard' : 'Copy project code'}
-              >
-                {codeCopied ? (
-                  <FiCheck className="text-success-600" aria-hidden />
-                ) : (
-                  <FiCopy aria-hidden />
-                )}
-              </Button>
-            </div>
+            <ProjectCodeCopyRow projectCode={project.project_code} />
           </Card>
 
           <Card className="md:col-start-1 md:row-start-2">

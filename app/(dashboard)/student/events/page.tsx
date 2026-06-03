@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiCalendar, FiClock, FiMapPin } from 'react-icons/fi';
+import { FiCalendar } from 'react-icons/fi';
 
+import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
+import DefenseScheduleCard from '@/components/defenses/DefenseScheduleCard';
+import DefenseSortControls from '@/components/defenses/DefenseSortControls';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import EmptyState from '@/components/layout/EmptyState';
 import MeetingScheduleCard from '@/components/meetings/MeetingScheduleCard';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
 import Select from '@/components/ui/Select';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import type { Defense } from '@/lib/api/defenses';
 import type { InstitutionEvent } from '@/lib/api/events';
 import { getMySchedule } from '@/lib/api/schedule';
+import { sortDefenses, type DefenseSortBy } from '@/lib/defenses/sort';
 import {
   MEETING_STATUS_FILTER_OPTIONS,
   MEETINGS_FILTER_CONTROL_CLASS,
@@ -20,22 +23,6 @@ import {
   meetingStatusFilterEmptyLabel,
   type MeetingStatusFilter,
 } from '@/lib/meetings/statusFilter';
-import { formatStatusLabel } from '@/lib/utils/formatStatus';
-
-function formatDateTime(iso?: string | null) {
-  if (!iso) return '-';
-  const parsed = new Date(iso.replace(/Z$/i, ''));
-  if (Number.isNaN(parsed.getTime())) return '-';
-  return parsed.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
-
 type Tab = 'events' | 'meetings' | 'defenses';
 
 function EventsList({ items }: { items: InstitutionEvent[] }) {
@@ -50,38 +37,19 @@ function EventsList({ items }: { items: InstitutionEvent[] }) {
   return (
     <div className="space-y-3">
       {items.map((item) => (
-        <Card key={item.id}>
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <h3 className="font-semibold text-lg text-primary-700">{item.title}</h3>
-            <Badge variant="primary">{formatStatusLabel(item.status)}</Badge>
-          </div>
-          {item.description ? (
-            <p className="text-sm text-neutral-600 mb-2">{item.description}</p>
-          ) : null}
-          <p className="text-sm text-neutral-600 inline-flex items-center gap-1">
-            <FiClock /> {formatDateTime(item.start_time)} – {formatDateTime(item.end_time)}
-          </p>
-          <p className="text-sm text-neutral-600 inline-flex items-center gap-1 mt-1">
-            <FiMapPin /> {item.location}
-            {item.modality ? ` · ${item.modality}` : ''}
-          </p>
-        </Card>
+        <CoordinatorScheduleCard
+          key={item.id}
+          title={item.title}
+          description={item.description}
+          startTime={item.start_time}
+          endTime={item.end_time}
+          modality={item.modality}
+          location={item.location}
+          status={item.status}
+        />
       ))}
     </div>
   );
-}
-
-function defenseTypeVariant(type: string): 'primary' | 'warning' | 'success' | 'default' {
-  switch (type) {
-    case 'proposal':
-      return 'primary';
-    case 'midterm':
-      return 'warning';
-    case 'final':
-      return 'success';
-    default:
-      return 'default';
-  }
 }
 
 function MeetingsList({
@@ -119,6 +87,9 @@ function MeetingsList({
 }
 
 function DefensesList({ items }: { items: Defense[] }) {
+  const [sortBy, setSortBy] = useState<DefenseSortBy>('time');
+  const sortedItems = useMemo(() => sortDefenses(items, sortBy), [items, sortBy]);
+
   if (items.length === 0) {
     return (
       <Card>
@@ -128,35 +99,13 @@ function DefensesList({ items }: { items: Defense[] }) {
   }
 
   return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <Card key={item.id}>
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <h3 className="font-semibold text-lg text-primary-700">{item.project_title}</h3>
-            <Badge variant={defenseTypeVariant(item.defense_type)}>
-              {formatStatusLabel(item.defense_type)}
-            </Badge>
-            {item.status ? (
-              <Badge variant="warning">
-                {formatStatusLabel(item.status_label || item.status)}
-              </Badge>
-            ) : null}
-          </div>
-          <p className="text-sm text-neutral-500 mb-2">{item.project_code}</p>
-          {item.adviser_name ? (
-            <p className="text-sm text-neutral-600 mb-2">Adviser: {item.adviser_name}</p>
-          ) : null}
-          <p className="text-sm text-neutral-600 inline-flex items-center gap-1">
-            <FiClock /> {formatDateTime(item.start_time || item.scheduled_at)}
-            {item.end_time ? ` – ${formatDateTime(item.end_time)}` : ''}
-          </p>
-          {(item.location || item.venue) ? (
-            <p className="text-sm text-neutral-600 inline-flex items-center gap-1 mt-1">
-              <FiMapPin /> {item.venue || item.location}
-            </p>
-          ) : null}
-        </Card>
-      ))}
+    <div className="space-y-4">
+      <DefenseSortControls sortBy={sortBy} onSortByChange={setSortBy} tone="student" />
+      <div className="space-y-3">
+        {sortedItems.map((item) => (
+          <DefenseScheduleCard key={item.id} defense={item} />
+        ))}
+      </div>
     </div>
   );
 }
