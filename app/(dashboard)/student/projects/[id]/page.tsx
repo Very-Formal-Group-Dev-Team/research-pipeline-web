@@ -141,7 +141,7 @@ export default function ProjectDetailPage() {
   const [titleInput, setTitleInput] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
   const [titleError, setTitleError] = useState<string | null>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const [detailsProjectType, setDetailsProjectType] = useState('thesis');
   const [detailsPaperStandard, setDetailsPaperStandard] = useState('IEEE');
   const [detailsProgram, setDetailsProgram] = useState('');
@@ -230,8 +230,24 @@ export default function ProjectDetailPage() {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
       titleInputRef.current.select();
+      titleInputRef.current.style.height = 'auto';
+      titleInputRef.current.style.height = `${titleInputRef.current.scrollHeight}px`;
     }
   }, [isEditingTitle]);
+
+  useEffect(() => {
+    if (!isEditingTitle || !titleInputRef.current) return;
+    const el = titleInputRef.current;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [isEditingTitle, titleInput]);
+
+  const resizeTitleTextarea = () => {
+    const el = titleInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  };
 
   const detailsDirty = useMemo(() => {
     if (!project) return false;
@@ -394,8 +410,8 @@ export default function ProjectDetailPage() {
     setSavingTitle(false);
   };
 
-  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void saveProjectTitle();
     } else if (e.key === 'Escape') {
@@ -540,31 +556,25 @@ export default function ProjectDetailPage() {
     <DashboardLayout role="student" user={user} onLogout={handleLogout}>
       <div className="project-detail-forms space-y-6">
         {/* Page header */}
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-            <div className="min-w-0 flex-1">
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="min-w-0 w-full flex-1">
               {isEditingTitle ? (
-                <div className="min-w-0 max-w-full">
-                  <div className="inline-grid w-max max-w-full min-w-0 [&>*]:col-start-1 [&>*]:row-start-1">
-                    <span
-                      className={`invisible whitespace-pre pointer-events-none ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_INPUT_SHELL_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
-                      aria-hidden
-                    >
-                      {titleInput || '\u00A0'}
-                    </span>
-                    <input
-                      ref={titleInputRef}
-                      type="text"
-                      value={titleInput}
-                      onChange={(e) => setTitleInput(e.target.value)}
-                      onKeyDown={handleTitleKeyDown}
-                      onBlur={() => void saveProjectTitle()}
-                      disabled={savingTitle}
-                      size={1}
-                      className={`project-title-inline-input min-w-0 w-full max-w-full bg-neutral-50 outline-none focus:border-primary-400/60 disabled:opacity-60 ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_INPUT_SHELL_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
-                      aria-label="Project title"
-                    />
-                  </div>
+                <div className="min-w-0 w-full max-w-full">
+                  <textarea
+                    ref={titleInputRef}
+                    rows={1}
+                    value={titleInput}
+                    onChange={(e) => {
+                      setTitleInput(e.target.value);
+                      resizeTitleTextarea();
+                    }}
+                    onKeyDown={handleTitleKeyDown}
+                    onBlur={() => void saveProjectTitle()}
+                    disabled={savingTitle}
+                    className={`project-title-inline-input block min-h-0 w-full min-w-0 max-w-full resize-none overflow-hidden break-words bg-neutral-50 outline-none focus:border-primary-400/60 disabled:opacity-60 ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_INPUT_SHELL_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+                    aria-label="Project title"
+                  />
                   {titleError ? (
                     <p className="mt-1 text-sm text-archivumRed">{titleError}</p>
                   ) : null}
@@ -577,27 +587,55 @@ export default function ProjectDetailPage() {
                 </h1>
               )}
             </div>
-            {!isEditingTitle ? (
-              <button
-                type="button"
-                onClick={startEditingTitle}
-                className="shrink-0 self-center rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
-                aria-label="Edit project title"
+
+            <div className="flex items-center justify-between gap-2 sm:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 text-sm text-primary-700 hover:bg-primary-50"
+                leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+                onClick={() => router.push('/student/projects')}
               >
-                <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
-              </button>
-            ) : null}
-            <Badge
-              variant={statusBadgeVariant(project.status)}
-              className="shrink-0 self-center capitalize"
-            >
-              {project.status}
-            </Badge>
+                Back to Projects
+              </Button>
+              <div className="flex items-center gap-2">
+                {!isEditingTitle ? (
+                  <button
+                    type="button"
+                    onClick={startEditingTitle}
+                    className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                    aria-label="Edit project title"
+                  >
+                    <FiEdit2 className="h-4 w-4" aria-hidden />
+                  </button>
+                ) : null}
+                <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 capitalize">
+                  {project.status}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="hidden items-center gap-2 self-center sm:flex sm:shrink-0 sm:gap-3">
+              {!isEditingTitle ? (
+                <button
+                  type="button"
+                  onClick={startEditingTitle}
+                  className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                  aria-label="Edit project title"
+                >
+                  <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+                </button>
+              ) : null}
+              <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 self-center capitalize">
+                {project.status}
+              </Badge>
+            </div>
           </div>
+
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:text-md"
+            className="hidden shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:inline-flex sm:text-md"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => router.push('/student/projects')}
           >

@@ -407,24 +407,41 @@ export default function AdviserProjectDetailPage() {
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
       <div className="project-detail-forms space-y-6">
         {/* Page header */}
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <h1
-              className={`min-w-0 flex-1 break-words ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+              className={`min-w-0 w-full flex-1 break-words ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
             >
               {project.title}
             </h1>
+
+            <div className="flex items-center justify-between gap-2 sm:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 text-sm text-primary-700 hover:bg-primary-50"
+                leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+                onClick={() => router.push('/adviser/advisees')}
+              >
+                Back to Advisees
+              </Button>
+              <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 capitalize">
+                {project.status}
+              </Badge>
+            </div>
+
             <Badge
               variant={statusBadgeVariant(project.status)}
-              className="shrink-0 self-center capitalize"
+              className="hidden shrink-0 capitalize sm:inline-flex"
             >
               {project.status}
             </Badge>
           </div>
+
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:text-md"
+            className="hidden shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:inline-flex sm:text-md"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => router.push('/adviser/advisees')}
           >
