@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import ArchivumBrand from './ArchivumBrand';
 import Dropdown from '../ui/Dropdown';
 import Avatar from '../ui/Avatar';
 import { useRouter, usePathname } from 'next/navigation';
@@ -44,27 +44,6 @@ export interface HeaderProps {
     role: string;
   };
   onLogout?: () => void;
-}
-
-function ArchivumBrand({ compact = false }: { compact?: boolean }) {
-  return (
-    <>
-      <Image
-        src="/archivum.svg"
-        alt="Archivum"
-        width={compact ? 40 : 44}
-        height={compact ? 40 : 44}
-        className={`flex-shrink-0 object-contain ${compact ? 'h-10 w-10' : 'h-11 w-11'}`}
-        priority
-      />
-      {!compact && (
-        <div className="min-w-0 text-left hidden sm:block">
-          <p className="font-serif text-2xl leading-tight truncate text-snow">Archivum</p>
-          <p className="font-sans text-xs font-light leading-snug truncate text-white/75">Research Portal</p>
-        </div>
-      )}
-    </>
-  );
 }
 
 export default function Header({ user, onLogout }: HeaderProps) {
@@ -329,12 +308,13 @@ export default function Header({ user, onLogout }: HeaderProps) {
     <Dropdown
       align="right"
       trigger={
-        <div className="flex cursor-pointer items-center rounded-lg transition-colors hover:bg-white/10 p-1 lg:gap-3 lg:px-3 lg:py-2">
+        <div className="flex cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-white/10 max-lg:p-0 lg:gap-3 lg:p-1 lg:px-3 lg:py-2">
           <div className="hidden text-right lg:block">
             <div className="font-serif text-lg font-medium text-snow">{user.name}</div>
             <div className="text-xs text-gray-400">{user.role}</div>
           </div>
-          <Avatar src={user.avatar} name={user.name} size="md" />
+          <Avatar src={user.avatar} name={user.name} size="sm" className="lg:hidden" />
+          <Avatar src={user.avatar} name={user.name} size="md" className="hidden lg:block" />
         </div>
       }
       items={userMenuItems}
@@ -348,7 +328,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
   );
 
   return (
-    <header className="sticky top-0 z-50 flex h-20 w-full flex-shrink-0 items-center border-b border-gray-800 bg-oxfordBlue px-4 shadow-[0_1px_6px_rgba(0,0,0,0.34)] lg:px-7">
+    <header className="sticky top-0 z-40 flex h-16 w-full flex-shrink-0 items-center border-b border-gray-800 bg-oxfordBlue px-4 lg:h-20 lg:justify-end lg:px-7">
       {/* Mobile: hamburger | logo (center) | profile */}
       <div className="grid h-full w-full grid-cols-3 items-center lg:hidden">
         <button
@@ -361,24 +341,20 @@ export default function Header({ user, onLogout }: HeaderProps) {
 
         <Link
           href={homeHref}
-          className="flex items-center justify-center gap-2 justify-self-center min-w-0"
+          className="flex min-w-0 items-center justify-center justify-self-center gap-2"
         >
           <ArchivumBrand compact />
         </Link>
 
-        <div className="justify-self-end">{profileDropdown}</div>
-      </div>
-
-      {/* Desktop: logo (left) | notifications + user (right) */}
-      <div className="hidden h-full w-full items-center justify-between lg:flex">
-        <Link href={homeHref} className="flex items-center gap-3 min-w-0">
-          <ArchivumBrand />
-        </Link>
-
-        <div className="flex items-center gap-4">
-          <div className="hidden lg:block">{notificationsDropdown}</div>
+        <div className="flex h-full items-center justify-end justify-self-end">
           {profileDropdown}
         </div>
+      </div>
+
+      {/* Desktop: notifications + user (brand lives in sidebar) */}
+      <div className="hidden h-full items-center gap-4 lg:flex">
+        {notificationsDropdown}
+        {profileDropdown}
       </div>
     </header>
   );
