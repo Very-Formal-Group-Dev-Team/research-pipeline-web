@@ -476,13 +476,14 @@ export default function ProjectDetailPage() {
   }
 
   const headerSubtitle = project.abstract || project.description || '';
-  const isProjectLeader =
+  const canDeleteProject =
     Boolean(profile?.id) &&
-    (project.created_by === profile?.id ||
-      members.some(
-        (member) =>
-          member.user_id === profile?.id && member.role === 'leader' && member.status === 'accepted',
-      ));
+    members.some(
+      (member) =>
+        member.user_id === profile?.id &&
+        member.role === 'leader' &&
+        member.status === 'accepted',
+    );
   const deleteTitleMatches = deleteTitleInput === project.title;
 
   const openDeleteModal = () => {
@@ -1074,13 +1075,13 @@ export default function ProjectDetailPage() {
           />
         </Card>
 
-        {isProjectLeader ? (
+        {canDeleteProject ? (
           <Card className="border-error-200">
             <CardHeader>
               <CardTitle className="text-archivumRed">Danger zone</CardTitle>
               <CardDescription>
-                Permanently delete this project and all related papers, meetings, and team data.
-                This cannot be undone.
+                Only the project leader can delete this project. This permanently removes all
+                papers, meetings, and team data and cannot be undone.
               </CardDescription>
             </CardHeader>
             <Button variant="error" size="sm" onClick={openDeleteModal}>
