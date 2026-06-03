@@ -14,9 +14,12 @@ import {
   getProject,
   getProjectMembers,
   getProjectInvitations,
+  inviteToProject,
   type Project,
   type ProjectMember,
 } from '@/lib/api/projects';
+import UserSearchModal from '@/components/UserSearchModal';
+import type { SearchUserResult } from '@/lib/api/users';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import {
@@ -99,6 +102,9 @@ export default function AdviserProjectDetailPage() {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [paperVersions, setPaperVersions] = useState<PaperVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [meetings, setMeetings] = useState<Defense[]>([]);
@@ -235,6 +241,32 @@ export default function AdviserProjectDetailPage() {
       navigator.clipboard.writeText(project.project_code);
       setCodeCopied(true);
       setTimeout(() => setCodeCopied(false), 2000);
+    }
+  };
+
+  const existingUserIds = [
+    ...members.map((m) => m.user_id),
+    ...pendingInvites.map((m) => m.user_id),
+  ];
+
+  const handleInviteSelect = async (selectedUser: SearchUserResult) => {
+    setInviteError(null);
+    setInviteSuccess(null);
+
+    const role =
+      selectedUser.role === 'adviser' || selectedUser.role === 'teacher' ? 'adviser' : 'member';
+    const res = await inviteToProject(projectId, {
+      userId: selectedUser.id,
+      role,
+    });
+
+    if (res.error) {
+      setInviteError(res.error);
+      setTimeout(() => setInviteError(null), 4000);
+    } else {
+      setInviteSuccess(`Invitation sent to ${selectedUser.full_name}`);
+      setTimeout(() => setInviteSuccess(null), 4000);
+      void loadMembers();
     }
   };
 
@@ -474,102 +506,134 @@ export default function AdviserProjectDetailPage() {
           {/* Team members */}
           <Card className="h-full">
             <CardHeader>
-              <CardTitle>Team Members</CardTitle>
-              <CardDescription>
-                {members.length} {members.length === 1 ? 'member' : 'members'}
-                {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
-              </CardDescription>
+              <div className="flex w-full flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Team Members</CardTitle>
+                  <CardDescription>
+                    {members.length} {members.length === 1 ? 'member' : 'members'}
+                    {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setInviteOpen(true)}
+                >
+                  Invite Members
+                </Button>
+              </div>
             </CardHeader>
 
-            {members.length > 0 || pendingInvites.length > 0 ? (
-            <div className="space-y-3">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className={`flex items-center gap-4 rounded-lg border p-3 transition-colors ${
-                    member.role === 'leader'
-                      ? 'border-primary-300 bg-primary-50/50'
-                      : member.role === 'adviser'
-                        ? 'border-neutral-200 bg-neutral-50'
-                        : 'border-neutral-200 hover:bg-neutral-50'
-                  }`}
-                >
-                  <Avatar
-                    src={member.users?.avatar_url || undefined}
-                    name={member.users?.full_name || 'Unknown'}
-                    size="md"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-semibold text-neutral-900 truncate">
-                        {member.users?.full_name || 'Unknown'}
-                      </h4>
-                      {member.role === 'leader' ? (
-                        <span className="text-xs font-medium text-primary-600 whitespace-nowrap">
-                          (Leader)
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 text-sm text-neutral-600 break-all">{member.users?.email}</p>
-                  </div>
-                  <Badge
-                    variant={
-                      member.role === 'leader'
-                        ? 'primary'
-                        : member.role === 'adviser'
-                          ? 'success'
-                          : 'default'
-                    }
-                    className="capitalize shrink-0"
-                  >
-                    {member.role === 'adviser'
-                      ? 'adviser'
-                      : member.role === 'leader'
-                        ? 'leader'
-                        : 'collaborator'}
-                  </Badge>
-                </div>
-              ))}
+            {(inviteSuccess || inviteError) && (
+              <div
+                className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+                  inviteSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
+                }`}
+              >
+                {inviteSuccess || inviteError}
+              </div>
+            )}
 
-              {pendingInvites.length > 0 ? (
-                <>
-                  <div className="pt-2 pb-1">
-                    <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                      Pending invitations
-                    </p>
-                  </div>
-                  {pendingInvites.map((invite) => (
-                    <div
-                      key={invite.id}
-                      className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
-                    >
-                      <Avatar
-                        src={invite.users?.avatar_url}
-                        name={invite.users?.full_name || invite.users?.email || 'Unknown'}
-                        size="md"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-semibold text-neutral-800 truncate">
-                          {invite.users?.full_name || 'Unknown User'}
+            {members.length > 0 || pendingInvites.length > 0 ? (
+              <div className="space-y-3">
+                {members.map((member) => (
+                  <div
+                    key={member.id}
+                    className={`flex items-center gap-4 rounded-lg border p-3 transition-colors ${
+                      member.role === 'leader'
+                        ? 'border-primary-300 bg-primary-50/50'
+                        : member.role === 'adviser'
+                          ? 'border-neutral-200 bg-neutral-50'
+                          : 'border-neutral-200 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <Avatar
+                      src={member.users?.avatar_url}
+                      name={member.users?.full_name || member.users?.email || 'Unknown'}
+                      size="md"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold text-neutral-900 truncate">
+                          {member.users?.full_name || 'Unknown User'}
                         </h4>
-                        <p className="mt-0.5 text-sm text-neutral-600 break-all">{invite.users?.email}</p>
+                        {member.role === 'leader' ? (
+                          <span className="text-xs font-medium text-primary-600 whitespace-nowrap">
+                            (Leader)
+                          </span>
+                        ) : null}
                       </div>
-                      <Badge
-                        variant={invite.role === 'adviser' ? 'success' : 'default'}
-                        className="capitalize shrink-0"
-                      >
-                        {invite.role}
-                      </Badge>
+                      <p className="mt-0.5 text-sm text-neutral-600 break-all">{member.users?.email}</p>
                     </div>
-                  ))}
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <p className="py-4 text-center text-sm text-neutral-500">No team members found</p>
-          )}
+                    <Badge
+                      variant={
+                        member.role === 'leader'
+                          ? 'primary'
+                          : member.role === 'adviser'
+                            ? 'success'
+                            : 'default'
+                      }
+                      className="capitalize shrink-0"
+                    >
+                      {member.role === 'adviser'
+                        ? 'adviser'
+                        : member.role === 'leader'
+                          ? 'leader'
+                          : 'collaborator'}
+                    </Badge>
+                  </div>
+                ))}
+
+                {pendingInvites.length > 0 ? (
+                  <>
+                    <div className="pt-2 pb-1">
+                      <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                        Pending invitations
+                      </p>
+                    </div>
+                    {pendingInvites.map((invite) => (
+                      <div
+                        key={invite.id}
+                        className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
+                      >
+                        <Avatar
+                          src={invite.users?.avatar_url}
+                          name={invite.users?.full_name || invite.users?.email || 'Unknown'}
+                          size="md"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-semibold text-neutral-800 truncate">
+                            {invite.users?.full_name || 'Unknown User'}
+                          </h4>
+                          <p className="mt-0.5 text-sm text-neutral-600 break-all">{invite.users?.email}</p>
+                        </div>
+                        <Badge
+                          variant={invite.role === 'adviser' ? 'success' : 'default'}
+                          className="capitalize shrink-0"
+                        >
+                          {invite.role}
+                        </Badge>
+                      </div>
+                    ))}
+                  </>
+                ) : null}
+              </div>
+            ) : (
+              <p className="py-4 text-center text-sm text-neutral-500">
+                No team members yet. Use Invite Members to add collaborators or advisers.
+              </p>
+            )}
           </Card>
         </div>
+
+        <UserSearchModal
+          isOpen={inviteOpen}
+          onClose={() => setInviteOpen(false)}
+          onSelect={handleInviteSelect}
+          title="Invite Members"
+          excludeIds={existingUserIds}
+        />
 
         {/* Meetings */}
         <Card id={PROJECT_MEETINGS_SECTION_ID} className="scroll-mt-24">
@@ -685,6 +749,7 @@ export default function AdviserProjectDetailPage() {
             versions={paperVersions}
             loading={versionsLoading}
             onRefresh={refreshPaperTimeline}
+            allowUpload={false}
           />
         </Card>
       </div>
