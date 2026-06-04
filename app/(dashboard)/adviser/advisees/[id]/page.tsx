@@ -14,6 +14,7 @@ import {
   getProjectMembers,
   getProjectInvitations,
   inviteToProject,
+  updateProjectStatus,
   type Project,
   type ProjectMember,
 } from '@/lib/api/projects';
@@ -46,11 +47,17 @@ import {
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import EmptyState from '@/components/layout/EmptyState';
+import ResearchStageEditor from '@/components/projects/ResearchStageEditor';
 import {
   formatPaperStandard,
   formatProjectType,
   statusBadgeVariant,
 } from '@/lib/utils/projectDisplay';
+import {
+  formatProjectStageLabel,
+  normalizeProjectStage,
+  type ProjectStage,
+} from '@/lib/utils/projectStage';
 import {
   projectDetailFieldRowClassName,
   projectDetailLabelLgClassName,
@@ -121,6 +128,12 @@ export default function AdviserProjectDetailPage() {
     useUndoActionToast();
   const [meetingStatusFilter, setMeetingStatusFilter] =
     useState<MeetingStatusFilter>('scheduled');
+  const [stageSaving, setStageSaving] = useState(false);
+  const [stageError, setStageError] = useState<string | null>(null);
+
+  const savedStage = project
+    ? (normalizeProjectStage(project.status) as ProjectStage)
+    : 'topic_proposal';
 
   const filteredMeetings = useMemo(
     () => meetings.filter((meeting) => meetingMatchesStatusFilter(meeting, meetingStatusFilter)),
@@ -351,6 +364,26 @@ export default function AdviserProjectDetailPage() {
     }
   };
 
+  const handleConfirmStage = async (stage: ProjectStage): Promise<boolean> => {
+    if (!project) return false;
+    setStageSaving(true);
+    setStageError(null);
+    try {
+      const res = await updateProjectStatus(projectId, stage);
+      if (res.error) {
+        setStageError(res.error);
+        return false;
+      }
+      if (res.data) setProject(res.data);
+      return true;
+    } catch {
+      setStageError('Failed to update research stage');
+      return false;
+    } finally {
+      setStageSaving(false);
+    }
+  };
+
   const handleConfirmCancelMeeting = async () => {
     if (!cancelMeetingId) return;
     const meetingId = cancelMeetingId;
@@ -425,16 +458,16 @@ export default function AdviserProjectDetailPage() {
               >
                 Back to Advisees
               </Button>
-              <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 capitalize">
-                {project.status}
+              <Badge variant={statusBadgeVariant(project.status)} className="shrink-0">
+                {formatProjectStageLabel(project.status)}
               </Badge>
             </div>
 
             <Badge
               variant={statusBadgeVariant(project.status)}
-              className="hidden shrink-0 capitalize sm:inline-flex"
+              className="hidden shrink-0 sm:inline-flex"
             >
-              {project.status}
+              {formatProjectStageLabel(project.status)}
             </Badge>
           </div>
 
@@ -506,6 +539,21 @@ export default function AdviserProjectDetailPage() {
             </div>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Research Stage</CardTitle>
+            <CardDescription>
+              Set where this project is in the research lifecycle.
+            </CardDescription>
+          </CardHeader>
+          <ResearchStageEditor
+            currentStage={savedStage}
+            onConfirm={handleConfirmStage}
+            saving={stageSaving}
+            error={stageError}
+          />
+        </Card>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
           {/* Abstract */}

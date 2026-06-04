@@ -12,7 +12,16 @@ export type BadgeVariant =
   | 'primary'
   | 'success'
   | 'error'
-  | 'warning';
+  | 'warning'
+  /** Research project stages — each has a distinct color */
+  | 'stage-topic-proposal'
+  | 'stage-approved'
+  | 'stage-ongoing'
+  | 'stage-pre-defense'
+  | 'stage-final-defense'
+  | 'stage-completed'
+  | 'stage-publication'
+  | 'stage-rejected';
 
 export type BadgeSize = 'sm' | 'md' | 'lg';
 
@@ -37,6 +46,14 @@ const variantStyles: Record<BadgeVariant, string> = {
   success: 'bg-success-100 text-success-800 border-success-200',
   error: 'bg-error-100 text-error-800 border-error-200',
   warning: 'bg-warning-100 text-warning-800 border-warning-200',
+  'stage-topic-proposal': 'bg-neutral-200 text-neutral-800 border-neutral-400',
+  'stage-approved': 'bg-success-100 text-success-800 border-success-300',
+  'stage-ongoing': 'bg-primary-100 text-primary-800 border-primary-300',
+  'stage-pre-defense': 'bg-warning-100 text-warning-900 border-warning-300',
+  'stage-final-defense': 'bg-error-100 text-error-800 border-error-300',
+  'stage-completed': 'bg-emerald-100 text-emerald-900 border-emerald-300',
+  'stage-publication': 'bg-accent-100 text-accent-900 border-accent-300',
+  'stage-rejected': 'bg-rose-100 text-rose-950 border-rose-400',
 };
 
 const sizeStyles: Record<BadgeSize, string> = {

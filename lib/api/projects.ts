@@ -219,10 +219,10 @@ export function deriveAdviserProjectStats(projects: Project[]) {
   let activeProjects = 0;
   let completedProjects = 0;
   for (const project of projects) {
-    const status = String(project.status || 'draft').toLowerCase();
-    if (status === 'completed' || status === 'archived') {
+    const status = String(project.status || 'topic_proposal').toLowerCase();
+    if (status === 'completed' || status === 'for_publication' || status === 'archived') {
       completedProjects += 1;
-    } else {
+    } else if (status !== 'rejected') {
       activeProjects += 1;
     }
   }

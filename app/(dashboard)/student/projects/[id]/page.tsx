@@ -51,6 +51,7 @@ import {
   paperStandardFormValue,
   statusBadgeVariant,
 } from '@/lib/utils/projectDisplay';
+import { formatProjectStageLabel } from '@/lib/utils/projectStage';
 
 function formatProjectDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -609,8 +610,8 @@ export default function ProjectDetailPage() {
                     <FiEdit2 className="h-4 w-4" aria-hidden />
                   </button>
                 ) : null}
-                <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 capitalize">
-                  {project.status}
+                <Badge variant={statusBadgeVariant(project.status)} className="shrink-0">
+                  {formatProjectStageLabel(project.status)}
                 </Badge>
               </div>
             </div>
@@ -626,8 +627,8 @@ export default function ProjectDetailPage() {
                   <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
                 </button>
               ) : null}
-              <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 self-center capitalize">
-                {project.status}
+              <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 self-center">
+                {formatProjectStageLabel(project.status)}
               </Badge>
             </div>
           </div>
