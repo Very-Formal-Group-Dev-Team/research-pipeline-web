@@ -54,6 +54,9 @@ export const projectDetailValueWrapClassName = 'min-w-0 flex-1';
 export const formControlFocusGlowClassName =
   'focus:outline-none focus:shadow-[0_0_12px_rgba(44,62,107,0.2)]';
 
+/** Matches default text field / select control height (py-2.5 + border). */
+export const formControlHeightClassName = 'h-[2.75rem]';
+
 export const formControlClassName = [
   'w-full text-sm text-neutral-900',
   'placeholder:text-neutral-400',

@@ -13,18 +13,17 @@ import {
   type InstitutionProject,
 } from '@/lib/api/coordinator';
 import Button from '@/components/Button';
-import { formatStatusLabel } from '@/lib/utils/formatStatus';
-
-type BadgeVariant = 'success' | 'warning' | 'error' | 'default' | 'primary';
+import {
+  formatProjectStageLabel,
+  projectStageBadgeVariant,
+} from '@/lib/utils/projectStage';
+import type { BadgeVariant } from '@/components/ui/Badge';
 
 function projectStatusBadge(status: string): { label: string; variant: BadgeVariant } {
-  switch (status) {
-    case 'completed': return { label: formatStatusLabel('completed'), variant: 'success' };
-    case 'in_progress': return { label: formatStatusLabel('in_progress'), variant: 'primary' };
-    case 'pending': return { label: formatStatusLabel('pending'), variant: 'warning' };
-    case 'rejected': return { label: formatStatusLabel('rejected'), variant: 'error' };
-    default: return { label: formatStatusLabel(status), variant: 'default' };
-  }
+  return {
+    label: formatProjectStageLabel(status),
+    variant: projectStageBadgeVariant(status),
+  };
 }
 
 function formatDate(iso: string) {

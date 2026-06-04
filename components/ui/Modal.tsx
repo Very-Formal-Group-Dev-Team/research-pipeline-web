@@ -12,6 +12,14 @@ export interface ModalProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'schedule' | 'full';
   /** Tighter header/body padding and smaller title — for short confirmation dialogs */
   dense?: boolean;
+  /** Override default title typography */
+  titleClassName?: string;
+  /** Extra classes on the modal panel (e.g. max-width) */
+  panelClassName?: string;
+  /** Extra classes on the body/content wrapper below the header */
+  contentClassName?: string;
+  /** Extra classes on the header block */
+  headerClassName?: string;
   closeOnOverlayClick?: boolean;
   showCloseButton?: boolean;
 }
@@ -35,12 +43,18 @@ export default function Modal({
   description,
   size = 'md',
   dense = false,
+  titleClassName,
+  panelClassName = '',
+  contentClassName = '',
+  headerClassName = '',
   closeOnOverlayClick = true,
   showCloseButton = true 
 }: ModalProps) {
   const headerPadding = dense ? 'p-4' : 'p-6';
   const contentPadding = dense ? 'p-4' : 'p-6';
-  const titleClass = dense ? 'text-lg font-semibold text-primary-700' : 'text-2xl font-semibold text-primary-700';
+  const titleClass =
+    titleClassName ??
+    (dense ? 'text-lg font-semibold text-primary-700' : 'text-2xl font-semibold text-primary-700');
   const closeIconClass = dense ? 'w-5 h-5' : 'w-6 h-6';
   const [isClosing, setIsClosing] = useState(false);
   const [shouldRender, setShouldRender] = useState(isOpen);
@@ -84,17 +98,19 @@ export default function Modal({
       />
       
       {/* Modal */}
-      <div className={`relative bg-white rounded-lg shadow-hard ${sizeStyles[size]} w-full mx-4 transition-all duration-200 ${
-        isClosing ? 'opacity-0 scale-95 translate-y-4' : 'animate-slide-up'
-      }`}>
+      <div
+        className={`relative bg-white rounded-lg shadow-hard ${sizeStyles[size]} w-full mx-4 transition-all duration-200 ${
+          isClosing ? 'opacity-0 scale-95 translate-y-4' : 'animate-slide-up'
+        } ${panelClassName}`}
+      >
         {/* Header */}
         {(title || description || showCloseButton) && (
-          <div className={`border-b border-neutral-200 ${headerPadding}`}>
+          <div className={`border-b border-neutral-200 ${headerPadding} ${headerClassName}`.trim()}>
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 {title ? <h2 className={titleClass}>{title}</h2> : null}
                 {description ? (
-                  <p className={`text-sm text-neutral-600 ${title ? 'mt-1.5' : ''}`}>{description}</p>
+                  <div className={`text-sm text-neutral-600 ${title ? 'mt-1.5' : ''}`}>{description}</div>
                 ) : null}
               </div>
               {showCloseButton ? (
@@ -114,7 +130,7 @@ export default function Modal({
         )}
         
         {/* Content */}
-        <div className={contentPadding}>
+        <div className={`${contentPadding} ${contentClassName}`.trim()}>
           {children}
         </div>
       </div>
@@ -124,7 +140,7 @@ export default function Modal({
 
 export function ModalFooter({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`flex items-center justify-end gap-3 mt-6 pt-4 border-t border-neutral-200 ${className}`}>
+    <div className={`flex items-center justify-end gap-3 border-t border-neutral-200 mt-6 pt-4 ${className}`}>
       {children}
     </div>
   );

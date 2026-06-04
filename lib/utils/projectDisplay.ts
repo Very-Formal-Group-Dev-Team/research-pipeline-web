@@ -1,11 +1,9 @@
 import type { BadgeVariant } from '@/components/ui/Badge';
+import { projectStageBadgeVariant } from '@/lib/utils/projectStage';
 
+/** Badge color for project research stage (status). */
 export function statusBadgeVariant(status: string): BadgeVariant {
-  const s = status.toLowerCase();
-  if (s === 'draft') return 'warning';
-  if (s === 'active') return 'primary';
-  if (s === 'completed' || s === 'archived') return 'success';
-  return 'default';
+  return projectStageBadgeVariant(status);
 }
 
 /** e.g. "thesis" → "Thesis" */

@@ -14,7 +14,6 @@ import {
   FiBookOpen,
   FiBell,
 } from 'react-icons/fi';
-import ArchivumBrand from '@/components/layout/ArchivumBrand';
 import { useSidebar } from './SidebarContext';
 
 export interface MenuItem {
@@ -30,7 +29,6 @@ export interface MenuItem {
 
 export interface SidebarProps {
   role: 'student' | 'adviser' | 'coordinator';
-  homeHref?: string;
 }
 
 const menuItems: Record<string, MenuItem[]> = {
@@ -59,7 +57,7 @@ const menuItems: Record<string, MenuItem[]> = {
   ],
 };
 
-export default function Sidebar({ role, homeHref = `/${role}` }: SidebarProps) {
+export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const items = menuItems[role] || [];
   const { isOpen, setOpen } = useSidebar();
@@ -71,14 +69,14 @@ export default function Sidebar({ role, homeHref = `/${role}` }: SidebarProps) {
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px] lg:hidden"
+          className="fixed inset-x-0 top-20 bottom-0 z-20 bg-black/20 backdrop-blur-[1px] lg:hidden"
           onClick={closeSidebar}
         />
       )}
 
       <div
         className={`
-          fixed inset-y-0 left-0 z-30 flex w-64 shrink-0 flex-col
+          fixed top-20 bottom-0 left-0 z-40 flex w-64 shrink-0 flex-col
           transition-transform duration-300 ease-in-out
           border-r border-gray-800
           lg:translate-x-0
@@ -93,45 +91,22 @@ export default function Sidebar({ role, homeHref = `/${role}` }: SidebarProps) {
             usesPortalSidebar ? 'coordinator-sidebar border-r border-[#243456]' : 'border-r border-neutral-200'
           }`}
         >
-          {/* Mobile drawer: compact brand + close */}
-          <div
-            className={`flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3 lg:hidden ${
-              usesPortalSidebar ? 'border-[#243456]' : 'border-neutral-200'
-            }`}
-          >
-            <Link
-              href={homeHref}
-              onClick={closeSidebar}
-              className="flex min-w-0 items-center gap-2"
-            >
-              <ArchivumBrand compact />
-            </Link>
+          <div className="flex shrink-0 items-center justify-end px-3 py-3 lg:hidden">
             <button
               type="button"
               onClick={closeSidebar}
-              className={`shrink-0 rounded-lg p-2 transition-colors ${
+              className={`flex-shrink-0 rounded-lg p-2 transition-colors ${
                 usesPortalSidebar
                   ? 'text-white/70 hover:bg-white/10 hover:text-white'
                   : 'text-neutral-400 hover:bg-neutral-100 hover:text-oxfordBlue'
               }`}
               aria-label="Close sidebar"
             >
-              <FiX className="text-lg" aria-hidden />
+              <FiX className="text-lg" />
             </button>
           </div>
 
-          {/* Desktop: full brand at top of sidebar column */}
-          <div
-            className={`hidden h-20 min-h-20 shrink-0 items-center border-b px-3 lg:flex ${
-              usesPortalSidebar ? 'border-[#243456]' : 'border-neutral-200'
-            }`}
-          >
-            <Link href={homeHref} className="flex min-w-0 w-full items-center gap-3 px-4">
-              <ArchivumBrand />
-            </Link>
-          </div>
-
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-4">
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-5">
             <ul className="space-y-2">
               {items.map((item) => {
                 const isActive = pathname === item.href;

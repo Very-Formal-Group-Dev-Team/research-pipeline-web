@@ -43,14 +43,14 @@ export default function Dropdown({ trigger, items, align = 'left', className = '
 
   return (
     <div className={`relative inline-block ${className}`} ref={dropdownRef}>
-      <div onClick={() => setIsOpen(!isOpen)} className="flex h-full cursor-pointer items-center">
+      <div onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
         {trigger}
       </div>
 
       {isOpen && (
         <div
           className={`
-            absolute top-full z-50 mt-2 min-w-[200px]
+            absolute z-50 mt-2 min-w-[200px]
             bg-white border border-neutral-200 rounded-lg shadow-medium
             py-1 animate-fade-in
             ${align === 'right' ? 'right-0' : 'left-0'}
