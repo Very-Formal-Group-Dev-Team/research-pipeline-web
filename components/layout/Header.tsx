@@ -308,13 +308,12 @@ export default function Header({ user, onLogout }: HeaderProps) {
     <Dropdown
       align="right"
       trigger={
-        <div className="flex cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-white/10 max-lg:p-0 lg:gap-3 lg:p-1 lg:px-3 lg:py-2">
+        <div className="flex cursor-pointer items-center rounded-lg p-1 transition-colors hover:bg-white/10 lg:gap-3 lg:px-3 lg:py-2">
           <div className="hidden text-right lg:block">
             <div className="font-serif text-lg font-medium text-snow">{user.name}</div>
             <div className="text-xs text-gray-400">{user.role}</div>
           </div>
-          <Avatar src={user.avatar} name={user.name} size="sm" className="lg:hidden" />
-          <Avatar src={user.avatar} name={user.name} size="md" className="hidden lg:block" />
+          <Avatar src={user.avatar} name={user.name} size="md" />
         </div>
       }
       items={userMenuItems}
@@ -328,7 +327,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
   );
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full flex-shrink-0 items-center border-b border-gray-800 bg-oxfordBlue px-4 lg:h-20 lg:justify-end lg:px-7">
+    <header className="fixed top-0 left-0 right-0 z-50 flex h-20 w-full flex-shrink-0 items-center border-b border-gray-800 bg-oxfordBlue px-4 shadow-[0_1px_6px_rgba(0,0,0,0.28)] lg:px-7">
       {/* Mobile: hamburger | logo (center) | profile */}
       <div className="grid h-full w-full grid-cols-3 items-center lg:hidden">
         <button
@@ -346,15 +345,19 @@ export default function Header({ user, onLogout }: HeaderProps) {
           <ArchivumBrand compact />
         </Link>
 
-        <div className="flex h-full items-center justify-end justify-self-end">
-          {profileDropdown}
-        </div>
+        <div className="justify-self-end">{profileDropdown}</div>
       </div>
 
-      {/* Desktop: notifications + user (brand lives in sidebar) */}
-      <div className="hidden h-full items-center gap-4 lg:flex">
-        {notificationsDropdown}
-        {profileDropdown}
+      {/* Desktop: logo (left) | notifications + user (right) */}
+      <div className="hidden h-full w-full items-center justify-between lg:flex">
+        <Link href={homeHref} className="flex min-w-0 items-center gap-3">
+          <ArchivumBrand />
+        </Link>
+
+        <div className="flex items-center gap-4">
+          <div className="hidden lg:block">{notificationsDropdown}</div>
+          {profileDropdown}
+        </div>
       </div>
     </header>
   );
