@@ -49,6 +49,8 @@ function notificationIcon(type: string) {
     case 'schedule':
     case 'event':
       return <FiCalendar className="text-2xl text-primary-600" />;
+    case 'project_stage_updated':
+      return <FiArrowRight className="text-2xl text-primary-600" />;
     default:
       return <FiBell className="text-2xl text-accent-600" />;
   }

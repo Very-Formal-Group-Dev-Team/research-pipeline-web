@@ -316,7 +316,7 @@ export default function ResearchStageEditor({
               Rejected
             </button>
             <p className="text-sm text-neutral-500">
-              Available only while the project is in Topic Proposal
+              Mark this project as rejected.
             </p>
           </div>
         </div>

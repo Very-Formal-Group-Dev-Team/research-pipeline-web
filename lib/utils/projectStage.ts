@@ -125,9 +125,9 @@ export function isProjectStageTopicProposal(status?: string | null): boolean {
   return normalizeProjectStage(status) === 'topic_proposal';
 }
 
-/** Rejection is only allowed while the project is still in topic proposal. */
+/** Rejection is allowed at any stage except when already rejected. */
 export function canRejectProjectAtStage(status?: string | null): boolean {
-  return isProjectStageTopicProposal(status);
+  return !isProjectStageRejected(status);
 }
 
 export function getProjectStageStepIndex(stage: string): number {
