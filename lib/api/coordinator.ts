@@ -70,6 +70,7 @@ export interface Defense {
   project_code: string;
   created_by_name: string;
   adviser_name?: string;
+  panelist_names?: string | null;
   meeting_room?: string | null;
   meeting_url?: string | null;
   meeting_provider?: string | null;
@@ -105,6 +106,10 @@ export function getMyInstitution() {
 
 export function getInstitutionAdvisers() {
   return get<InstitutionAdviser[]>('/coordinator/institution/advisers');
+}
+
+export function getInstitutionPanelists() {
+  return get<InstitutionAdviser[]>('/coordinator/institution/panelists');
 }
 
 export function addAdviserToInstitution(adviserId: string, courseId: string) {
@@ -306,6 +311,7 @@ export interface BookDefenseSchedulePayload {
   location: string;
   venue?: string;
   modality?: string;
+  panelistIds?: string[];
   forceApprove?: boolean;
 }
 

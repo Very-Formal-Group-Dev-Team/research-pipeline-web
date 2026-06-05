@@ -157,13 +157,15 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
 
   const ACTIVE_DEFENSE_ACTION_STATUSES = new Set(['scheduled', 'moved', 'approved']);
 
-  const loadDefenses = useCallback(async () => {
+  const loadDefenses = useCallback(async (syncParent = false) => {
     setLoading(true);
     const [pendingRes, allRes] = await Promise.all([getPendingDefenses(), getAllDefenses()]);
     if (pendingRes.data) setPendingDefenses(pendingRes.data.map(normalizeDefenseTimes));
     if (allRes.data) setAllDefenses(allRes.data.map(normalizeDefenseTimes));
     setLoading(false);
-    onDataChange?.();
+    if (syncParent) {
+      onDataChange?.();
+    }
   }, [onDataChange]);
 
   useEffect(() => {
@@ -244,7 +246,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
       });
     } else if (!res.error) {
       closeModal();
-      await loadDefenses();
+      await loadDefenses(true);
     }
     setSubmitting(false);
   }
@@ -274,7 +276,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
       });
     } else if (!res.error) {
       closeModal();
-      await loadDefenses();
+      await loadDefenses(true);
     }
     setSubmitting(false);
   }
@@ -310,7 +312,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     } else if (!res.error) {
       toast.success('Changes saved');
       closeModal();
-      await loadDefenses();
+      await loadDefenses(true);
     }
     setSubmitting(false);
   }
@@ -334,7 +336,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
       }
       setConflictPrompt(null);
       closeModal();
-      await loadDefenses();
+      await loadDefenses(true);
     }
     setSubmitting(false);
   }
@@ -345,7 +347,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     const res = await rejectDefense(selectedDefense.id, notes || undefined);
     if (!res.error) {
       closeModal();
-      await loadDefenses();
+      await loadDefenses(true);
     }
     setSubmitting(false);
   }
@@ -356,7 +358,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
       setDefenseActionError(res.error);
       return;
     }
-    await loadDefenses();
+    await loadDefenses(true);
   }
 
   function showDefenseStatusUndo(
@@ -384,7 +386,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
         return;
       }
       setCancelTarget(null);
-      await loadDefenses();
+      await loadDefenses(true);
       showDefenseStatusUndo(defenseId, previousStatus, 'cancel');
     } catch {
       setDefenseActionError('Failed to cancel defense.');
@@ -404,7 +406,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
         setDefenseActionError(res.error);
         return;
       }
-      await loadDefenses();
+      await loadDefenses(true);
       showDefenseStatusUndo(defense.id, previousStatus, 'complete');
     } catch {
       setDefenseActionError('Failed to mark defense as complete.');

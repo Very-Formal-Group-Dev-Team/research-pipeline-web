@@ -10,7 +10,8 @@ export type NotificationType =
   | 'defense_approved'
   | 'defense_rejected'
   | 'defense_moved'
-  | 'event';
+  | 'event'
+  | 'project_stage_updated';
 
 export interface NotificationItem {
   id: string;

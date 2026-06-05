@@ -16,6 +16,27 @@ export const COORDINATOR_SCHEDULE_CONTENT_WIDTH = '32rem';
 
 export const COORDINATOR_SCHEDULE_FORM_CLASS = 'w-full min-w-0 max-w-[32rem]';
 
+/** Compact input/select height for coordinator schedule modals (excludes textareas). */
+const COORDINATOR_SCHEDULE_COMPACT_FIELD_CLASS = [
+  '[&_input]:!rounded-md [&_select]:!rounded-md',
+  '[&_input:not(.coordinator-panelist-search)]:!px-3 [&_input:not(.coordinator-panelist-search)]:!py-2 [&_input]:!text-sm',
+  '[&_select]:!px-3 [&_select]:!py-2 [&_select]:!pl-3 [&_select]:!pr-9 [&_select]:!text-sm',
+  '[&_label]:!mb-1',
+].join(' ');
+
+/** Schedule institution event modal — compact fields; description textarea keeps default sizing. */
+export const COORDINATOR_SCHEDULE_EVENT_FORM_CLASS = [
+  COORDINATOR_SCHEDULE_FORM_CLASS,
+  COORDINATOR_SCHEDULE_COMPACT_FIELD_CLASS,
+].join(' ');
+
+/** Schedule defense modal — compact fields plus panelist search padding. */
+export const COORDINATOR_SCHEDULE_DEFENSE_FORM_CLASS = [
+  COORDINATOR_SCHEDULE_FORM_CLASS,
+  COORDINATOR_SCHEDULE_COMPACT_FIELD_CLASS,
+  '[&_input.coordinator-panelist-search]:!py-2 [&_input.coordinator-panelist-search]:!pl-11 [&_input.coordinator-panelist-search]:!pr-3',
+].join(' ');
+
 /** Modal width hugs the date/time row (see Modal size `schedule`). */
 export const COORDINATOR_SCHEDULE_MODAL_SIZE = 'schedule' as const;
 

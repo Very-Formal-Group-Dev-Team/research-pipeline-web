@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FiCalendar, FiPlus, FiSave, FiShield } from 'react-icons/fi';
+import { FiCalendar, FiPlus, FiSave, FiSearch, FiShield, FiX } from 'react-icons/fi';
 import { toast } from 'sonner';
 
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -11,6 +11,7 @@ import Card from '@/components/ui/Card';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import Avatar from '@/components/ui/Avatar';
 import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
 import { formLabelClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
 import {
@@ -18,6 +19,8 @@ import {
   COORDINATOR_DATE_TIME_ROW_CLASS,
   COORDINATOR_TIME_FIELD_WRAPPER_CLASS,
   COORDINATOR_SCHEDULE_FORM_CLASS,
+  COORDINATOR_SCHEDULE_EVENT_FORM_CLASS,
+  COORDINATOR_SCHEDULE_DEFENSE_FORM_CLASS,
   COORDINATOR_SCHEDULE_MODAL_SIZE,
   CoordinatorTimeRangeFields,
 } from '@/components/coordinator/CoordinatorTimeRangeFields';
@@ -43,10 +46,12 @@ import {
   bookDefenseSchedule,
   getCoordinatorRubrics,
   getCourses,
+  getInstitutionPanelists,
   getMyInstitution,
   getPendingDefenses,
   type Course,
   type Institution,
+  type InstitutionAdviser,
   type CoordinatorRubric,
 } from '@/lib/api/coordinator';
 
@@ -89,6 +94,7 @@ export default function CoordinatorEventsPage() {
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [rubrics, setRubrics] = useState<CoordinatorRubric[]>([]);
+  const [panelistPool, setPanelistPool] = useState<InstitutionAdviser[]>([]);
 
   const [eventForm, setEventForm] = useState({
     title: '',
@@ -112,24 +118,29 @@ export default function CoordinatorEventsPage() {
     modality: 'Online',
   });
 
-  async function loadEvents() {
+  const [selectedPanelists, setSelectedPanelists] = useState<InstitutionAdviser[]>([]);
+  const [panelistQuery, setPanelistQuery] = useState('');
+
+  const loadEvents = useCallback(async () => {
     const [eventsRes, pendingRes] = await Promise.all([
       getCoordinatorEvents(),
       getPendingDefenses(),
     ]);
     if (eventsRes.data) setEvents(eventsRes.data);
     if (pendingRes.data) setPendingCount(pendingRes.data.length);
-  }
+  }, []);
 
   async function loadScheduleOptions() {
-    const [instRes, coursesRes, rubricRes] = await Promise.all([
+    const [instRes, coursesRes, rubricRes, panelistsRes] = await Promise.all([
       getMyInstitution(),
       getCourses(),
       getCoordinatorRubrics(),
+      getInstitutionPanelists(),
     ]);
     if (instRes.data) setInstitution(instRes.data);
     if (coursesRes.data) setCourses(coursesRes.data);
     if (rubricRes.data) setRubrics(rubricRes.data);
+    if (panelistsRes.data) setPanelistPool(panelistsRes.data);
   }
 
   useEffect(() => {
@@ -153,6 +164,32 @@ export default function CoordinatorEventsPage() {
     [rubrics, defenseForm.defenseType],
   );
 
+  const panelistSuggestions = useMemo(() => {
+    const selectedIds = new Set(selectedPanelists.map((p) => p.id));
+    const term = panelistQuery.trim().toLowerCase();
+    return panelistPool.filter((member) => {
+      if (selectedIds.has(member.id)) return false;
+      if (!term) return false;
+      const name = member.full_name?.toLowerCase() || '';
+      const email = member.email?.toLowerCase() || '';
+      return name.includes(term) || email.includes(term);
+    });
+  }, [panelistPool, panelistQuery, selectedPanelists]);
+
+  function resetPanelistSelection() {
+    setSelectedPanelists([]);
+    setPanelistQuery('');
+  }
+
+  function addPanelist(adviser: InstitutionAdviser) {
+    setSelectedPanelists((prev) => [...prev, adviser]);
+    setPanelistQuery('');
+  }
+
+  function removePanelist(userId: string) {
+    setSelectedPanelists((prev) => prev.filter((p) => p.id !== userId));
+  }
+
   const editEventFormDirty = useMemo(() => {
     if (!editEvent) return false;
     const baseline = institutionEventToFormState(editEvent);
@@ -172,6 +209,7 @@ export default function CoordinatorEventsPage() {
     setShowScheduleModal(false);
     setScheduleKind(null);
     setError(null);
+    resetPanelistSelection();
   }
 
   async function handleCreateEvent(e: React.FormEvent) {
@@ -216,6 +254,9 @@ export default function CoordinatorEventsPage() {
       location: defenseForm.location.trim(),
       venue: defenseForm.venue.trim() || undefined,
       modality: defenseForm.modality,
+      panelistIds: selectedPanelists.length
+        ? selectedPanelists.map((panelist) => panelist.id)
+        : undefined,
     });
 
     setSubmitting(false);
@@ -241,6 +282,7 @@ export default function CoordinatorEventsPage() {
       courseId: '', rubricId: '', defenseType: 'proposal',
       date: '', startTime: '', endTime: '', location: '', venue: '', modality: 'Online',
     });
+    resetPanelistSelection();
     setDefenseRefreshKey((key) => key + 1);
     await loadEvents();
     setActiveTab('approved');
@@ -456,7 +498,7 @@ export default function CoordinatorEventsPage() {
             </button>
           </div>
         ) : scheduleKind === 'event' ? (
-          <form onSubmit={handleCreateEvent} className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}>
+          <form onSubmit={handleCreateEvent} className={`space-y-3 ${COORDINATOR_SCHEDULE_EVENT_FORM_CLASS}`}>
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
             <Input
               label="Title"
@@ -535,7 +577,7 @@ export default function CoordinatorEventsPage() {
             </div>
           </form>
         ) : (
-          <form onSubmit={handleCreateDefense} className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}>
+          <form onSubmit={handleCreateDefense} className={`space-y-3 ${COORDINATOR_SCHEDULE_DEFENSE_FORM_CLASS}`}>
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
             <Select
               fullWidth
@@ -601,28 +643,113 @@ export default function CoordinatorEventsPage() {
                 />
               </div>
             </div>
-            <Select
-              fullWidth
-              responsiveText
-              label="Modality"
-              value={defenseForm.modality}
-              onChange={(e) =>
-                setDefenseForm((f) => ({ ...f, modality: e.target.value }))
-              }
-              options={[
-                { value: 'Online', label: 'Online' },
-                { value: 'In-Person', label: 'Face-to-Face' },
-                { value: 'Hybrid', label: 'Hybrid' },
-              ]}
-            />
-            <Input
-              label="Location"
-              required
-              value={defenseForm.location}
-              onChange={(e) => setDefenseForm((f) => ({ ...f, location: e.target.value }))}
-              responsiveText
-              fullWidth
-            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Select
+                fullWidth
+                responsiveText
+                label="Modality"
+                value={defenseForm.modality}
+                onChange={(e) =>
+                  setDefenseForm((f) => ({ ...f, modality: e.target.value }))
+                }
+                options={[
+                  { value: 'Online', label: 'Online' },
+                  { value: 'In-Person', label: 'Face-to-Face' },
+                  { value: 'Hybrid', label: 'Hybrid' },
+                ]}
+              />
+              <Input
+                label="Location"
+                required
+                value={defenseForm.location}
+                onChange={(e) => setDefenseForm((f) => ({ ...f, location: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
+            </div>
+            <div>
+              <label className={formLabelClassName}>Panelists</label>
+              <div className="space-y-3 rounded-lg border border-neutral-200 p-3">
+                <div className="relative">
+                  <FiSearch
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
+                    aria-hidden
+                  />
+                  <input
+                    type="text"
+                    value={panelistQuery}
+                    onChange={(e) => setPanelistQuery(e.target.value)}
+                    className="coordinator-panelist-search w-full rounded-md border border-neutral-300 text-sm focus:outline-none focus:ring-2 focus:ring-coordinator-rose/40"
+                    placeholder="Search advisers or coordinators by name or email..."
+                  />
+                  {panelistSuggestions.length > 0 ? (
+                    <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white shadow-lg">
+                      {panelistSuggestions.map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => addPanelist(user)}
+                          className="flex w-full items-center gap-3 border-b border-neutral-50 px-4 py-3 text-left transition-colors last:border-0 hover:bg-coordinator-rose/5"
+                        >
+                          <Avatar
+                            src={user.avatar_url ?? undefined}
+                            name={user.full_name || 'Unknown'}
+                            size="sm"
+                            className="shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-coordinator-ink">
+                              {user.full_name || 'Unknown'}
+                            </p>
+                            <p className="truncate text-xs text-neutral-500">{user.email}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  {panelistSuggestions.length === 0 && panelistQuery.trim().length > 0 ? (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 shadow-lg">
+                      <p className="text-sm text-neutral-500">No advisers or coordinators found matching your search.</p>
+                    </div>
+                  ) : null}
+                </div>
+                {selectedPanelists.length > 0 ? (
+                  <ul className="space-y-2">
+                    {selectedPanelists.map((panelist) => (
+                      <li
+                        key={panelist.id}
+                        className="flex items-center gap-3 rounded-lg border border-coordinator-rose/20 bg-coordinator-rose/5 px-3 py-2"
+                      >
+                        <Avatar
+                          src={panelist.avatar_url ?? undefined}
+                          name={panelist.full_name || 'Unknown'}
+                          size="sm"
+                          className="shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-coordinator-ink">
+                            {panelist.full_name || 'Unknown'}
+                          </p>
+                          <p className="truncate text-xs text-neutral-500">{panelist.email}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removePanelist(panelist.id)}
+                          className="rounded-md p-1 text-neutral-400 transition-colors hover:bg-white hover:text-neutral-700"
+                          aria-label={`Remove ${panelist.full_name || 'panelist'}`}
+                        >
+                          <FiX className="h-4 w-4" aria-hidden />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Search and add advisers or coordinators from your institution to serve as panelists.
+                  </p>
+                )}
+              </div>
+            </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setScheduleKind(null)}>Back</Button>
               <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Schedule Defense'}</Button>

@@ -8,6 +8,7 @@ export interface DefenseCardExpandFields {
   location?: string | null;
   venue?: string | null;
   adviser_name?: string | null;
+  panelist_names?: string | null;
   modality?: string | null;
   meeting_url?: string | null;
   meeting_room?: string | null;
@@ -30,6 +31,11 @@ export default function DefenseCardExpandContent({ defense }: { defense: Defense
         {defense.adviser_name ? (
           <div>
             <span className="font-medium text-neutral-500">Adviser:</span> {defense.adviser_name}
+          </div>
+        ) : null}
+        {defense.panelist_names ? (
+          <div>
+            <span className="font-medium text-neutral-500">Panelists:</span> {defense.panelist_names}
           </div>
         ) : null}
       </div>
