@@ -34,19 +34,20 @@ export function buildMergedScheduleItems(
 
   const defenseItems: MergedScheduleItem[] = defenses
     .filter((d) => !inactive.has(d.status))
-    .map((d) => {
+    .flatMap((d) => {
       const start = d.start_time || (d as Defense & { scheduled_at?: string }).scheduled_at;
       const end = d.end_time || start;
-      if (!start || !end) return null;
-      return {
-        id: d.id,
-        kind: 'defense' as const,
-        title: d.project_title || 'Defense',
-        startTime: start,
-        endTime: end,
-      };
-    })
-    .filter((item): item is MergedScheduleItem => Boolean(item));
+      if (!start || !end) return [];
+      return [
+        {
+          id: d.id,
+          kind: 'defense' as const,
+          title: d.project_title || 'Defense',
+          startTime: start,
+          endTime: end,
+        },
+      ];
+    });
 
   const eventItems: MergedScheduleItem[] = institutionEvents
     .filter((e) => e.status !== 'cancelled')

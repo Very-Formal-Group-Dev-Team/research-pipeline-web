@@ -75,6 +75,9 @@ const features = [
   },
 ] as const;
 
+const heroCtaButtonClassName =
+  'rounded-sm flex-1 sm:flex-none whitespace-nowrap !px-5 !py-2.5 !text-base sm:!px-7 sm:!py-3 sm:!text-lg';
+
 export default async function Home() {
   const stats = (await fetchPublicStats()) ?? {
     totalProjects: 0,
@@ -146,7 +149,7 @@ export default async function Home() {
                   <Button
                     variant="primary"
                     size="lg"
-                    className="rounded-sm flex-1 sm:flex-none whitespace-nowrap hover:bg-oxfordBlue/90 !px-5 !py-2.5 !text-base sm:!px-7 sm:!py-3 sm:!text-lg"
+                    className={`${heroCtaButtonClassName} hover:bg-oxfordBlue/90`}
                   >
                     Start your project
                   </Button>
@@ -155,7 +158,7 @@ export default async function Home() {
                   <Button
                     variant="outline"
                     size="lg"
-                    className="rounded-sm flex-1 sm:flex-none whitespace-nowrap !border-primary-700/50 !px-5 !py-2 !text-base hover:!border-oxfordBlue hover:!bg-oxfordBlue/10 hover:!text-primary-700 hover:!shadow-[0_2px_10px_rgba(44,62,107,0.12)] sm:!px-7 sm:!py-2.5 sm:!text-lg"
+                    className={`${heroCtaButtonClassName} !border-primary-700/50 hover:!border-oxfordBlue hover:!bg-oxfordBlue/10 hover:!text-primary-700 hover:!shadow-[0_2px_10px_rgba(44,62,107,0.12)]`}
                   >
                     View demo
                   </Button>
