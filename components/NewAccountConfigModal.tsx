@@ -8,6 +8,8 @@ import Select from './ui/Select';
 import Avatar from './ui/Avatar';
 import { useRouter } from 'next/navigation';
 import { completeProfile } from '@/lib/api/users';
+import InstitutionSearchField from '@/components/InstitutionSearchField';
+import type { RegisteredInstitution } from '@/lib/api/institutions';
 
 export interface NewAccountConfigModalProps {
   isOpen: boolean;
@@ -23,13 +25,12 @@ type UserRole = 'student' | 'teacher' | 'coordinator';
 interface FormData {
   role: UserRole | '';
   displayName: string;
-  institutionName: string;
 }
 
 interface ValidationErrors {
   role?: string;
   displayName?: string;
-  institutionName?: string;
+  institution?: string;
 }
 
 export default function NewAccountConfigModal({
@@ -45,8 +46,8 @@ export default function NewAccountConfigModal({
   const [formData, setFormData] = useState<FormData>({
     role: '',
     displayName: googleDisplayName || '',
-    institutionName: '',
   });
+  const [selectedInstitution, setSelectedInstitution] = useState<RegisteredInstitution | null>(null);
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(googlePhotoUrl || null);
@@ -80,8 +81,8 @@ export default function NewAccountConfigModal({
       newErrors.displayName = 'Display name must be less than 50 characters';
     }
 
-    if (formData.role === 'coordinator' && !formData.institutionName.trim()) {
-      newErrors.institutionName = 'Institution name is required for coordinators';
+    if (!selectedInstitution) {
+      newErrors.institution = 'Please select your institution';
     }
 
     setErrors(newErrors);
@@ -150,7 +151,7 @@ export default function NewAccountConfigModal({
       email: userEmail,
       avatarFile,
       googlePhotoUrl,
-      institutionName: formData.role === 'coordinator' ? formData.institutionName : undefined,
+      institutionId: selectedInstitution?.id,
     });
 
     if (!result.success) {
@@ -245,20 +246,20 @@ export default function NewAccountConfigModal({
           required
         />
 
-        {formData.role === 'coordinator' ? (
-          <Input
-            id="institutionName"
-            label="Institution name"
-            type="text"
-            value={formData.institutionName}
-            onChange={(e) => handleInputChange('institutionName', e.target.value)}
-            placeholder="Enter your institution name"
-            error={errors.institutionName}
-            helperText="The institution you will manage as coordinator"
-            required
-            maxLength={255}
-          />
-        ) : null}
+        <InstitutionSearchField
+          label="Institution"
+          value={selectedInstitution}
+          onChange={(institution) => {
+            setSelectedInstitution(institution);
+            if (errors.institution) {
+              setErrors((prev) => ({ ...prev, institution: undefined }));
+            }
+            setGeneralError(null);
+          }}
+          error={errors.institution}
+          helperText="Search for your school or university"
+          required
+        />
 
         <Input
           id="displayName"

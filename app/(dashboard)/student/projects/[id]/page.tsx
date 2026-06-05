@@ -34,6 +34,7 @@ import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
+import { getMyInstitutionCourses, type InstitutionCourse } from '@/lib/api/institutions';
 import { toast } from 'sonner';
 import {
   formControlResponsiveClassName,
@@ -138,7 +139,9 @@ export default function ProjectDetailPage() {
   const [detailsProjectType, setDetailsProjectType] = useState('thesis');
   const [detailsPaperStandard, setDetailsPaperStandard] = useState('IEEE');
   const [detailsProgram, setDetailsProgram] = useState('');
-  const [detailsCourse, setDetailsCourse] = useState('');
+  const [detailsCourseId, setDetailsCourseId] = useState('');
+  const [institutionCourses, setInstitutionCourses] = useState<InstitutionCourse[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const [detailsSection, setDetailsSection] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
@@ -161,6 +164,35 @@ export default function ProjectDetailPage() {
     await Promise.all([loadPaperVersions(), reloadProject()]);
   }, [loadPaperVersions, reloadProject]);
 
+  const resolveCourseId = useCallback(
+    (projectData: Project, courses: InstitutionCourse[]) => {
+      if (projectData.course_id) {
+        return projectData.course_id;
+      }
+
+      const savedCourse = projectData.course?.trim().toLowerCase();
+      if (!savedCourse) return '';
+
+      const matched = courses.find((item) => {
+        const byName = item.course_name.trim().toLowerCase() === savedCourse;
+        const byLabel = `${item.course_name} (${item.code})`.trim().toLowerCase() === savedCourse;
+        return byName || byLabel;
+      });
+
+      return matched?.id || '';
+    },
+    [],
+  );
+
+  const loadInstitutionCourses = useCallback(async () => {
+    setCoursesLoading(true);
+    const res = await getMyInstitutionCourses();
+    const courses = res.data || [];
+    setInstitutionCourses(courses);
+    setCoursesLoading(false);
+    return courses;
+  }, []);
+
   const loadMembers = useCallback(async () => {
     if (!params.id) return;
     const [membersRes, invitesRes] = await Promise.all([
@@ -176,15 +208,20 @@ export default function ProjectDetailPage() {
     async function load() {
       if (!params.id) return;
       setLoading(true);
-      const [projRes, membersRes, invitesRes] = await Promise.all([
+      const [projRes, membersRes, invitesRes, courses] = await Promise.all([
         getProject(params.id as string),
         getProjectMembers(params.id as string),
         getProjectInvitations(params.id as string),
+        loadInstitutionCourses(),
       ]);
       if (!cancelled) {
-        setProject(projRes.data || null);
+        const projectData = projRes.data || null;
+        setProject(projectData);
         setMembers(membersRes.data || []);
         setPendingInvites(invitesRes.data || []);
+        if (projectData) {
+          setDetailsCourseId(resolveCourseId(projectData, courses));
+        }
         setLoading(false);
       }
     }
@@ -192,7 +229,7 @@ export default function ProjectDetailPage() {
     loadPaperVersions();
     const interval = setInterval(loadMembers, 10000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [params.id, loadPaperVersions, loadMembers]);
+  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCourses, resolveCourseId]);
 
   useEffect(() => {
     setEditableKeywords(project?.keywords || []);
@@ -208,9 +245,9 @@ export default function ProjectDetailPage() {
     setDetailsProjectType(project.project_type || 'thesis');
     setDetailsPaperStandard(paperStandardFormValue(project.paper_standard));
     setDetailsProgram(project.program || '');
-    setDetailsCourse(project.course || '');
+    setDetailsCourseId(resolveCourseId(project, institutionCourses));
     setDetailsSection(project.section || '');
-  }, [project]);
+  }, [project, institutionCourses, resolveCourseId]);
 
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
@@ -241,7 +278,7 @@ export default function ProjectDetailPage() {
       detailsProjectType !== (project.project_type || 'thesis') ||
       detailsPaperStandard !== paperStandardFormValue(project.paper_standard) ||
       detailsProgram !== (project.program || '') ||
-      detailsCourse !== (project.course || '') ||
+      detailsCourseId !== (project.course_id || resolveCourseId(project, institutionCourses)) ||
       detailsSection !== (project.section || '')
     );
   }, [
@@ -249,8 +286,10 @@ export default function ProjectDetailPage() {
     detailsProjectType,
     detailsPaperStandard,
     detailsProgram,
-    detailsCourse,
+    detailsCourseId,
     detailsSection,
+    institutionCourses,
+    resolveCourseId,
   ]);
 
   const abstractDirty = useMemo(() => {
@@ -381,7 +420,7 @@ export default function ProjectDetailPage() {
       projectType: detailsProjectType,
       paperStandard: detailsPaperStandard,
       program: detailsProgram.trim(),
-      course: detailsCourse.trim(),
+      courseId: detailsCourseId || undefined,
       section: detailsSection.trim(),
     });
 
@@ -420,7 +459,7 @@ export default function ProjectDetailPage() {
       projectType: detailsProjectType,
       paperStandard: detailsPaperStandard,
       program: detailsProgram.trim(),
-      course: detailsCourse.trim(),
+      courseId: detailsCourseId || undefined,
       section: detailsSection.trim(),
     });
 
@@ -694,13 +733,22 @@ export default function ProjectDetailPage() {
                   />
                 </ProjectDetailFieldRow>
                 <ProjectDetailFieldRow label="Course" htmlFor="project-detail-course">
-                  <Input
+                  <select
                     id="project-detail-course"
-                    value={detailsCourse}
-                    onChange={(e) => setDetailsCourse(e.target.value)}
-                    placeholder="Course name"
-                    className={PROJECT_DETAIL_CONTROL_CLASS}
-                  />
+                    value={detailsCourseId}
+                    onChange={(e) => setDetailsCourseId(e.target.value)}
+                    disabled={coursesLoading}
+                    className={`${formSelectResponsiveClassName} ${PROJECT_DETAIL_CONTROL_CLASS} !pr-8 bg-[length:0.875rem_0.875rem] bg-[right_0.5rem_center]`}
+                  >
+                    <option value="">
+                      {coursesLoading ? 'Loading courses...' : 'Select course'}
+                    </option>
+                    {institutionCourses.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.course_name} ({item.code})
+                      </option>
+                    ))}
+                  </select>
                 </ProjectDetailFieldRow>
                 <ProjectDetailFieldRow label="Section" htmlFor="project-detail-section">
                   <Input

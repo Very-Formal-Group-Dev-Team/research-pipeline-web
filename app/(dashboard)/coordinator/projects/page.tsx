@@ -85,7 +85,7 @@ export default function CoordinatorProjectsPage() {
         <div>
           <h1 className="text-3xl font-bold text-primary-700">All Projects</h1>
           <p className="text-neutral-600 mt-1">
-            Projects advised by faculty assigned to your courses
+            Projects in your institution, grouped by assigned adviser
           </p>
         </div>
 
