@@ -5,8 +5,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
-import Avatar from '@/components/ui/Avatar';
-import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiFileText } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiFileText } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import { useRouter, useParams } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -14,9 +13,14 @@ import {
   getProject,
   getProjectMembers,
   getProjectInvitations,
+  inviteToProject,
+  updateProjectStatus,
   type Project,
   type ProjectMember,
 } from '@/lib/api/projects';
+import UserSearchModal from '@/components/UserSearchModal';
+import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
+import type { SearchUserResult } from '@/lib/api/users';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import {
@@ -25,9 +29,13 @@ import {
   getProjectMeetings,
   getMyDefenses,
   normalizeDefenseSchedule,
+  restoreMeeting,
   type Defense,
 } from '@/lib/api/defenses';
 import MeetingScheduleCard from '@/components/meetings/MeetingScheduleCard';
+import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
+import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
+import { meetingUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import { PROJECT_MEETINGS_SECTION_ID } from '@/lib/meetings/navigation';
 import {
   MEETING_STATUS_FILTER_OPTIONS,
@@ -39,11 +47,17 @@ import {
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import EmptyState from '@/components/layout/EmptyState';
+import ResearchStageEditor from '@/components/projects/ResearchStageEditor';
 import {
   formatPaperStandard,
   formatProjectType,
   statusBadgeVariant,
 } from '@/lib/utils/projectDisplay';
+import {
+  formatProjectStageLabel,
+  normalizeProjectStage,
+  type ProjectStage,
+} from '@/lib/utils/projectStage';
 import {
   projectDetailFieldRowClassName,
   projectDetailLabelLgClassName,
@@ -93,23 +107,33 @@ export default function AdviserProjectDetailPage() {
   const router = useRouter();
   const params = useParams();
   const projectId = params.id as string;
-  const { user, handleLogout } = useDashboardUser('Adviser');
+  const { user, profile, handleLogout } = useDashboardUser('Adviser');
 
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [paperVersions, setPaperVersions] = useState<PaperVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [meetings, setMeetings] = useState<Defense[]>([]);
   const [meetingsLoading, setMeetingsLoading] = useState(true);
   const [meetingsError, setMeetingsError] = useState<string | null>(null);
-  const [codeCopied, setCodeCopied] = useState(false);
   const [cancelMeetingId, setCancelMeetingId] = useState<string | null>(null);
   const [meetingActionLoading, setMeetingActionLoading] = useState(false);
   const [meetingActionError, setMeetingActionError] = useState<string | null>(null);
+  const { toast: meetingUndoToast, showUndoToast: showMeetingUndoToast, dismissUndoToast: dismissMeetingUndoToast } =
+    useUndoActionToast();
   const [meetingStatusFilter, setMeetingStatusFilter] =
     useState<MeetingStatusFilter>('scheduled');
+  const [stageSaving, setStageSaving] = useState(false);
+  const [stageError, setStageError] = useState<string | null>(null);
+
+  const savedStage = project
+    ? (normalizeProjectStage(project.status) as ProjectStage)
+    : 'topic_proposal';
 
   const filteredMeetings = useMemo(
     () => meetings.filter((meeting) => meetingMatchesStatusFilter(meeting, meetingStatusFilter)),
@@ -230,11 +254,29 @@ export default function AdviserProjectDetailPage() {
     return () => window.clearTimeout(timer);
   }, [meetingsLoading]);
 
-  const copyProjectCode = () => {
-    if (project?.project_code) {
-      navigator.clipboard.writeText(project.project_code);
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 2000);
+  const existingUserIds = [
+    ...members.map((m) => m.user_id),
+    ...pendingInvites.map((m) => m.user_id),
+  ];
+
+  const handleInviteSelect = async (selectedUser: SearchUserResult) => {
+    setInviteError(null);
+    setInviteSuccess(null);
+
+    const role =
+      selectedUser.role === 'adviser' || selectedUser.role === 'teacher' ? 'adviser' : 'member';
+    const res = await inviteToProject(projectId, {
+      userId: selectedUser.id,
+      role,
+    });
+
+    if (res.error) {
+      setInviteError(res.error);
+      setTimeout(() => setInviteError(null), 4000);
+    } else {
+      setInviteSuccess(`Invitation sent to ${selectedUser.full_name}`);
+      setTimeout(() => setInviteSuccess(null), 4000);
+      void loadMembers();
     }
   };
 
@@ -291,9 +333,19 @@ export default function AdviserProjectDetailPage() {
     router.push(`/defenses?${query.toString()}`);
   };
 
+  const handleRevertMeeting = async (meetingId: string) => {
+    const res = await restoreMeeting(meetingId);
+    if (res.error) {
+      setMeetingActionError(res.error);
+      return;
+    }
+    await loadMeetings();
+  };
+
   const handleCompleteMeeting = async (meetingId: string) => {
     setMeetingActionLoading(true);
     setMeetingActionError(null);
+    dismissMeetingUndoToast();
     try {
       const res = await completeMeeting(meetingId);
       if (res.error) {
@@ -301,6 +353,10 @@ export default function AdviserProjectDetailPage() {
         return;
       }
       await loadMeetings();
+      showMeetingUndoToast({
+        message: meetingUndoToastMessage('complete'),
+        onUndo: () => handleRevertMeeting(meetingId),
+      });
     } catch {
       setMeetingActionError('Failed to mark meeting as complete.');
     } finally {
@@ -308,18 +364,44 @@ export default function AdviserProjectDetailPage() {
     }
   };
 
+  const handleConfirmStage = async (stage: ProjectStage): Promise<boolean> => {
+    if (!project) return false;
+    setStageSaving(true);
+    setStageError(null);
+    try {
+      const res = await updateProjectStatus(projectId, stage);
+      if (res.error) {
+        setStageError(res.error);
+        return false;
+      }
+      if (res.data) setProject(res.data);
+      return true;
+    } catch {
+      setStageError('Failed to update research stage');
+      return false;
+    } finally {
+      setStageSaving(false);
+    }
+  };
+
   const handleConfirmCancelMeeting = async () => {
     if (!cancelMeetingId) return;
+    const meetingId = cancelMeetingId;
     setMeetingActionLoading(true);
     setMeetingActionError(null);
+    dismissMeetingUndoToast();
     try {
-      const res = await cancelMeeting(cancelMeetingId);
+      const res = await cancelMeeting(meetingId);
       if (res.error) {
         setMeetingActionError(res.error);
         return;
       }
       setCancelMeetingId(null);
       await loadMeetings();
+      showMeetingUndoToast({
+        message: meetingUndoToastMessage('cancel'),
+        onUndo: () => handleRevertMeeting(meetingId),
+      });
     } catch {
       setMeetingActionError('Failed to cancel meeting.');
     } finally {
@@ -358,21 +440,41 @@ export default function AdviserProjectDetailPage() {
     <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
       <div className="project-detail-forms space-y-6">
         {/* Page header */}
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <h1
-              className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+              className={`min-w-0 w-full flex-1 break-words ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
             >
               {project.title}
             </h1>
-            <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
-              {project.status}
+
+            <div className="flex items-center justify-between gap-2 sm:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 text-sm text-primary-700 hover:bg-primary-50"
+                leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+                onClick={() => router.push('/adviser/advisees')}
+              >
+                Back to Advisees
+              </Button>
+              <Badge variant={statusBadgeVariant(project.status)} className="shrink-0">
+                {formatProjectStageLabel(project.status)}
+              </Badge>
+            </div>
+
+            <Badge
+              variant={statusBadgeVariant(project.status)}
+              className="hidden shrink-0 sm:inline-flex"
+            >
+              {formatProjectStageLabel(project.status)}
             </Badge>
           </div>
+
           <Button
             variant="ghost"
             size="sm"
-            className="text-sm sm:text-md shrink-0 text-primary-700 hover:bg-primary-50"
+            className="hidden shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:inline-flex sm:text-md"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => router.push('/adviser/advisees')}
           >
@@ -388,26 +490,7 @@ export default function AdviserProjectDetailPage() {
               <CardTitle>Project Code</CardTitle>
               <CardDescription>Reference for this research group</CardDescription>
             </CardHeader>
-            <div className="mt-4 flex min-w-0 items-center gap-2">
-              <code
-                className={`flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-primary-700 ${projectSummaryDetailTextClassName}`}
-              >
-                {project.project_code}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={copyProjectCode}
-                aria-label={codeCopied ? 'Copied to clipboard' : 'Copy project code'}
-              >
-                {codeCopied ? (
-                  <FiCheck className="text-success-600" aria-hidden />
-                ) : (
-                  <FiCopy aria-hidden />
-                )}
-              </Button>
-            </div>
+            <ProjectCodeCopyRow projectCode={project.project_code} />
           </Card>
 
           <Card className="md:col-start-1 md:row-start-2">
@@ -457,6 +540,21 @@ export default function AdviserProjectDetailPage() {
           </Card>
         </div>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Research Stage</CardTitle>
+            <CardDescription>
+              Set where this project is in the research lifecycle.
+            </CardDescription>
+          </CardHeader>
+          <ResearchStageEditor
+            currentStage={savedStage}
+            onConfirm={handleConfirmStage}
+            saving={stageSaving}
+            error={stageError}
+          />
+        </Card>
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
           {/* Abstract */}
           <Card className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
@@ -471,105 +569,25 @@ export default function AdviserProjectDetailPage() {
             </p>
           </Card>
 
-          {/* Team members */}
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Team Members</CardTitle>
-              <CardDescription>
-                {members.length} {members.length === 1 ? 'member' : 'members'}
-                {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
-              </CardDescription>
-            </CardHeader>
-
-            {members.length > 0 || pendingInvites.length > 0 ? (
-            <div className="space-y-3">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className={`flex items-center gap-4 rounded-lg border p-3 transition-colors ${
-                    member.role === 'leader'
-                      ? 'border-primary-300 bg-primary-50/50'
-                      : member.role === 'adviser'
-                        ? 'border-neutral-200 bg-neutral-50'
-                        : 'border-neutral-200 hover:bg-neutral-50'
-                  }`}
-                >
-                  <Avatar
-                    src={member.users?.avatar_url || undefined}
-                    name={member.users?.full_name || 'Unknown'}
-                    size="md"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-semibold text-neutral-900 truncate">
-                        {member.users?.full_name || 'Unknown'}
-                      </h4>
-                      {member.role === 'leader' ? (
-                        <span className="text-xs font-medium text-primary-600 whitespace-nowrap">
-                          (Leader)
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 text-sm text-neutral-600 break-all">{member.users?.email}</p>
-                  </div>
-                  <Badge
-                    variant={
-                      member.role === 'leader'
-                        ? 'primary'
-                        : member.role === 'adviser'
-                          ? 'success'
-                          : 'default'
-                    }
-                    className="capitalize shrink-0"
-                  >
-                    {member.role === 'adviser'
-                      ? 'adviser'
-                      : member.role === 'leader'
-                        ? 'leader'
-                        : 'collaborator'}
-                  </Badge>
-                </div>
-              ))}
-
-              {pendingInvites.length > 0 ? (
-                <>
-                  <div className="pt-2 pb-1">
-                    <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                      Pending invitations
-                    </p>
-                  </div>
-                  {pendingInvites.map((invite) => (
-                    <div
-                      key={invite.id}
-                      className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
-                    >
-                      <Avatar
-                        src={invite.users?.avatar_url}
-                        name={invite.users?.full_name || invite.users?.email || 'Unknown'}
-                        size="md"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-semibold text-neutral-800 truncate">
-                          {invite.users?.full_name || 'Unknown User'}
-                        </h4>
-                        <p className="mt-0.5 text-sm text-neutral-600 break-all">{invite.users?.email}</p>
-                      </div>
-                      <Badge
-                        variant={invite.role === 'adviser' ? 'success' : 'default'}
-                        className="capitalize shrink-0"
-                      >
-                        {invite.role}
-                      </Badge>
-                    </div>
-                  ))}
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <p className="py-4 text-center text-sm text-neutral-500">No team members found</p>
-          )}
-          </Card>
+          <ProjectTeamMembersCard
+            projectId={projectId}
+            members={members}
+            pendingInvites={pendingInvites}
+            currentUserId={profile?.id}
+            onMembersChange={loadMembers}
+            onInviteClick={() => setInviteOpen(true)}
+            inviteSuccess={inviteSuccess}
+            inviteError={inviteError}
+          />
         </div>
+
+        <UserSearchModal
+          isOpen={inviteOpen}
+          onClose={() => setInviteOpen(false)}
+          onSelect={handleInviteSelect}
+          title="Invite Members"
+          excludeIds={existingUserIds}
+        />
 
         {/* Meetings */}
         <Card id={PROJECT_MEETINGS_SECTION_ID} className="scroll-mt-24">
@@ -685,9 +703,12 @@ export default function AdviserProjectDetailPage() {
             versions={paperVersions}
             loading={versionsLoading}
             onRefresh={refreshPaperTimeline}
+            allowUpload={false}
           />
         </Card>
       </div>
+
+      <UndoActionToastHost toast={meetingUndoToast} onDismiss={dismissMeetingUndoToast} />
     </DashboardLayout>
   );
 }

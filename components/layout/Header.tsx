@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import ArchivumBrand from './ArchivumBrand';
 import Dropdown from '../ui/Dropdown';
 import Avatar from '../ui/Avatar';
 import { useRouter, usePathname } from 'next/navigation';
@@ -34,6 +34,7 @@ import {
   respondToInvitation,
   type Invitation,
 } from '@/lib/api/projects';
+import { PROJECT_INVITATION_RESPONDED_EVENT } from '@/components/projects/PendingInvitationsCard';
 
 export interface HeaderProps {
   user?: {
@@ -43,27 +44,6 @@ export interface HeaderProps {
     role: string;
   };
   onLogout?: () => void;
-}
-
-function ArchivumBrand({ compact = false }: { compact?: boolean }) {
-  return (
-    <>
-      <Image
-        src="/archivum.svg"
-        alt="Archivum"
-        width={compact ? 40 : 44}
-        height={compact ? 40 : 44}
-        className={`flex-shrink-0 object-contain ${compact ? 'h-10 w-10' : 'h-11 w-11'}`}
-        priority
-      />
-      {!compact && (
-        <div className="min-w-0 text-left hidden sm:block">
-          <p className="font-serif text-2xl leading-tight truncate text-snow">Archivum</p>
-          <p className="font-sans text-xs font-light leading-snug truncate text-white/75">Research Portal</p>
-        </div>
-      )}
-    </>
-  );
 }
 
 export default function Header({ user, onLogout }: HeaderProps) {
@@ -152,9 +132,20 @@ export default function Header({ user, onLogout }: HeaderProps) {
     await loadData();
   }
 
-  async function handleRespondInvitation(invitationId: string, accept: boolean) {
-    setRespondingId(invitationId);
-    await respondToInvitation(invitationId, accept);
+  async function handleRespondInvitation(invitation: Invitation, accept: boolean) {
+    setRespondingId(invitation.id);
+    const result = await respondToInvitation(invitation.id, accept);
+    if (!result.error) {
+      window.dispatchEvent(
+        new CustomEvent(PROJECT_INVITATION_RESPONDED_EVENT, {
+          detail: {
+            accept,
+            projectId: result.data?.projectId || invitation.project_id,
+            invitationId: invitation.id,
+          },
+        }),
+      );
+    }
     await loadData();
     setRespondingId(null);
   }
@@ -249,14 +240,14 @@ export default function Header({ user, onLogout }: HeaderProps) {
                   <div className="flex gap-2 mt-2">
                     <button
                       className="flex items-center gap-1 rounded-md bg-success-600 px-3 py-1 text-xs font-medium text-white hover:bg-success-700 transition-colors disabled:opacity-50"
-                      onClick={() => handleRespondInvitation(inv.id, true)}
+                      onClick={() => handleRespondInvitation(inv, true)}
                       disabled={respondingId === inv.id}
                     >
                       <FiCheck className="text-xs" /> Accept
                     </button>
                     <button
                       className="flex items-center gap-1 rounded-md bg-error-100 px-3 py-1 text-xs font-medium text-error-700 hover:bg-error-200 transition-colors disabled:opacity-50"
-                      onClick={() => handleRespondInvitation(inv.id, false)}
+                      onClick={() => handleRespondInvitation(inv, false)}
                       disabled={respondingId === inv.id}
                     >
                       <FiX className="text-xs" /> Decline
@@ -317,7 +308,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
     <Dropdown
       align="right"
       trigger={
-        <div className="flex cursor-pointer items-center rounded-lg transition-colors hover:bg-white/10 p-1 lg:gap-3 lg:px-3 lg:py-2">
+        <div className="flex cursor-pointer items-center rounded-lg p-1 transition-colors hover:bg-white/10 lg:gap-3 lg:px-3 lg:py-2">
           <div className="hidden text-right lg:block">
             <div className="font-serif text-lg font-medium text-snow">{user.name}</div>
             <div className="text-xs text-gray-400">{user.role}</div>
@@ -336,7 +327,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
   );
 
   return (
-    <header className="sticky top-0 z-50 flex h-20 w-full flex-shrink-0 items-center border-b border-gray-800 bg-oxfordBlue px-4 shadow-[0_1px_6px_rgba(0,0,0,0.34)] lg:px-7">
+    <header className="fixed top-0 left-0 right-0 z-50 flex h-20 w-full flex-shrink-0 items-center border-b border-gray-800 bg-oxfordBlue px-4 shadow-[0_1px_6px_rgba(0,0,0,0.28)] lg:px-7">
       {/* Mobile: hamburger | logo (center) | profile */}
       <div className="grid h-full w-full grid-cols-3 items-center lg:hidden">
         <button
@@ -349,7 +340,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
 
         <Link
           href={homeHref}
-          className="flex items-center justify-center gap-2 justify-self-center min-w-0"
+          className="flex min-w-0 items-center justify-center justify-self-center gap-2"
         >
           <ArchivumBrand compact />
         </Link>
@@ -359,7 +350,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
 
       {/* Desktop: logo (left) | notifications + user (right) */}
       <div className="hidden h-full w-full items-center justify-between lg:flex">
-        <Link href={homeHref} className="flex items-center gap-3 min-w-0">
+        <Link href={homeHref} className="flex min-w-0 items-center gap-3">
           <ArchivumBrand />
         </Link>
 

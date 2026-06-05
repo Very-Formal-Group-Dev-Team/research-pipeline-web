@@ -2,24 +2,43 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FiCalendar, FiMapPin, FiPlus, FiX, FiShield } from 'react-icons/fi';
+import { FiCalendar, FiPlus, FiSave, FiShield } from 'react-icons/fi';
+import { toast } from 'sonner';
 
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/Button';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
-import Modal from '@/components/ui/Modal';
+import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
 import { formLabelClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
+import {
+  COORDINATOR_DATE_FIELD_WRAPPER_CLASS,
+  COORDINATOR_DATE_TIME_ROW_CLASS,
+  COORDINATOR_TIME_FIELD_WRAPPER_CLASS,
+  COORDINATOR_SCHEDULE_FORM_CLASS,
+  COORDINATOR_SCHEDULE_MODAL_SIZE,
+  CoordinatorTimeRangeFields,
+} from '@/components/coordinator/CoordinatorTimeRangeFields';
 import CoordinatorDefenseSections from '@/components/coordinator/CoordinatorDefenseSections';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   cancelCoordinatorEvent,
+  completeCoordinatorEvent,
   createCoordinatorEvent,
   getCoordinatorEvents,
+  revertCoordinatorEvent,
+  updateCoordinatorEvent,
   type InstitutionEvent,
 } from '@/lib/api/events';
+import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
+import { institutionEventUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
+import {
+  institutionEventFormToPayload,
+  institutionEventToFormState,
+  type InstitutionEventFormState,
+} from '@/lib/coordinator/institutionEventDisplay';
 import {
   bookDefenseSchedule,
   getCoordinatorRubrics,
@@ -30,33 +49,19 @@ import {
   type Institution,
   type CoordinatorRubric,
 } from '@/lib/api/coordinator';
-import { formatStatusLabel } from '@/lib/utils/formatStatus';
 
 type PageTab = 'events' | 'pending' | 'approved';
 type ScheduleKind = 'event' | 'defense' | null;
 
-function formatDateTime(iso?: string | null) {
-  if (!iso) return '-';
-  const parsed = new Date(iso.replace(/Z$/i, ''));
-  if (Number.isNaN(parsed.getTime())) return '-';
-  return parsed.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
-
-function statusVariant(status: string): 'success' | 'warning' | 'error' | 'default' {
-  switch (status) {
-    case 'scheduled': return 'default';
-    case 'completed': return 'success';
-    case 'cancelled': return 'error';
-    default: return 'warning';
-  }
-}
+const EMPTY_EVENT_FORM: InstitutionEventFormState = {
+  title: '',
+  description: '',
+  date: '',
+  startTime: '',
+  endTime: '',
+  location: '',
+  modality: 'Online',
+};
 
 export default function CoordinatorEventsPage() {
   const searchParams = useSearchParams();
@@ -66,7 +71,15 @@ export default function CoordinatorEventsPage() {
   const [activeTab, setActiveTab] = useState<PageTab>(initialTab);
   const [events, setEvents] = useState<InstitutionEvent[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [defenseRefreshKey, setDefenseRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [eventActionLoading, setEventActionLoading] = useState(false);
+  const [eventActionError, setEventActionError] = useState<string | null>(null);
+  const [cancelEventId, setCancelEventId] = useState<string | null>(null);
+  const [editEvent, setEditEvent] = useState<InstitutionEvent | null>(null);
+  const [editForm, setEditForm] = useState<InstitutionEventFormState>(EMPTY_EVENT_FORM);
+  const { toast: eventUndoToast, showUndoToast: showEventUndoToast, dismissUndoToast: dismissEventUndoToast } =
+    useUndoActionToast();
 
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(null);
@@ -139,6 +152,14 @@ export default function CoordinatorEventsPage() {
     () => rubrics.filter((r) => r.defense_type === defenseForm.defenseType),
     [rubrics, defenseForm.defenseType],
   );
+
+  const editEventFormDirty = useMemo(() => {
+    if (!editEvent) return false;
+    const baseline = institutionEventToFormState(editEvent);
+    return (Object.keys(baseline) as (keyof InstitutionEventFormState)[]).some(
+      (key) => editForm[key] !== baseline[key],
+    );
+  }, [editEvent, editForm]);
 
   function openScheduleModal() {
     setShowScheduleModal(true);
@@ -220,13 +241,97 @@ export default function CoordinatorEventsPage() {
       courseId: '', rubricId: '', defenseType: 'proposal',
       date: '', startTime: '', endTime: '', location: '', venue: '', modality: 'Online',
     });
+    setDefenseRefreshKey((key) => key + 1);
     await loadEvents();
     setActiveTab('approved');
   }
 
-  async function handleCancel(eventId: string) {
-    const res = await cancelCoordinatorEvent(eventId);
-    if (!res.error) await loadEvents();
+  function openEditEvent(event: InstitutionEvent) {
+    setEditEvent(event);
+    setEditForm(institutionEventToFormState(event));
+    setEventActionError(null);
+  }
+
+  function closeEditEvent() {
+    if (eventActionLoading) return;
+    setEditEvent(null);
+    setEditForm(EMPTY_EVENT_FORM);
+    setEventActionError(null);
+  }
+
+  async function handleRevertEvent(eventId: string) {
+    const res = await revertCoordinatorEvent(eventId);
+    if (res.error) {
+      setEventActionError(res.error);
+      return;
+    }
+    await loadEvents();
+  }
+
+  async function handleCompleteEvent(eventId: string) {
+    setEventActionLoading(true);
+    setEventActionError(null);
+    dismissEventUndoToast();
+    try {
+      const res = await completeCoordinatorEvent(eventId);
+      if (res.error) {
+        setEventActionError(res.error);
+        return;
+      }
+      await loadEvents();
+      showEventUndoToast({
+        message: institutionEventUndoToastMessage('complete'),
+        onUndo: () => handleRevertEvent(eventId),
+      });
+    } catch {
+      setEventActionError('Failed to mark event as complete.');
+    } finally {
+      setEventActionLoading(false);
+    }
+  }
+
+  async function handleConfirmCancelEvent() {
+    if (!cancelEventId) return;
+    const eventId = cancelEventId;
+    setEventActionLoading(true);
+    setEventActionError(null);
+    dismissEventUndoToast();
+    try {
+      const res = await cancelCoordinatorEvent(eventId);
+      if (res.error) {
+        setEventActionError(res.error);
+        return;
+      }
+      setCancelEventId(null);
+      await loadEvents();
+      showEventUndoToast({
+        message: institutionEventUndoToastMessage('cancel'),
+        onUndo: () => handleRevertEvent(eventId),
+      });
+    } catch {
+      setEventActionError('Failed to cancel event.');
+    } finally {
+      setEventActionLoading(false);
+    }
+  }
+
+  async function handleSaveEditEvent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editEvent || !editEventFormDirty) return;
+    setEventActionError(null);
+    setEventActionLoading(true);
+
+    const res = await updateCoordinatorEvent(editEvent.id, institutionEventFormToPayload(editForm));
+    setEventActionLoading(false);
+
+    if (res.error) {
+      setEventActionError(res.error);
+      return;
+    }
+
+    closeEditEvent();
+    await loadEvents();
+    toast.success('Changes saved');
   }
 
   const tabClass = (tab: PageTab) =>
@@ -278,46 +383,44 @@ export default function CoordinatorEventsPage() {
           ) : (
             <div className="space-y-3">
               {events.map((event) => (
-                <Card key={event.id}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-lg coordinator-heading">{event.title}</h3>
-                        <Badge variant={statusVariant(event.status)}>
-                          {formatStatusLabel(event.status)}
-                        </Badge>
-                      </div>
-                      {event.description ? (
-                        <p className="text-sm text-neutral-600 mb-2">{event.description}</p>
-                      ) : null}
-                      <div className="flex flex-wrap gap-4 text-sm text-neutral-600">
-                        <span className="inline-flex items-center gap-1">
-                          <FiCalendar /> {formatDateTime(event.start_time)} – {formatDateTime(event.end_time)}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <FiMapPin /> {event.location}
-                        </span>
-                        <span>{event.modality}</span>
-                      </div>
-                    </div>
-                    {event.status === 'scheduled' ? (
-                      <Button variant="outline" size="sm" onClick={() => handleCancel(event.id)}>
-                        <FiX className="mr-1" /> Cancel
-                      </Button>
-                    ) : null}
-                  </div>
-                </Card>
+                <CoordinatorScheduleCard
+                  key={event.id}
+                  title={event.title}
+                  description={event.description}
+                  startTime={event.start_time}
+                  endTime={event.end_time}
+                  modality={event.modality}
+                  location={event.location}
+                  status={event.status}
+                  actions={{
+                    onEdit: () => openEditEvent(event),
+                    onCancel: () => setCancelEventId(event.id),
+                    onComplete: () => void handleCompleteEvent(event.id),
+                    disabled: eventActionLoading,
+                  }}
+                />
               ))}
+              {eventActionError ? (
+                <p className="text-center text-sm text-archivumRed">{eventActionError}</p>
+              ) : null}
             </div>
           )
         )}
 
         {activeTab === 'pending' && (
-          <CoordinatorDefenseSections section="pending" onDataChange={loadEvents} />
+          <CoordinatorDefenseSections
+            key={`pending-${defenseRefreshKey}`}
+            section="pending"
+            onDataChange={loadEvents}
+          />
         )}
 
         {activeTab === 'approved' && (
-          <CoordinatorDefenseSections section="approved" onDataChange={loadEvents} />
+          <CoordinatorDefenseSections
+            key={`approved-${defenseRefreshKey}`}
+            section="approved"
+            onDataChange={loadEvents}
+          />
         )}
       </div>
 
@@ -325,31 +428,35 @@ export default function CoordinatorEventsPage() {
         isOpen={showScheduleModal}
         onClose={closeScheduleModal}
         title={scheduleKind === null ? 'What would you like to schedule?' : scheduleKind === 'event' ? 'Schedule Institution Event' : 'Schedule Defense'}
-        size="md"
+        size={scheduleKind === null ? 'lg' : COORDINATOR_SCHEDULE_MODAL_SIZE}
       >
         {scheduleKind === null ? (
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
             <button
               type="button"
               onClick={() => setScheduleKind('event')}
-              className="rounded-xl border-2 border-coordinator-navy/30 p-6 text-left hover:border-coordinator-navy hover:bg-coordinator-navy/5 transition-colors"
+              className="flex min-h-[11.5rem] w-full flex-col rounded-xl border-2 border-coordinator-navy/30 p-8 text-left transition-colors hover:border-coordinator-navy hover:bg-coordinator-navy/5 sm:min-h-[12.5rem]"
             >
-              <FiCalendar className="text-2xl text-coordinator-navy mb-2" />
-              <h3 className="font-semibold text-coordinator-ink">Event</h3>
-              <p className="text-sm text-neutral-600 mt-1">Workshops, deadlines, and institution-wide activities</p>
+              <FiCalendar className="mb-3 h-9 w-9 text-coordinator-navy" aria-hidden />
+              <h3 className="text-lg font-semibold text-coordinator-ink">Event</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                Workshops, deadlines, and institution-wide activities
+              </p>
             </button>
             <button
               type="button"
               onClick={() => setScheduleKind('defense')}
-              className="rounded-xl border-2 border-coordinator-rose/30 p-6 text-left hover:border-coordinator-rose hover:bg-coordinator-rose/5 transition-colors"
+              className="flex min-h-[11.5rem] w-full flex-col rounded-xl border-2 border-coordinator-rose/30 p-8 text-left transition-colors hover:border-coordinator-rose hover:bg-coordinator-rose/5 sm:min-h-[12.5rem]"
             >
-              <FiShield className="text-2xl text-coordinator-rose mb-2" />
-              <h3 className="font-semibold text-coordinator-ink">Defense</h3>
-              <p className="text-sm text-neutral-600 mt-1">Proposal, midterm, or final defense for a course</p>
+              <FiShield className="mb-3 h-9 w-9 text-coordinator-rose" aria-hidden />
+              <h3 className="text-lg font-semibold text-coordinator-ink">Defense</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                Proposal, midterm, or final defense for a course
+              </p>
             </button>
           </div>
         ) : scheduleKind === 'event' ? (
-          <form onSubmit={handleCreateEvent} className="space-y-4 p-1">
+          <form onSubmit={handleCreateEvent} className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}>
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
             <Input
               label="Title"
@@ -378,43 +485,28 @@ export default function CoordinatorEventsPage() {
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Input
-                label="Date"
-                type="date"
-                required
-                value={eventForm.date}
-                onChange={(e) => setEventForm((f) => ({ ...f, date: e.target.value }))}
-                responsiveText
-                fullWidth
-              />
-              <Input
-                label="Start"
-                type="time"
-                required
-                value={eventForm.startTime}
-                onChange={(e) => setEventForm((f) => ({ ...f, startTime: e.target.value }))}
-                responsiveText
-                fullWidth
-              />
-              <Input
-                label="End"
-                type="time"
-                required
-                value={eventForm.endTime}
-                onChange={(e) => setEventForm((f) => ({ ...f, endTime: e.target.value }))}
-                responsiveText
-                fullWidth
-              />
+            <div className={COORDINATOR_DATE_TIME_ROW_CLASS}>
+              <div className={COORDINATOR_DATE_FIELD_WRAPPER_CLASS}>
+                <Input
+                  label="Date"
+                  type="date"
+                  required
+                  value={eventForm.date}
+                  onChange={(e) => setEventForm((f) => ({ ...f, date: e.target.value }))}
+                  responsiveText
+                  fullWidth
+                />
+              </div>
+              <div className={COORDINATOR_TIME_FIELD_WRAPPER_CLASS}>
+                <CoordinatorTimeRangeFields
+                  required
+                  startTime={eventForm.startTime}
+                  endTime={eventForm.endTime}
+                  onStartChange={(value) => setEventForm((f) => ({ ...f, startTime: value }))}
+                  onEndChange={(value) => setEventForm((f) => ({ ...f, endTime: value }))}
+                />
+              </div>
             </div>
-            <Input
-              label="Location"
-              required
-              value={eventForm.location}
-              onChange={(e) => setEventForm((f) => ({ ...f, location: e.target.value }))}
-              responsiveText
-              fullWidth
-            />
             <Select
               fullWidth
               responsiveText
@@ -425,9 +517,17 @@ export default function CoordinatorEventsPage() {
               }
               options={[
                 { value: 'Online', label: 'Online' },
-                { value: 'In-Person', label: 'In-Person' },
+                { value: 'In-Person', label: 'Face-to-Face' },
                 { value: 'Hybrid', label: 'Hybrid' },
               ]}
+            />
+            <Input
+              label="Location"
+              required
+              value={eventForm.location}
+              onChange={(e) => setEventForm((f) => ({ ...f, location: e.target.value }))}
+              responsiveText
+              fullWidth
             />
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setScheduleKind(null)}>Back</Button>
@@ -435,7 +535,7 @@ export default function CoordinatorEventsPage() {
             </div>
           </form>
         ) : (
-          <form onSubmit={handleCreateDefense} className="space-y-4 p-1">
+          <form onSubmit={handleCreateDefense} className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}>
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
             <Select
               fullWidth
@@ -479,35 +579,42 @@ export default function CoordinatorEventsPage() {
                 options={filteredRubrics.map((r) => ({ value: r.id, label: r.name }))}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Input
-                label="Date"
-                type="date"
-                required
-                value={defenseForm.date}
-                onChange={(e) => setDefenseForm((f) => ({ ...f, date: e.target.value }))}
-                responsiveText
-                fullWidth
-              />
-              <Input
-                label="Start"
-                type="time"
-                required
-                value={defenseForm.startTime}
-                onChange={(e) => setDefenseForm((f) => ({ ...f, startTime: e.target.value }))}
-                responsiveText
-                fullWidth
-              />
-              <Input
-                label="End"
-                type="time"
-                required
-                value={defenseForm.endTime}
-                onChange={(e) => setDefenseForm((f) => ({ ...f, endTime: e.target.value }))}
-                responsiveText
-                fullWidth
-              />
+            <div className={COORDINATOR_DATE_TIME_ROW_CLASS}>
+              <div className={COORDINATOR_DATE_FIELD_WRAPPER_CLASS}>
+                <Input
+                  label="Date"
+                  type="date"
+                  required
+                  value={defenseForm.date}
+                  onChange={(e) => setDefenseForm((f) => ({ ...f, date: e.target.value }))}
+                  responsiveText
+                  fullWidth
+                />
+              </div>
+              <div className={COORDINATOR_TIME_FIELD_WRAPPER_CLASS}>
+                <CoordinatorTimeRangeFields
+                  required
+                  startTime={defenseForm.startTime}
+                  endTime={defenseForm.endTime}
+                  onStartChange={(value) => setDefenseForm((f) => ({ ...f, startTime: value }))}
+                  onEndChange={(value) => setDefenseForm((f) => ({ ...f, endTime: value }))}
+                />
+              </div>
             </div>
+            <Select
+              fullWidth
+              responsiveText
+              label="Modality"
+              value={defenseForm.modality}
+              onChange={(e) =>
+                setDefenseForm((f) => ({ ...f, modality: e.target.value }))
+              }
+              options={[
+                { value: 'Online', label: 'Online' },
+                { value: 'In-Person', label: 'Face-to-Face' },
+                { value: 'Hybrid', label: 'Hybrid' },
+              ]}
+            />
             <Input
               label="Location"
               required
@@ -523,6 +630,134 @@ export default function CoordinatorEventsPage() {
           </form>
         )}
       </Modal>
+
+      <Modal
+        isOpen={Boolean(editEvent)}
+        onClose={closeEditEvent}
+        title="Edit institution event"
+        description={
+          <>
+            Update schedule and details for <strong>{editEvent?.title}</strong>.
+          </>
+        }
+        size={COORDINATOR_SCHEDULE_MODAL_SIZE}
+      >
+        <form onSubmit={handleSaveEditEvent} className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}>
+          {eventActionError ? (
+            <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{eventActionError}</p>
+          ) : null}
+          <Input
+            label="Title"
+            required
+            value={editForm.title}
+            onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+            placeholder="Event title"
+            responsiveText
+            fullWidth
+          />
+          <div>
+            <label className={formLabelClassName}>Description</label>
+            <textarea
+              value={editForm.description}
+              onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+              className={formTextareaResponsiveClassName}
+              rows={2}
+            />
+          </div>
+          <div className={COORDINATOR_DATE_TIME_ROW_CLASS}>
+            <div className={COORDINATOR_DATE_FIELD_WRAPPER_CLASS}>
+              <Input
+                label="Date"
+                type="date"
+                required
+                value={editForm.date}
+                onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
+                responsiveText
+                fullWidth
+              />
+            </div>
+            <div className={COORDINATOR_TIME_FIELD_WRAPPER_CLASS}>
+              <CoordinatorTimeRangeFields
+                required
+                startTime={editForm.startTime}
+                endTime={editForm.endTime}
+                onStartChange={(value) => setEditForm((f) => ({ ...f, startTime: value }))}
+                onEndChange={(value) => setEditForm((f) => ({ ...f, endTime: value }))}
+              />
+            </div>
+          </div>
+          <Select
+            fullWidth
+            responsiveText
+            label="Modality"
+            value={editForm.modality}
+            onChange={(e) =>
+              setEditForm((f) => ({ ...f, modality: e.target.value as typeof f.modality }))
+            }
+            options={[
+              { value: 'Online', label: 'Online' },
+              { value: 'In-Person', label: 'Face-to-Face' },
+              { value: 'Hybrid', label: 'Hybrid' },
+            ]}
+          />
+          <Input
+            label="Location"
+            required
+            value={editForm.location}
+            onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
+            responsiveText
+            fullWidth
+          />
+          <ModalFooter>
+            <Button type="button" variant="outline" onClick={closeEditEvent} disabled={eventActionLoading}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={eventActionLoading}
+              disabled={eventActionLoading || !editEventFormDirty}
+              leftIcon={!eventActionLoading ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
+            >
+              Save changes
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(cancelEventId)}
+        onClose={() => {
+          if (!eventActionLoading) setCancelEventId(null);
+        }}
+        title="Cancel event?"
+        size="sm"
+      >
+        <p className="text-sm text-neutral-700">
+          This event will be marked as cancelled. It will remain visible in the list with a
+          cancelled status.
+        </p>
+        <ModalFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCancelEventId(null)}
+            disabled={eventActionLoading}
+          >
+            Keep event
+          </Button>
+          <Button
+            type="button"
+            variant="error"
+            onClick={() => void handleConfirmCancelEvent()}
+            loading={eventActionLoading}
+            disabled={eventActionLoading}
+          >
+            Cancel event
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      <UndoActionToastHost toast={eventUndoToast} onDismiss={dismissEventUndoToast} />
     </DashboardLayout>
   );
 }

@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/Button';
-import Avatar from '@/components/ui/Avatar';
-import { FiArrowLeft, FiCheck, FiClock, FiCopy, FiEdit2, FiFileText, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiEdit2, FiFileText, FiX } from 'react-icons/fi';
 import { LuLink } from 'react-icons/lu';
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -31,8 +30,11 @@ import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import UserSearchModal from '@/components/UserSearchModal';
+import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
+import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
+import { toast } from 'sonner';
 import {
   formControlResponsiveClassName,
   formSelectResponsiveClassName,
@@ -49,6 +51,7 @@ import {
   paperStandardFormValue,
   statusBadgeVariant,
 } from '@/lib/utils/projectDisplay';
+import { formatProjectStageLabel } from '@/lib/utils/projectStage';
 
 function formatProjectDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -107,7 +110,6 @@ function ProjectDetailFieldRow({
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [codeCopied, setCodeCopied] = useState(false);
   const { user, profile, handleLogout } = useDashboardUser('Student');
 
   const [project, setProject] = useState<Project | null>(null);
@@ -140,7 +142,7 @@ export default function ProjectDetailPage() {
   const [titleInput, setTitleInput] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
   const [titleError, setTitleError] = useState<string | null>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const [detailsProjectType, setDetailsProjectType] = useState('thesis');
   const [detailsPaperStandard, setDetailsPaperStandard] = useState('IEEE');
   const [detailsProgram, setDetailsProgram] = useState('');
@@ -148,7 +150,6 @@ export default function ProjectDetailPage() {
   const [detailsSection, setDetailsSection] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
-  const [detailsSuccess, setDetailsSuccess] = useState<string | null>(null);
 
   const loadPaperVersions = useCallback(async () => {
     if (!params.id) return;
@@ -230,16 +231,55 @@ export default function ProjectDetailPage() {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
       titleInputRef.current.select();
+      titleInputRef.current.style.height = 'auto';
+      titleInputRef.current.style.height = `${titleInputRef.current.scrollHeight}px`;
     }
   }, [isEditingTitle]);
 
-  const copyProjectCode = () => {
-    if (project?.project_code) {
-      navigator.clipboard.writeText(project.project_code);
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 2000);
-    }
+  useEffect(() => {
+    if (!isEditingTitle || !titleInputRef.current) return;
+    const el = titleInputRef.current;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [isEditingTitle, titleInput]);
+
+  const resizeTitleTextarea = () => {
+    const el = titleInputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
   };
+
+  const detailsDirty = useMemo(() => {
+    if (!project) return false;
+    return (
+      detailsProjectType !== (project.project_type || 'thesis') ||
+      detailsPaperStandard !== paperStandardFormValue(project.paper_standard) ||
+      detailsProgram !== (project.program || '') ||
+      detailsCourse !== (project.course || '') ||
+      detailsSection !== (project.section || '')
+    );
+  }, [
+    project,
+    detailsProjectType,
+    detailsPaperStandard,
+    detailsProgram,
+    detailsCourse,
+    detailsSection,
+  ]);
+
+  const abstractDirty = useMemo(() => {
+    if (!project) return false;
+    const savedAbstract = project.description || project.abstract || '';
+    return abstractInput !== savedAbstract;
+  }, [project, abstractInput]);
+
+  const keywordsDirty = useMemo(() => {
+    if (!project) return false;
+    const savedKeywords = project.keywords || [];
+    if (savedKeywords.length !== editableKeywords.length) return true;
+    return savedKeywords.some((keyword, index) => keyword !== editableKeywords[index]);
+  }, [project, editableKeywords]);
 
   const existingUserIds = [
     ...members.map((m) => m.user_id),
@@ -307,7 +347,7 @@ export default function ProjectDetailPage() {
   };
 
   const commitKeywords = async () => {
-    if (!project) return;
+    if (!project || !keywordsDirty) return;
     setSavingKeywords(true);
     setKeywordsError(null);
     const res = await updateProjectKeywords(project.id, editableKeywords);
@@ -319,6 +359,7 @@ export default function ProjectDetailPage() {
     setProject((prev) => (prev ? { ...prev, keywords: res.data?.keywords || [] } : prev));
     setEditableKeywords(res.data.keywords || []);
     setSavingKeywords(false);
+    toast.success('Changes saved');
   };
 
   const startEditingTitle = () => {
@@ -370,8 +411,8 @@ export default function ProjectDetailPage() {
     setSavingTitle(false);
   };
 
-  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void saveProjectTitle();
     } else if (e.key === 'Escape') {
@@ -380,7 +421,7 @@ export default function ProjectDetailPage() {
   };
 
   const commitProjectDetails = async () => {
-    if (!project) return;
+    if (!project || !detailsDirty) return;
     if (!detailsPaperStandard) {
       setDetailsError('Paper standard is required');
       return;
@@ -388,7 +429,6 @@ export default function ProjectDetailPage() {
 
     setSavingDetails(true);
     setDetailsError(null);
-    setDetailsSuccess(null);
 
     const res = await updateProjectDetails(project.id, {
       title: project.title,
@@ -406,13 +446,12 @@ export default function ProjectDetailPage() {
     }
 
     setProject(res.data);
-    setDetailsSuccess('Project details saved');
-    setTimeout(() => setDetailsSuccess(null), 3000);
     setSavingDetails(false);
+    toast.success('Changes saved');
   };
 
   const commitAbstract = async () => {
-    if (!project) return;
+    if (!project || !abstractDirty) return;
     setSavingAbstract(true);
     setAbstractError(null);
     const res = await updateProjectAbstract(project.id, abstractInput);
@@ -432,6 +471,7 @@ export default function ProjectDetailPage() {
       };
     });
     setSavingAbstract(false);
+    toast.success('Changes saved');
   };
 
   const handleCrossReference = async () => {
@@ -518,61 +558,86 @@ export default function ProjectDetailPage() {
     <DashboardLayout role="student" user={user} onLogout={handleLogout}>
       <div className="project-detail-forms space-y-6">
         {/* Page header */}
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <div className="min-w-0 flex-1">
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="min-w-0 w-full flex-1">
               {isEditingTitle ? (
-                <div className="min-w-0 max-w-full">
-                  <div className="inline-grid w-max max-w-full min-w-0 [&>*]:col-start-1 [&>*]:row-start-1">
-                    <span
-                      className={`invisible whitespace-pre pointer-events-none ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_INPUT_SHELL_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
-                      aria-hidden
-                    >
-                      {titleInput || '\u00A0'}
-                    </span>
-                    <input
-                      ref={titleInputRef}
-                      type="text"
-                      value={titleInput}
-                      onChange={(e) => setTitleInput(e.target.value)}
-                      onKeyDown={handleTitleKeyDown}
-                      onBlur={() => void saveProjectTitle()}
-                      disabled={savingTitle}
-                      size={1}
-                      className={`project-title-inline-input min-w-0 w-full max-w-full bg-neutral-50 outline-none focus:border-primary-400/60 disabled:opacity-60 ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_INPUT_SHELL_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
-                      aria-label="Project title"
-                    />
-                  </div>
+                <div className="min-w-0 w-full max-w-full">
+                  <textarea
+                    ref={titleInputRef}
+                    rows={1}
+                    value={titleInput}
+                    onChange={(e) => {
+                      setTitleInput(e.target.value);
+                      resizeTitleTextarea();
+                    }}
+                    onKeyDown={handleTitleKeyDown}
+                    onBlur={() => void saveProjectTitle()}
+                    disabled={savingTitle}
+                    className={`project-title-inline-input block min-h-0 w-full min-w-0 max-w-full resize-none overflow-hidden break-words bg-neutral-50 outline-none focus:border-primary-400/60 disabled:opacity-60 ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_INPUT_SHELL_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+                    aria-label="Project title"
+                  />
                   {titleError ? (
                     <p className="mt-1 text-sm text-archivumRed">{titleError}</p>
                   ) : null}
                 </div>
               ) : (
-                <div className="inline-flex w-max max-w-full min-w-0 items-center gap-1.5">
-                  <h1
-                    className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
-                  >
-                    {project.title}
-                  </h1>
+                <h1
+                  className={`min-w-0 break-words ${PROJECT_TITLE_CLASS} ${PROJECT_TITLE_END_BLEED_CLASS}`}
+                >
+                  {project.title}
+                </h1>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 sm:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 text-sm text-primary-700 hover:bg-primary-50"
+                leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+                onClick={() => router.push('/student/projects')}
+              >
+                Back to Projects
+              </Button>
+              <div className="flex items-center gap-2">
+                {!isEditingTitle ? (
                   <button
                     type="button"
                     onClick={startEditingTitle}
                     className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
                     aria-label="Edit project title"
                   >
-                    <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+                    <FiEdit2 className="h-4 w-4" aria-hidden />
                   </button>
-                </div>
-              )}
+                ) : null}
+                <Badge variant={statusBadgeVariant(project.status)} className="shrink-0">
+                  {formatProjectStageLabel(project.status)}
+                </Badge>
+              </div>
             </div>
-            <Badge variant={statusBadgeVariant(project.status)} className="capitalize shrink-0">
-              {project.status}
-            </Badge>
+
+            <div className="hidden items-center gap-2 self-center sm:flex sm:shrink-0 sm:gap-3">
+              {!isEditingTitle ? (
+                <button
+                  type="button"
+                  onClick={startEditingTitle}
+                  className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                  aria-label="Edit project title"
+                >
+                  <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+                </button>
+              ) : null}
+              <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 self-center">
+                {formatProjectStageLabel(project.status)}
+              </Badge>
+            </div>
           </div>
+
           <Button
             variant="ghost"
             size="sm"
-            className="text-sm sm:text-md shrink-0 text-primary-700 hover:bg-primary-50"
+            className="hidden shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:inline-flex sm:text-md"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => router.push('/student/projects')}
           >
@@ -588,26 +653,7 @@ export default function ProjectDetailPage() {
               <CardTitle>Project Code</CardTitle>
               <CardDescription>Share this code to invite team members and advisers</CardDescription>
             </CardHeader>
-            <div className="mt-4 flex min-w-0 items-center gap-2">
-              <code
-                className={`flex-1 min-w-0 break-all rounded-lg bg-neutral-100 px-3 py-2 font-mono text-primary-700 ${projectSummaryDetailTextClassName}`}
-              >
-                {project.project_code}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={copyProjectCode}
-                aria-label={codeCopied ? 'Copied to clipboard' : 'Copy project code'}
-              >
-                {codeCopied ? (
-                  <FiCheck className="text-success-600" aria-hidden />
-                ) : (
-                  <FiCopy aria-hidden />
-                )}
-              </Button>
-            </div>
+            <ProjectCodeCopyRow projectCode={project.project_code} />
           </Card>
 
           <Card className="md:col-start-1 md:row-start-2">
@@ -640,23 +686,19 @@ export default function ProjectDetailPage() {
                   variant="primary"
                   className="shrink-0"
                   onClick={commitProjectDetails}
-                  disabled={savingDetails}
+                  disabled={savingDetails || !detailsDirty}
                   loading={savingDetails}
                 >
-                  {savingDetails ? 'Saving...' : 'Save'}
+                  {savingDetails ? 'Saving...' : 'Save Details'}
                 </Button>
               </div>
             </CardHeader>
             <div className="mt-5 flex min-h-0 flex-1 flex-col">
-              {(detailsSuccess || detailsError) && (
-                <div
-                  className={`mb-3 shrink-0 rounded-lg px-3 py-1.5 text-sm ${
-                    detailsSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
-                  }`}
-                >
-                  {detailsSuccess || detailsError}
+              {detailsError ? (
+                <div className="mb-3 shrink-0 rounded-lg bg-error-50 px-3 py-1.5 text-sm text-archivumRed">
+                  {detailsError}
                 </div>
-              )}
+              ) : null}
               <div className="flex min-h-0 flex-1 flex-col justify-center">
                 <div className="project-detail-inline-fields flex flex-col gap-3 md:gap-3.5">
                 <ProjectDetailFieldRow label="Program" htmlFor="project-detail-program">
@@ -736,7 +778,7 @@ export default function ProjectDetailPage() {
                   variant="primary"
                   className="shrink-0"
                   onClick={commitAbstract}
-                  disabled={savingAbstract}
+                  disabled={savingAbstract || !abstractDirty}
                 >
                   {savingAbstract ? 'Saving...' : 'Save Abstract'}
                 </Button>
@@ -759,123 +801,16 @@ export default function ProjectDetailPage() {
             </div>
           </Card>
 
-          {/* Team members */}
-          <Card className="h-full">
-          <CardHeader>
-            <div className="flex w-full flex-wrap items-start justify-between gap-3">
-              <div>
-                <CardTitle>Team Members</CardTitle>
-                <CardDescription>
-                  {members.length} {members.length === 1 ? 'member' : 'members'}
-                  {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
-                </CardDescription>
-              </div>
-              <Button variant="primary" size="sm" className="shrink-0" onClick={() => setInviteOpen(true)}>
-                Invite Members
-              </Button>
-            </div>
-          </CardHeader>
-
-          {(inviteSuccess || inviteError) && (
-            <div
-              className={`mb-4 rounded-lg px-3 py-2 text-sm ${
-                inviteSuccess ? 'bg-success-50 text-success-700' : 'bg-error-50 text-archivumRed'
-              }`}
-            >
-              {inviteSuccess || inviteError}
-            </div>
-          )}
-
-          {members.length > 0 || pendingInvites.length > 0 ? (
-            <div className="space-y-3">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className={`flex items-center gap-4 rounded-lg border p-3 transition-colors ${
-                    member.role === 'leader'
-                      ? 'border-primary-300 bg-primary-50/50'
-                      : member.role === 'adviser'
-                        ? 'border-neutral-200 bg-neutral-50'
-                        : 'border-neutral-200 hover:bg-neutral-50'
-                  }`}
-                >
-                  <Avatar
-                    src={member.users?.avatar_url}
-                    name={member.users?.full_name || member.users?.email || 'Unknown'}
-                    size="md"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-semibold text-neutral-900 truncate">
-                        {member.users?.full_name || 'Unknown User'}
-                      </h4>
-                      {member.role === 'leader' ? (
-                        <span className="text-xs font-medium text-primary-600 whitespace-nowrap">
-                          (Leader)
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-0.5 text-sm text-neutral-600 break-all">{member.users?.email}</p>
-                  </div>
-                  <Badge
-                    variant={
-                      member.role === 'leader'
-                        ? 'primary'
-                        : member.role === 'adviser'
-                          ? 'success'
-                          : 'default'
-                    }
-                    className="capitalize shrink-0"
-                  >
-                    {member.role === 'adviser'
-                      ? 'adviser'
-                      : member.role === 'leader'
-                        ? 'leader'
-                        : 'collaborator'}
-                  </Badge>
-                </div>
-              ))}
-
-              {pendingInvites.length > 0 ? (
-                <>
-                  <div className="pt-2 pb-1">
-                    <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                      Pending invitations
-                    </p>
-                  </div>
-                  {pendingInvites.map((invite) => (
-                    <div
-                      key={invite.id}
-                      className="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3"
-                    >
-                      <Avatar
-                        src={invite.users?.avatar_url}
-                        name={invite.users?.full_name || invite.users?.email || 'Unknown'}
-                        size="md"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-semibold text-neutral-800 truncate">
-                          {invite.users?.full_name || 'Unknown User'}
-                        </h4>
-                        <p className="mt-0.5 text-sm text-neutral-600 break-all">{invite.users?.email}</p>
-                      </div>
-                      <Badge
-                        variant={invite.role === 'adviser' ? 'success' : 'default'}
-                        className="capitalize shrink-0"
-                      >
-                        {invite.role}
-                      </Badge>
-                    </div>
-                  ))}
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <p className="py-4 text-center text-sm text-neutral-500">
-              No team members yet. Use Invite Members to add collaborators or advisers.
-            </p>
-          )}
-          </Card>
+          <ProjectTeamMembersCard
+            projectId={project.id}
+            members={members}
+            pendingInvites={pendingInvites}
+            currentUserId={profile?.id}
+            onMembersChange={loadMembers}
+            onInviteClick={() => setInviteOpen(true)}
+            inviteSuccess={inviteSuccess}
+            inviteError={inviteError}
+          />
         </div>
 
         <UserSearchModal
@@ -915,7 +850,7 @@ export default function ProjectDetailPage() {
                   size="sm"
                   variant="outline"
                   onClick={commitKeywords}
-                  disabled={savingKeywords}
+                  disabled={savingKeywords || !keywordsDirty}
                 >
                   {savingKeywords ? 'Saving...' : 'Commit'}
                 </Button>

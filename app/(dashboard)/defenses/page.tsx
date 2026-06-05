@@ -1,7 +1,7 @@
 //Urri Tomas is my best
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -11,18 +11,21 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/Button';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiSave } from 'react-icons/fi';
 import { formControlTextSizeClassName, formLabelClassName } from '@/lib/utils/formControls';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import Badge from '@/components/ui/Badge';
 import {
+  formatMeetingDateCompact,
   formatMeetingStatusLabel,
+  formatMeetingTime,
   meetingStatusBadgeVariant,
 } from '@/lib/meetings/display';
 import { buildMeetingBookingPayload, meetingToBookingForm } from '@/lib/meetings/bookingForm';
 import { adviserProjectMeetingsUrl } from '@/lib/meetings/navigation';
 import { getMeeting } from '@/lib/api/defenses';
 import { createPortal } from 'react-dom';
+import { toast as sonnerToast } from 'sonner';
 
 interface ScheduledDefense {
   id: string;
@@ -110,6 +113,26 @@ function formatMinutes(minutes: number) {
   return `${mins}m`;
 }
 
+const DEFAULT_BOOKING_FORM = {
+  projectId: '',
+  projectCode: '',
+  projectTitle: '',
+  section: '',
+  startTime: '',
+  endTime: '',
+  date: '',
+  meetingType: 'Online',
+  defenseType: 'Proposal',
+  roomOption: '',
+  meetingTitle: '',
+};
+
+type BookingFormState = typeof DEFAULT_BOOKING_FORM;
+
+function bookingFormsEqual(a: BookingFormState, b: BookingFormState) {
+  return (Object.keys(a) as (keyof BookingFormState)[]).every((key) => a[key] === b[key]);
+}
+
 export default function MeetingSchedule() {
   const { user, isLoading, handleLogout } = useDashboardUser('Adviser');
 
@@ -123,19 +146,9 @@ export default function MeetingSchedule() {
   const editingMeetingId = searchParams.get('meeting_id');
   const isEditMode = Boolean(editingMeetingId);
 
-  const [form, setForm] = useState({
-    projectId: '',
-    projectCode: '',
-    projectTitle: '',
-    section: '',
-    startTime: '',
-    endTime: '',
-    date: '',
-    meetingType: 'Online',
-    defenseType: 'Proposal',
-    roomOption: '',
-    meetingTitle: '',
-  });
+  const [form, setForm] = useState<BookingFormState>({ ...DEFAULT_BOOKING_FORM });
+
+  const [editFormBaseline, setEditFormBaseline] = useState<BookingFormState | null>(null);
 
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [projectLookupLoading, setProjectLookupLoading] = useState(false);
@@ -167,6 +180,17 @@ export default function MeetingSchedule() {
     const hasChanges = Object.values(form).some(v => v !== '');
     setIsDirty(hasChanges);
   }, [form]);
+
+  const editFormDirty = useMemo(() => {
+    if (!isEditMode || !editFormBaseline) return false;
+    return !bookingFormsEqual(form, editFormBaseline);
+  }, [form, editFormBaseline, isEditMode]);
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setEditFormBaseline(null);
+    }
+  }, [isEditMode]);
 
   useEffect(() => {
     const projectId = searchParams.get('project_id');
@@ -205,10 +229,12 @@ export default function MeetingSchedule() {
         const res = await getMeeting(meetingIdForEdit);
         if (cancelled) return;
         if (res.data) {
-          setForm((prev) => ({
-            ...prev,
-            ...meetingToBookingForm(res.data!),
-          }));
+          const next: BookingFormState = {
+            ...DEFAULT_BOOKING_FORM,
+            ...meetingToBookingForm(res.data),
+          };
+          setForm(next);
+          setEditFormBaseline(next);
         } else {
           showToast(res.error || 'Failed to load meeting for editing.', 'error');
         }
@@ -358,7 +384,7 @@ export default function MeetingSchedule() {
       throw new Error(data?.error || 'Failed to update meeting.');
     }
 
-    showToast('Meeting updated successfully.', 'success');
+    sonnerToast.success('Changes saved');
     setOverlapWarning(null);
     setPendingSubmitPayload(null);
 
@@ -372,6 +398,8 @@ export default function MeetingSchedule() {
   };
 
   const handleSubmit = async () => {
+    if (isEditMode && !editFormDirty) return;
+
     try {
       let projectId = form.projectId;
       if (!projectId && form.projectCode?.trim()) {
@@ -460,19 +488,7 @@ export default function MeetingSchedule() {
   };
 
   const handleClear = () => {
-    setForm({
-      projectId: '',
-      projectCode: '',
-      projectTitle: '',
-      section: '',
-      startTime: '',
-      endTime: '',
-      date: '',
-      meetingType: 'Online',
-      defenseType: 'Proposal',
-      roomOption: '',
-      meetingTitle: '',
-    });
+    setForm({ ...DEFAULT_BOOKING_FORM });
   };
 
   return (
@@ -655,8 +671,13 @@ export default function MeetingSchedule() {
                       type="submit"
                       variant="primary"
                       className="w-full min-w-[8.5rem]"
-                      disabled={projectLookupLoading}
+                      disabled={projectLookupLoading || editFormLoading || (isEditMode && !editFormDirty)}
                       loading={projectLookupLoading}
+                      leftIcon={
+                        isEditMode && !projectLookupLoading ? (
+                          <FiSave className="h-4 w-4" aria-hidden />
+                        ) : undefined
+                      }
                     >
                       {isEditMode ? 'Save Changes' : 'Book Meeting'}
                     </Button>
@@ -680,6 +701,7 @@ export default function MeetingSchedule() {
                         <tr>
                           <th className="px-4 py-3 font-medium text-neutral-600">Project Title</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Project Code</th>
+                          <th className="px-4 py-3 font-medium text-neutral-600">Date</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Start Time</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">End Time</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Total Time</th>
@@ -689,7 +711,7 @@ export default function MeetingSchedule() {
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
                           <tr>
-                            <td colSpan={7} className="py-12">
+                            <td colSpan={8} className="py-12">
                               <div className="flex flex-col items-center justify-center">
                                 <p className="text-neutral-500">No scheduled meetings yet</p>
                               </div>
@@ -704,6 +726,7 @@ export default function MeetingSchedule() {
                         <tr>
                           <th className="px-4 py-3 font-medium text-neutral-600">Project Title</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Project Code</th>
+                          <th className="px-4 py-3 font-medium text-neutral-600">Date</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Start Time</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">End Time</th>
                           <th className="px-4 py-3 font-medium text-neutral-600">Total Time</th>
@@ -716,8 +739,15 @@ export default function MeetingSchedule() {
                             <tr key={d.id} className="hover:bg-coordinator-neutral-50 cursor-pointer">
                               <td className="px-4 py-3 text-neutral-800">{d.project_title}</td>
                               <td className="px-4 py-3 text-neutral-600">{d.project_code}</td>
-                              <td className="px-4 py-3 text-neutral-600">{formatDateTime(d.start_time)}</td>
-                              <td className="px-4 py-3 text-neutral-600">{d.end_time ? formatDateTime(d.end_time) : '-'}</td>
+                              <td className="px-4 py-3 text-neutral-600 tabular-nums">
+                                {formatMeetingDateCompact(d.start_time)}
+                              </td>
+                              <td className="px-4 py-3 text-neutral-600 tabular-nums">
+                                {formatMeetingTime(d.start_time)}
+                              </td>
+                              <td className="px-4 py-3 text-neutral-600 tabular-nums">
+                                {d.end_time ? formatMeetingTime(d.end_time) : '-'}
+                              </td>
                               <td className="px-4 py-3 text-neutral-600">{d.end_time ? computeTotalTime(d.start_time, d.end_time) : '-'}</td>
                               <td className="px-4 py-3 text-neutral-600">{d.modality || 'Online'}</td>
                               <td className="px-4 py-3">

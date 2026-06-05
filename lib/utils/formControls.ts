@@ -10,6 +10,12 @@ export const projectSummaryDetailTextClassName = [
   formControlTextSizeClassName,
 ].join(' ');
 
+/** Project code value box — border lighter than summary `Card` (neutral-400) */
+export const projectCodeDisplayClassName = [
+  'flex-1 min-w-0 break-all rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 font-mono text-primary-700',
+  projectSummaryDetailTextClassName,
+].join(' ');
+
 /** Project Details card metadata: text-sm → text-md from md (student / default) */
 export const projectDetailMetadataTextClassName = [
   'project-detail-metadata-text',
@@ -47,6 +53,9 @@ export const projectDetailValueWrapClassName = 'min-w-0 flex-1';
 /** Focus glow aligned with oxfordBlue / primary actions */
 export const formControlFocusGlowClassName =
   'focus:outline-none focus:shadow-[0_0_12px_rgba(44,62,107,0.2)]';
+
+/** Matches default text field / select control height (py-2.5 + border). */
+export const formControlHeightClassName = 'h-[2.75rem]';
 
 export const formControlClassName = [
   'w-full text-sm text-neutral-900',

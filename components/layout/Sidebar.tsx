@@ -6,17 +6,12 @@ import { usePathname } from 'next/navigation';
 import {
   FiHome,
   FiFolder,
-  FiPlus,
-  FiMail,
   FiCalendar,
   FiUser,
   FiUsers,
-  FiBarChart2,
-  FiSettings,
   FiClipboard,
   FiX,
   FiBookOpen,
-  FiCheckSquare,
   FiBell,
 } from 'react-icons/fi';
 import { useSidebar } from './SidebarContext';
@@ -48,7 +43,6 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Dashboard', href: '/adviser', icon: <FiHome /> },
     { label: 'My Advisees', href: '/adviser/advisees', icon: <FiUsers /> },
     { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell />, tooltip: 'Your recent notifications and alerts', mobileOnly: true },
-    // {/* label: 'Projects Overview', href: '/adviser/projects', icon: <FiFolder /> */}
     { label: 'Meeting Schedule', href: '/adviser/meetings', icon: <FiCalendar />, tooltip: 'Adviser meetings with students (one-on-one or group)' },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
   ],
@@ -67,14 +61,12 @@ export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const items = menuItems[role] || [];
   const { isOpen, setOpen } = useSidebar();
-  /** Coordinator-style navy sidebar (student + coordinator only). */
   const usesPortalSidebar = role === 'coordinator' || role === 'student' || role === 'adviser';
 
   const closeSidebar = () => setOpen(false);
 
   return (
     <>
-      {/* Backdrop - only show on mobile when sidebar is open */}
       {isOpen && (
         <div
           className="fixed inset-x-0 top-20 bottom-0 z-20 bg-black/20 backdrop-blur-[1px] lg:hidden"
@@ -82,14 +74,11 @@ export default function Sidebar({ role }: SidebarProps) {
         />
       )}
 
-      {/* Mobile: fixed drawer. Desktop: stretches with page content (min. viewport below header). */}
       <div
         className={`
           fixed top-20 bottom-0 left-0 z-40 flex w-64 shrink-0 flex-col
           transition-transform duration-300 ease-in-out
-          border-r border-gray-800 
-          lg:relative lg:top-auto lg:left-auto lg:z-auto
-          lg:h-auto lg:min-h-[calc(100vh-5rem)] lg:self-stretch
+          border-r border-gray-800
           lg:translate-x-0
           ${isOpen ? 'max-lg:shadow-[2px_0_8px_rgba(0,0,0,0.28)]' : 'max-lg:shadow-none'}
           lg:shadow-[2px_0_10px_rgba(0,0,0,0.24)]
@@ -97,70 +86,76 @@ export default function Sidebar({ role }: SidebarProps) {
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-      <aside
-        className={`
-          flex h-full min-h-full w-full flex-1 flex-col
-          ${usesPortalSidebar ? 'coordinator-sidebar border-r border-[#243456]' : 'border-r border-neutral-200'}
-        `}
-      >
-        <div className="flex items-center justify-end px-3 py-3 shrink-0 lg:hidden">
-          <button
-            type="button"
-            onClick={closeSidebar}
-            className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
-              usesPortalSidebar
-                ? 'text-white/70 hover:text-white hover:bg-white/10'
-                : 'text-neutral-400 hover:text-oxfordBlue hover:bg-neutral-100'
-            }`}
-            aria-label="Close sidebar"
-          >
-            <FiX className="text-lg" />
-          </button>
-        </div>
+        <aside
+          className={`flex h-full min-h-full w-full flex-1 flex-col ${
+            usesPortalSidebar ? 'coordinator-sidebar border-r border-[#243456]' : 'border-r border-neutral-200'
+          }`}
+        >
+          <div className="flex shrink-0 items-center justify-end px-3 py-3 lg:hidden">
+            <button
+              type="button"
+              onClick={closeSidebar}
+              className={`flex-shrink-0 rounded-lg p-2 transition-colors ${
+                usesPortalSidebar
+                  ? 'text-white/70 hover:bg-white/10 hover:text-white'
+                  : 'text-neutral-400 hover:bg-neutral-100 hover:text-oxfordBlue'
+              }`}
+              aria-label="Close sidebar"
+            >
+              <FiX className="text-lg" />
+            </button>
+          </div>
 
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-5">
-          <ul className="space-y-2">
-            {items.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <li key={item.href} className={item.mobileOnly ? 'lg:hidden' : undefined}>
-                  <Link
-                    href={item.href}
-                    onClick={closeSidebar}
-                    title={item.tooltip || item.label}
-                    className={`
-                      flex items-center gap-3 rounded-lg
-                      transition-all duration-200 group text-sm px-4 py-2.5 relative
-                      ${isActive
-                        ? (usesPortalSidebar ? 'coordinator-nav-active' : 'bg-neutral-100 text-oxfordBlue font-medium')
-                        : (usesPortalSidebar ? '' : 'text-neutral-600 hover:bg-neutral-50 hover:text-oxfordBlue')
-                      }
-                    `}
-                  >
-                    <span
-                      className={`text-lg flex-shrink-0 ${
-                        isActive
-                          ? (usesPortalSidebar ? 'text-white' : 'text-oxfordBlue')
-                          : (usesPortalSidebar ? 'text-white/60 group-hover:text-white' : 'text-neutral-400 group-hover:text-oxfordBlue')
-                      }`}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-5">
+            <ul className="space-y-2">
+              {items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <li key={item.href} className={item.mobileOnly ? 'lg:hidden' : undefined}>
+                    <Link
+                      href={item.href}
+                      onClick={closeSidebar}
+                      title={item.tooltip || item.label}
+                      className={`
+                        relative flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm
+                        transition-all duration-200 group
+                        ${
+                          isActive
+                            ? usesPortalSidebar
+                              ? 'coordinator-nav-active'
+                              : 'bg-neutral-100 font-medium text-oxfordBlue'
+                            : usesPortalSidebar
+                              ? ''
+                              : 'text-neutral-600 hover:bg-neutral-50 hover:text-oxfordBlue'
+                        }
+                      `}
                     >
-                      {item.icon}
-                    </span>
-                    <span className="flex-1 overflow-hidden">
-                      {item.label}
-                    </span>
-                    {item.badge !== undefined && (
-                      <span className="px-2 py-0.5 text-xs bg-archivumRed text-white rounded-full font-medium">
-                        {item.badge}
+                      <span
+                        className={`flex-shrink-0 text-lg ${
+                          isActive
+                            ? usesPortalSidebar
+                              ? 'text-white'
+                              : 'text-oxfordBlue'
+                            : usesPortalSidebar
+                              ? 'text-white/60 group-hover:text-white'
+                              : 'text-neutral-400 group-hover:text-oxfordBlue'
+                        }`}
+                      >
+                        {item.icon}
                       </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      </aside>
+                      <span className="flex-1 overflow-hidden">{item.label}</span>
+                      {item.badge !== undefined ? (
+                        <span className="rounded-full bg-archivumRed px-2 py-0.5 text-xs font-medium text-white">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </aside>
       </div>
     </>
   );

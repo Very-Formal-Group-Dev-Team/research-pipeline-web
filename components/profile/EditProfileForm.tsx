@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FiSave, FiUploadCloud } from 'react-icons/fi';
 import Button from '@/components/Button';
 import Input from '@/components/ui/Input';
 import Avatar from '@/components/ui/Avatar';
 import { updateUserProfile, uploadUserAvatar } from '@/lib/api/users';
+import { toast } from 'sonner';
 import {
   formControlClassName,
   formControlTextSizeClassName,
@@ -21,8 +23,23 @@ export interface EditProfileUser {
 
 export interface EditProfileFormProps {
   user: EditProfileUser;
-  onClose: () => void;
+  onSaved: () => void;
   statusPlaceholder?: string;
+}
+
+const ACCEPTED_AVATAR_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+]);
+
+const ACCEPTED_AVATAR_EXTENSION = /\.(jpe?g|png|webp)$/i;
+
+function isAcceptedAvatarFile(file: File): boolean {
+  const mime = (file.type || '').toLowerCase();
+  if (mime && ACCEPTED_AVATAR_MIME_TYPES.has(mime)) return true;
+  return ACCEPTED_AVATAR_EXTENSION.test(file.name);
 }
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
@@ -40,7 +57,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
 
 export default function EditProfileForm({
   user,
-  onClose,
+  onSaved,
   statusPlaceholder = 'Add a short status',
 }: EditProfileFormProps) {
   const [name, setName] = useState(user.name);
@@ -49,9 +66,27 @@ export default function EditProfileForm({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    setName(user.name);
+    setStatusText(user.statusText || '');
+    setAvatarPreview(user.avatarUrl || '');
+    setAvatarFile(null);
+  }, [user.name, user.statusText, user.avatarUrl]);
+
+  const profileDirty = useMemo(
+    () =>
+      name.trim() !== user.name ||
+      statusText.trim() !== (user.statusText || '') ||
+      avatarFile !== null,
+    [name, statusText, avatarFile, user.name, user.statusText],
+  );
+
   const handleUpdate = async () => {
+    if (!profileDirty) return;
+
     setError(null);
 
     if (!name.trim() || name.trim().length < 2) {
@@ -83,7 +118,8 @@ export default function EditProfileForm({
         }
       }
 
-      onClose();
+      toast.success('Changes saved');
+      onSaved();
     } catch {
       setError('An unexpected error occurred');
     } finally {
@@ -91,15 +127,54 @@ export default function EditProfileForm({
     }
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processAvatarFile = (file: File) => {
+    if (!isAcceptedAvatarFile(file)) {
+      setError('Only JPG, PNG, and WebP images are allowed');
+      return;
+    }
+    setError(null);
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       setAvatarPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processAvatarFile(file);
+    e.target.value = '';
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    processAvatarFile(file);
   };
 
   return (
@@ -110,42 +185,90 @@ export default function EditProfileForm({
         void handleUpdate();
       }}
     >
-      <p className="text-sm text-neutral-600">
-        Update your display name, status, and profile photo.
-      </p>
-
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-neutral-200 bg-neutral-50/50 px-4 py-5">
-        <Avatar src={avatarPreview} name={name} size="lg" />
-        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-          Change photo
+      <div className="flex items-start justify-between gap-4">
+        <p className="min-w-0 flex-1 text-sm text-neutral-600">
+          Update your display name, status, and profile photo.
+        </p>
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          className="shrink-0"
+          disabled={loading || !profileDirty}
+          loading={loading}
+          leftIcon={!loading ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
+        >
+          {loading ? 'Saving…' : 'Save changes'}
         </Button>
-        <p className="text-xs text-neutral-500">JPG, PNG, or WebP</p>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          ref={fileInputRef}
-          onChange={handleAvatarChange}
-          aria-label="Upload profile photo"
-        />
       </div>
 
-      <div className="space-y-4">
-        <Input
-          label="Display name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter your display name"
-          responsiveText
-          fullWidth
-          required
-        />
+      <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2">
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Upload profile photo"
+          className={`flex min-h-full min-w-0 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+            isDragging
+              ? 'border-primary-400 bg-primary-50'
+              : avatarFile
+                ? 'border-success-400 bg-success-50'
+                : 'border-neutral-300 hover:border-primary-400 hover:bg-neutral-50'
+          }`}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleAvatarChange}
+            aria-hidden
+          />
+          <Avatar src={avatarPreview} name={name} size="lg" />
+          {avatarFile ? (
+            <div className="flex flex-col items-center gap-1">
+              <p className="font-medium text-success-700">{avatarFile.name}</p>
+              <p className="text-sm text-neutral-500">Click or drop to replace</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <FiUploadCloud className="h-8 w-8 text-neutral-400" />
+              <p className="font-medium text-neutral-600">
+                {isDragging
+                  ? 'Drop your photo here'
+                  : 'Drop your photo here, or click to browse'}
+              </p>
+              <p className="text-sm text-neutral-400">JPG, PNG, or WebP</p>
+            </div>
+          )}
+        </div>
 
-        <ReadOnlyField label="Email" value={user.email} />
+        <div className="flex min-w-0 flex-col justify-center gap-4">
+          <Input
+            label="Display name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter your display name"
+            responsiveText
+            fullWidth
+            required
+          />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <ReadOnlyField label="Email" value={user.email} />
+
           <ReadOnlyField label="Role" value={user.role} />
+
           <Input
             label="Status"
             type="text"
@@ -163,15 +286,6 @@ export default function EditProfileForm({
           {error}
         </div>
       ) : null}
-
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-          Cancel
-        </Button>
-        <Button type="submit" variant="primary" disabled={loading} loading={loading}>
-          {loading ? 'Saving…' : 'Save changes'}
-        </Button>
-      </div>
     </form>
   );
 }

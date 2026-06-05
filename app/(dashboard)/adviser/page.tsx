@@ -13,10 +13,8 @@ import { getMyNotifications } from '@/lib/api/notifications';
 import {
   getAdvisedProjectsWithStats,
   getAdviserDashboardStats,
-  getMyInvitations,
   resolveAdviserDashboardStats,
   type AdviserDashboardStats,
-  type Invitation,
   type Project,
 } from '@/lib/api/projects';
 import type { Defense } from '@/lib/api/defenses';
@@ -70,12 +68,11 @@ export default function AdviserDashboardPage() {
     let cancelled = false;
 
     async function loadDashboard() {
-      const [scheduleRes, advisedRes, statsRes, notificationsRes, invitationsRes] = await Promise.all([
+      const [scheduleRes, advisedRes, statsRes, notificationsRes] = await Promise.all([
         getMySchedule(),
         getAdvisedProjectsWithStats(),
         getAdviserDashboardStats(),
         getMyNotifications(12),
-        getMyInvitations(),
       ]);
 
       if (cancelled) return;
@@ -105,37 +102,19 @@ export default function AdviserDashboardPage() {
         resolveAdviserDashboardStats(statsFromEndpoint, advisedProjects, upcomingFallback),
       );
 
-      const notificationActivity: RecentActivityItem[] = (notificationsRes.data || []).map((row) => ({
-        id: `notif:${row.id}`,
-        title: row.title,
-        message: row.message,
-        createdAt: row.created_at,
-        isUnread: !row.is_read,
-        badgeLabel: getNotificationTypeLabel(row.type),
-        badgeVariant: getNotificationVariant(row.type),
-      }));
-
-      const invitationActivity: RecentActivityItem[] = (invitationsRes.data || []).map(
-        (row: Invitation) => ({
-          id: `inv:${row.id}`,
-          title: row.project_title,
-          message: `Invited by ${row.invited_by_name} | Role: ${row.role}`,
-          createdAt: row.invited_at,
-          isUnread: true,
-          badgeLabel: 'Invitation',
-          badgeVariant: 'primary',
-        }),
-      );
-
-      const mergedActivity = [...invitationActivity, ...notificationActivity]
-        .sort((a, b) => {
-          const left = new Date(a.createdAt).getTime();
-          const right = new Date(b.createdAt).getTime();
-          return right - left;
-        })
+      const recentActivityItems: RecentActivityItem[] = (notificationsRes.data || [])
+        .map((row) => ({
+          id: row.id,
+          title: row.title,
+          message: row.message,
+          createdAt: row.created_at,
+          isUnread: !row.is_read,
+          badgeLabel: getNotificationTypeLabel(row.type),
+          badgeVariant: getNotificationVariant(row.type),
+        }))
         .slice(0, 6);
 
-      setRecentActivity(mergedActivity);
+      setRecentActivity(recentActivityItems);
 
       setScheduleLoading(false);
       setStatsLoading(false);
@@ -215,14 +194,14 @@ export default function AdviserDashboardPage() {
                   description="Latest updates from your advisees"
                   icon={<FiActivity className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
                 />
-                <div className="space-y-3">
+                <div className="max-h-80 space-y-3 overflow-y-auto overscroll-contain pr-0.5">
                   {recentActivity.length === 0 ? (
                     <p className="text-sm text-neutral-600">No recent activity</p>
                   ) : (
                     recentActivity.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-start justify-between gap-3 rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2"
+                        className="flex items-start justify-between gap-3 rounded-lg border border-solid border-neutral-200 bg-neutral-50 px-3 py-2"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-neutral-800 truncate">{item.title}</p>

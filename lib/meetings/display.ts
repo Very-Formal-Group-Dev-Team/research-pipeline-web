@@ -79,6 +79,13 @@ export function formatMeetingTime(iso?: string | null): string {
   });
 }
 
+export function formatScheduleTimeRange(start?: string | null, end?: string | null): string {
+  const startLabel = formatMeetingTime(start);
+  if (!end) return startLabel;
+  const endLabel = formatMeetingTime(end);
+  return endLabel !== '-' ? `${startLabel} – ${endLabel}` : startLabel;
+}
+
 export function formatMeetingDateCompact(iso?: string | null): string {
   const parsed = parseMeetingDate(iso);
   if (!parsed) return '-';
@@ -90,12 +97,29 @@ export function formatMeetingDateCompact(iso?: string | null): string {
   });
 }
 
+export type ModalityKind = 'online' | 'in-person' | 'hybrid' | 'unknown';
+
+export function normalizeModalityKind(modality?: string | null): ModalityKind {
+  const normalized = (modality || '').trim().toLowerCase();
+  if (normalized === 'online') return 'online';
+  if (normalized === 'hybrid') return 'hybrid';
+  if (
+    normalized === 'in-person' ||
+    normalized === 'in person' ||
+    normalized === 'face-to-face' ||
+    normalized === 'face to face'
+  ) {
+    return 'in-person';
+  }
+  return normalized ? 'unknown' : 'online';
+}
+
 export function formatModalityLabel(modality?: string | null): string {
   if (!modality) return 'Not specified';
-  const normalized = modality.trim().toLowerCase();
-  if (normalized === 'face-to-face' || normalized === 'face to face') return 'Face to face';
-  if (normalized === 'online') return 'Online';
-  if (normalized === 'hybrid') return 'Hybrid';
+  const kind = normalizeModalityKind(modality);
+  if (kind === 'online') return 'Online';
+  if (kind === 'hybrid') return 'Hybrid';
+  if (kind === 'in-person') return 'Face-to-Face';
   return modality;
 }
 

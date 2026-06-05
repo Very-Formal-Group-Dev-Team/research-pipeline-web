@@ -189,8 +189,13 @@ export default function StudentProjectsPage() {
             aria-modal="true"
             aria-label={`${expandedProject.title} details`}
           >
-            <Card padding="none" shadow="hard" className="overflow-hidden rounded-xl border-neutral-300">
-              <div className="flex items-start justify-between gap-4 border-b border-neutral-200 bg-neutral-50 px-5 py-4 sm:px-6 sm:py-5">
+            <Card
+              padding="none"
+              shadow="hard"
+              hoverShadow={false}
+              className="overflow-hidden rounded-md border border-neutral-300"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-neutral-300 bg-neutral-50 px-5 py-4 sm:px-6 sm:py-5">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs uppercase tracking-[0.14em] text-primary-600">Project overview</p>
                   <h2 className="mt-1 font-serif text-2xl text-primary-700 break-words">{expandedProject.title}</h2>
@@ -219,7 +224,7 @@ export default function StudentProjectsPage() {
               </div>
 
               <div className="max-h-[72vh] space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
-                <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 sm:p-5">
+                <section className="rounded-sm border border-neutral-300 bg-neutral-50 p-4 transition-all hover:border-neutral-400 hover:shadow-lg sm:p-5">
                   <p className="text-xs uppercase tracking-[0.14em] text-primary-600">Abstract</p>
                   <p className="mt-2 text-sm leading-relaxed text-neutral-700 sm:text-base">
                     {projectAbstract(expandedProject) || 'No abstract available yet.'}
@@ -253,7 +258,7 @@ export default function StudentProjectsPage() {
                         return (
                           <li
                             key={member.id}
-                            className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-2"
+                            className="flex items-center justify-between gap-3 rounded-sm border border-neutral-300 bg-white px-3 py-2 transition-all hover:border-neutral-400 hover:shadow-lg"
                           >
                             <div className="flex min-w-0 items-center gap-3">
                               <Avatar
@@ -382,54 +387,55 @@ export default function StudentProjectsPage() {
             {projects.map((project) => {
               const abstractText = projectAbstract(project);
               return (
-                <div key={project.id}>
+                <div key={project.id} className="h-full">
                 <Card
                   hover
-                  className="h-full"
+                  className="flex h-full flex-col justify-between"
                   onClick={() => router.push(`/student/projects/${project.id}`)}
                 >
-                  <div className="flex items-start justify-between">
-                    <FiFolder className="text-2xl text-primary-500" />
-                    <div className="flex items-center gap-2">
-                      {project.member_role && (
-                        <Badge
-                          variant={project.member_role === 'adviser' ? 'success' : 'primary'}
-                          size="sm"
-                          className="capitalize"
-                        >
-                          {project.member_role === 'adviser' ? 'adviser' :
-                           project.member_role === 'leader' ? 'leader' : 'contributor'}
-                        </Badge>
-                      )}
-                      <StatusIcon status={project.status} />
+                  <div className="min-w-0">
+                    <div className="flex items-start justify-between">
+                      <FiFolder className="text-2xl text-primary-500" />
+                      <div className="flex items-center gap-2">
+                        {project.member_role && (
+                          <Badge
+                            variant={project.member_role === 'adviser' ? 'success' : 'primary'}
+                            size="sm"
+                            className="capitalize"
+                          >
+                            {project.member_role === 'adviser' ? 'adviser' :
+                             project.member_role === 'leader' ? 'leader' : 'contributor'}
+                          </Badge>
+                        )}
+                        <StatusIcon status={project.status} />
+                      </div>
                     </div>
+                    <CardTitle className="mt-3">{project.title}</CardTitle>
+                    <CardDescription
+                      lines={2}
+                      uniformHeight
+                      className={`italic ${
+                        abstractText
+                          ? ''
+                          : 'text-neutral-500/60'
+                      }`}
+                    >
+                      <>
+                        <span>{abstractText ? buildAbstractPreview(abstractText) : 'No abstract available'}</span>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void openExpandedProject(project);
+                          }}
+                          className="ml-1.5 font-sans not-italic text-primary-700 underline underline-offset-2 hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm"
+                        >
+                          See more
+                        </button>
+                      </>
+                    </CardDescription>
                   </div>
-                  <CardTitle className="mt-4">{project.title}</CardTitle>
-                  <CardDescription
-                    lines={2}
-                    uniformHeight
-                    className={`italic ${
-                      abstractText
-                        ? ''
-                        : 'text-neutral-500/60'
-                    }`}
-                  >
-                    <>
-                      <span>{abstractText ? buildAbstractPreview(abstractText) : 'No abstract available'}</span>
-                      <span>{' '}</span>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          void openExpandedProject(project);
-                        }}
-                        className="font-sans not-italic text-primary-700 underline underline-offset-2 hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm"
-                      >
-                        See more
-                      </button>
-                    </>
-                  </CardDescription>
                   <div className="mt-4 flex items-center justify-between gap-4 border-t border-neutral-300 pt-4 text-sm text-neutral-600">
                     <div className="min-w-0 flex-1">
                       <span>{formatProjectCardMeta(project)}</span>

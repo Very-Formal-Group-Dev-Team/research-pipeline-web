@@ -219,10 +219,10 @@ export function deriveAdviserProjectStats(projects: Project[]) {
   let activeProjects = 0;
   let completedProjects = 0;
   for (const project of projects) {
-    const status = String(project.status || 'draft').toLowerCase();
-    if (status === 'completed' || status === 'archived') {
+    const status = String(project.status || 'topic_proposal').toLowerCase();
+    if (status === 'completed' || status === 'for_publication' || status === 'archived') {
       completedProjects += 1;
-    } else {
+    } else if (status !== 'rejected') {
       activeProjects += 1;
     }
   }
@@ -276,7 +276,7 @@ export function getMyInvitations() {
 
 /** Respond to an invitation (accept or decline). */
 export function respondToInvitation(invitationId: string, accept: boolean) {
-  return post<{ success: boolean; status: string }>(
+  return post<{ success: boolean; status: string; projectId?: string; role?: string }>(
     `/projects/invitations/${invitationId}/respond`,
     { accept },
   );
@@ -285,6 +285,13 @@ export function respondToInvitation(invitationId: string, accept: boolean) {
 /** Fetch pending invitations for a specific project. */
 export function getProjectInvitations(projectId: string) {
   return get<ProjectMember[]>(`/projects/${projectId}/invitations`);
+}
+
+/** Remove an accepted member or revert a pending invitation. */
+export function removeProjectMember(projectId: string, memberId: string) {
+  return del<{ success: boolean; reverted?: boolean; removed?: boolean }>(
+    `/projects/${projectId}/members/${memberId}`,
+  );
 }
 
 /** Create a defense schedule for a project. */

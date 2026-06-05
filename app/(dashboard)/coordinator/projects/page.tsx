@@ -13,18 +13,17 @@ import {
   type InstitutionProject,
 } from '@/lib/api/coordinator';
 import Button from '@/components/Button';
-import { formatStatusLabel } from '@/lib/utils/formatStatus';
-
-type BadgeVariant = 'success' | 'warning' | 'error' | 'default' | 'primary';
+import {
+  formatProjectStageLabel,
+  projectStageBadgeVariant,
+} from '@/lib/utils/projectStage';
+import type { BadgeVariant } from '@/components/ui/Badge';
 
 function projectStatusBadge(status: string): { label: string; variant: BadgeVariant } {
-  switch (status) {
-    case 'completed': return { label: formatStatusLabel('completed'), variant: 'success' };
-    case 'in_progress': return { label: formatStatusLabel('in_progress'), variant: 'primary' };
-    case 'pending': return { label: formatStatusLabel('pending'), variant: 'warning' };
-    case 'rejected': return { label: formatStatusLabel('rejected'), variant: 'error' };
-    default: return { label: formatStatusLabel(status), variant: 'default' };
-  }
+  return {
+    label: formatProjectStageLabel(status),
+    variant: projectStageBadgeVariant(status),
+  };
 }
 
 function formatDate(iso: string) {
@@ -33,6 +32,17 @@ function formatDate(iso: string) {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function formatProjectCourse(project: InstitutionProject): string {
+  const entered = project.course_label?.trim();
+  if (entered) return entered;
+  if (project.course_name) {
+    return project.course_code
+      ? `${project.course_name} (${project.course_code})`
+      : project.course_name;
+  }
+  return '—';
 }
 
 export default function CoordinatorProjectsPage() {
@@ -75,7 +85,9 @@ export default function CoordinatorProjectsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-primary-700">All Projects</h1>
-          <p className="text-neutral-600 mt-1">View all projects across your institution</p>
+          <p className="text-neutral-600 mt-1">
+            Projects advised by faculty assigned to your courses
+          </p>
         </div>
 
         <div className="flex gap-2 border-b border-neutral-200 pb-0">
@@ -171,39 +183,62 @@ export default function CoordinatorProjectsPage() {
         ) : allProjects.length === 0 ? (
           <Card>
             <div className="text-center py-8 text-neutral-500">
-              No projects found in your institution.
+              No projects found under your assigned advisers.
             </div>
           </Card>
         ) : (
-          <div className="overflow-x-auto">
-            <Card padding="none">
-              <table className="w-full text-sm text-left">
+          <Card padding="none" className="overflow-hidden">
+            <div className="overflow-x-auto overscroll-x-contain">
+              <table className="min-w-full w-max text-sm text-left">
                 <thead className="bg-neutral-50 border-b border-neutral-200">
-                  <tr>
-                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Title</th>
-                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Code</th>
-                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Course</th>
-                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Status</th>
-                    <th className="px-4 py-3 sm:px-6 font-medium text-neutral-600">Created</th>
+                  <tr className="bg-neutral-50">
+                    <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
+                      Title
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
+                      Code
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
+                      Course
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
+                      Status
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
+                      Created
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-100">
+                <tbody className="divide-y divide-neutral-100 bg-white">
                   {allProjects.map((project) => {
                     const badge = projectStatusBadge(project.status);
                     return (
-                      <tr key={project.id} className="hover:bg-neutral-50">
-                        <td className="px-4 py-3 sm:px-6 font-medium text-neutral-800 truncate max-w-xs">{project.title}</td>
-                        <td className="px-4 py-3 sm:px-6 text-neutral-600">{project.project_code}</td>
-                        <td className="px-4 py-3 sm:px-6 text-neutral-600">{project.course_name ? `${project.course_name} (${project.course_code})` : '—'}</td>
-                        <td className="px-4 py-3 sm:px-6"><Badge variant={badge.variant}>{badge.label}</Badge></td>
-                        <td className="px-4 py-3 sm:px-6 text-neutral-500">{formatDate(project.created_at)}</td>
+                      <tr key={project.id} className="bg-white hover:bg-neutral-50">
+                        <td className="min-w-[10rem] max-w-xs px-4 py-3 sm:px-6 font-medium text-neutral-800">
+                          <span className="line-clamp-2">{project.title}</span>
+                        </td>
+                        <td
+                          className="max-w-[11rem] truncate px-4 py-3 font-mono text-xs text-neutral-600 sm:px-6 sm:text-sm sm:font-sans"
+                          title={project.project_code}
+                        >
+                          {project.project_code}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 sm:px-6 text-neutral-600">
+                          {formatProjectCourse(project)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 sm:px-6">
+                          <Badge variant={badge.variant}>{badge.label}</Badge>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 sm:px-6 text-neutral-500">
+                          {formatDate(project.created_at)}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            </Card>
-          </div>
+            </div>
+          </Card>
         )}
       </div>
     </DashboardLayout>

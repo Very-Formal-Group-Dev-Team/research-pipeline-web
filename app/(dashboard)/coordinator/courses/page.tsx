@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
-import Modal from '@/components/ui/Modal';
+import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { formLabelClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
 import {
@@ -27,6 +27,7 @@ import {
   type Course,
   type CourseAdviser,
 } from '@/lib/api/coordinator';
+import { toast } from 'sonner';
 import { useUserSearch } from '@/lib/hooks/useUserSearch';
 import type { SearchUserResult } from '@/lib/api/users';
 
@@ -63,6 +64,15 @@ export default function CoordinatorCoursesPage() {
     const courseAdviserIds = new Set((addAdviserCourse.advisers || []).map((a) => a.id));
     return results.filter((u) => !courseAdviserIds.has(u.id));
   }, [results, addAdviserCourse]);
+
+  const courseFormDirty = useMemo(() => {
+    if (!editingCourse) return true;
+    return (
+      formData.courseName.trim() !== editingCourse.course_name ||
+      formData.code.trim() !== editingCourse.code ||
+      formData.description.trim() !== (editingCourse.description || '').trim()
+    );
+  }, [editingCourse, formData]);
 
   async function loadCourses() {
     setLoading(true);
@@ -115,6 +125,8 @@ export default function CoordinatorCoursesPage() {
       setFormError('Course name and code are required.');
       return;
     }
+    if (editingCourse && !courseFormDirty) return;
+
     setSubmitting(true);
     setFormError('');
     if (editingCourse) {
@@ -123,6 +135,7 @@ export default function CoordinatorCoursesPage() {
       else {
         closeForm();
         await loadCourses();
+        toast.success('Changes saved');
       }
     } else {
       const res = await createCourse(formData);
@@ -335,10 +348,16 @@ export default function CoordinatorCoursesPage() {
         )}
       </div>
 
-      <Modal isOpen={isFormOpen} onClose={closeForm} title={editingCourse ? 'Edit Course' : 'New Course'}>
-        <div className="p-6 space-y-4">
+      <Modal
+        isOpen={isFormOpen}
+        onClose={closeForm}
+        title={editingCourse ? 'Edit Course' : 'New Course'}
+        size="sm"
+        dense
+      >
+        <div className="space-y-3">
           {formError && (
-            <div className="p-3 bg-error-50 text-error-700 text-sm rounded-lg">{formError}</div>
+            <div className="rounded-lg bg-error-50 p-2.5 text-sm text-error-700">{formError}</div>
           )}
           <Input
             label="Course Name"
@@ -363,20 +382,26 @@ export default function CoordinatorCoursesPage() {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-              rows={3}
+              rows={2}
               className={formTextareaResponsiveClassName}
               placeholder="Brief description of the course..."
             />
           </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={closeForm}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Saving...' : editingCourse ? 'Update' : 'Create'}
-            </Button>
-          </div>
         </div>
+        <ModalFooter className="!mt-4 !pt-3">
+          <Button variant="outline" size="sm" onClick={closeForm} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={submitting || (Boolean(editingCourse) && !courseFormDirty)}
+            loading={submitting}
+          >
+            {submitting ? 'Saving...' : editingCourse ? 'Update' : 'Create'}
+          </Button>
+        </ModalFooter>
       </Modal>
 
       <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Course">
