@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FiCalendar, FiPlus, FiSave, FiSearch, FiShield, FiX } from 'react-icons/fi';
 import { toast } from 'sonner';
 
@@ -26,6 +26,8 @@ import {
 } from '@/components/coordinator/CoordinatorTimeRangeFields';
 import CoordinatorGroupMultiSelect from '@/components/coordinator/CoordinatorGroupMultiSelect';
 import CoordinatorDefenseSections from '@/components/coordinator/CoordinatorDefenseSections';
+import { buildDefenseIdsByProjectId } from '@/lib/coordinator/defenseBatchEvent';
+import { saveDefenseBatchSession } from '@/lib/coordinator/defenseBatchSession';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   cancelCoordinatorEvent,
@@ -45,6 +47,7 @@ import {
 } from '@/lib/coordinator/institutionEventDisplay';
 import {
   bookDefenseSchedule,
+  type BookDefenseScheduleResult,
   getCoordinatorRubrics,
   getCourseGroups,
   getCourses,
@@ -85,6 +88,7 @@ const EMPTY_DEFENSE_FORM = {
 };
 
 export default function CoordinatorEventsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { user, handleLogout } = useDashboardUser('Coordinator');
 
@@ -122,7 +126,6 @@ export default function CoordinatorEventsPage() {
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [courseGroups, setCourseGroups] = useState<CourseGroup[]>([]);
   const [courseGroupsLoading, setCourseGroupsLoading] = useState(false);
-
   const loadEvents = useCallback(async () => {
     const [eventsRes, pendingRes] = await Promise.all([
       getCoordinatorEvents(),
@@ -289,7 +292,86 @@ export default function CoordinatorEventsPage() {
     e.preventDefault();
     setError(null);
 
-    if (defenseScheduleMode === 'groups' && !selectedGroupIds.length) {
+    if (defenseScheduleMode === 'course') {
+      setSubmitting(true);
+
+      const groupsRes = await getCourseGroups(defenseForm.courseId);
+      if (groupsRes.error) {
+        setSubmitting(false);
+        setError(groupsRes.error);
+        return;
+      }
+
+      const groups = groupsRes.data ?? [];
+      if (!groups.length) {
+        setSubmitting(false);
+        setError('No groups found for this course.');
+        return;
+      }
+
+      const bookRes = await bookDefenseSchedule({
+        courseId: defenseForm.courseId,
+        rubricId: defenseForm.rubricId || undefined,
+        defenseType: defenseForm.defenseType,
+        date: defenseForm.date,
+        startTime: defenseForm.startTime,
+        endTime: defenseForm.endTime,
+        location: defenseForm.location.trim(),
+        venue: defenseForm.venue.trim() || undefined,
+        modality: defenseForm.modality,
+        panelistIds: selectedPanelists.length
+          ? selectedPanelists.map((panelist) => panelist.id)
+          : undefined,
+      });
+
+      setSubmitting(false);
+
+      if (bookRes.error) {
+        setError(bookRes.error);
+        return;
+      }
+
+      if (bookRes.data && 'conflict' in bookRes.data && bookRes.data.conflict) {
+        const count = bookRes.data.conflicts?.length ?? 0;
+        const domains = [...new Set((bookRes.data.conflicts || []).map((c) => c.domain))].join(', ');
+        setError(
+          count
+            ? `Schedule conflict (${count} overlap${count === 1 ? '' : 's'}${domains ? `: ${domains}` : ''}). Use a different time or location.`
+            : 'Schedule conflict detected. Use a different time or location.',
+        );
+        return;
+      }
+
+      const bookedDefenses =
+        (bookRes.data as BookDefenseScheduleResult | undefined)?.booked_defenses ?? [];
+      const course = courses.find((item) => item.id === defenseForm.courseId);
+
+      saveDefenseBatchSession({
+        mode: 'create',
+        draft: {
+          courseId: defenseForm.courseId,
+          courseName: course ? `${course.course_name} (${course.code})` : 'Selected course',
+          defenseType: defenseForm.defenseType,
+          date: defenseForm.date,
+          startTime: defenseForm.startTime,
+          endTime: defenseForm.endTime,
+          location: defenseForm.location,
+          venue: defenseForm.venue,
+          modality: defenseForm.modality,
+          rubricId: defenseForm.rubricId,
+          panelistIds: selectedPanelists.map((panelist) => panelist.id),
+        },
+        eventGroups: groups,
+        courseGroups: groups,
+        defenseIdsByProjectId: buildDefenseIdsByProjectId(bookedDefenses),
+      });
+      closeScheduleModal();
+      setDefenseRefreshKey((key) => key + 1);
+      router.push('/coordinator/events/edit');
+      return;
+    }
+
+    if (!selectedGroupIds.length) {
       setError('Select at least one group.');
       return;
     }
@@ -764,7 +846,7 @@ export default function CoordinatorEventsPage() {
                     type="text"
                     value={panelistQuery}
                     onChange={(e) => setPanelistQuery(e.target.value)}
-                    className="coordinator-panelist-search w-full rounded-md border border-neutral-300 text-sm focus:outline-none focus:ring-2 focus:ring-coordinator-rose/40"
+                    className="coordinator-panelist-search w-full rounded-sm border border-neutral-300 text-sm focus:outline-none focus:ring-2 focus:ring-coordinator-rose/40"
                     placeholder="Search advisers or coordinators by name or email..."
                   />
                   {panelistSuggestions.length > 0 ? (
@@ -846,7 +928,13 @@ export default function CoordinatorEventsPage() {
               >
                 Back
               </Button>
-              <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Schedule Defense'}</Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting
+                  ? 'Loading…'
+                  : defenseScheduleMode === 'course'
+                    ? 'Continue to Batches'
+                    : 'Schedule Defense'}
+              </Button>
             </div>
           </form>
         )}

@@ -33,8 +33,8 @@ export const COORDINATOR_SCHEDULE_EVENT_FORM_CLASS = [
 /** Schedule defense modal — compact fields plus panelist search padding. */
 export const COORDINATOR_SCHEDULE_DEFENSE_FORM_CLASS = [
   COORDINATOR_SCHEDULE_FORM_CLASS,
-  COORDINATOR_SCHEDULE_COMPACT_FIELD_CLASS,
-  '[&_input.coordinator-panelist-search]:!py-2 [&_input.coordinator-panelist-search]:!pl-11 [&_input.coordinator-panelist-search]:!pr-3',
+  COORDINATOR_SCHEDULE_COMPACT_FIELD_CLASS.replaceAll('!rounded-md', '!rounded-sm'),
+  '[&_input.coordinator-panelist-search]:!rounded-sm [&_input.coordinator-panelist-search]:!py-2 [&_input.coordinator-panelist-search]:!pl-11 [&_input.coordinator-panelist-search]:!pr-3',
 ].join(' ');
 
 /** Modal width hugs the date/time row (see Modal size `schedule`). */
