@@ -25,7 +25,6 @@ import {
   getPaperVersionDiff,
   type PaperVersion,
   type DiffResult,
-  type DiffChange,
 } from '@/lib/api/paperVersions';
 
 function formatBytes(bytes: number): string {
@@ -51,31 +50,7 @@ function shortHash(id: string): string {
   return id.replace(/-/g, '').slice(0, 7);
 }
 
-function DiffView({ changes }: { changes: DiffChange[] }) {
-  return (
-    <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-all max-h-none sm:max-h-96 overflow-visible sm:overflow-y-auto">
-      {changes.map((change, i) => {
-        if (change.added) {
-          return (
-            <span key={i} className="bg-success-100 text-success-800 decoration-success-400">
-              {change.value}
-            </span>
-          );
-        }
-        if (change.removed) {
-          return (
-            <span key={i} className="bg-error-100 text-error-800 line-through decoration-error-400">
-              {change.value}
-            </span>
-          );
-        }
-        return <span key={i}>{change.value}</span>;
-      })}
-    </div>
-  );
-}
-
-function RenderedDiffView({ diff, mode }: { diff: DiffResult; mode: 'current' | 'previous' }) {
+function RenderedDiffView({ diff, mode, className }: { diff: DiffResult; mode: 'current' | 'previous'; className?: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -177,7 +152,7 @@ function RenderedDiffView({ diff, mode }: { diff: DiffResult; mode: 'current' | 
   }, [diff, mode]);
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4 max-h-none sm:max-h-96 overflow-auto">
+    <div className={`rounded-lg border border-neutral-200 bg-white p-4 overflow-y-auto ${className ?? 'max-h-96'}`}>
       <div ref={containerRef} />
     </div>
   );
@@ -188,25 +163,42 @@ function VersionCard({
   isLatest,
   isFirst,
   projectId,
+  isOpen,
+  onToggle,
 }: {
   version: PaperVersion;
   isLatest: boolean;
   isFirst: boolean;
   projectId: string;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'text' | 'rendered'>('text');
   const [renderSide, setRenderSide] = useState<'current' | 'previous'>('current');
+  const hasFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen || hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    setDiffLoading(true);
+    setDiffError(null);
+    getPaperVersionDiff(projectId, version.id).then((res) => {
+      if (res.error) {
+        setDiffError(res.error);
+      } else if (res.data) {
+        setDiff(res.data);
+      }
+      setDiffLoading(false);
+    });
+  }, [isOpen, projectId, version.id]);
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setDownloading(true);
     try {
-      // Extract session token from cookie (same as API client does)
       const tokenMatch = document.cookie.match(/(?:^|;\s*)session_token=([^;]*)/);
       const token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
 
@@ -216,7 +208,7 @@ function VersionCard({
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const res = await fetch(url, { 
+      const res = await fetch(url, {
         credentials: 'include',
         headers,
       });
@@ -237,28 +229,8 @@ function VersionCard({
     }
   };
 
-  const handleToggle = async () => {
-    const willExpand = !expanded;
-    setExpanded(willExpand);
-
-    if (willExpand && !diff && !diffLoading && !isFirst) {
-      setDiffLoading(true);
-      setDiffError(null);
-      const res = await getPaperVersionDiff(projectId, version.id);
-      if (res.error) {
-        setDiffError(res.error);
-      } else if (res.data) {
-        setDiff(res.data);
-      }
-      setDiffLoading(false);
-    }
-  };
-
-  const canDiff = !isFirst;
-
   return (
     <div className="flex gap-3 sm:gap-4">
-      {/* Left timeline dot */}
       <div className="flex flex-col items-center">
         <div
           className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${
@@ -272,19 +244,16 @@ function VersionCard({
         <div className="w-px flex-1 bg-neutral-200 mt-1" />
       </div>
 
-      {/* Card content */}
       <div className="flex-1 mb-4">
         <div
-          onClick={canDiff ? handleToggle : undefined}
-          className={`rounded-xl border p-4 transition-all ${
+          onClick={onToggle}
+          className={`rounded-xl border p-4 transition-all cursor-pointer hover:shadow-sm ${
             isLatest
               ? 'border-primary-200 bg-primary-50/40'
               : 'border-neutral-200 bg-white'
-          } ${canDiff ? 'cursor-pointer hover:shadow-sm' : ''}`}
+          } ${isOpen ? 'ring-1 ring-primary-200 shadow-sm' : ''}`}
         >
-          {/* Header and buttons row */}
           <div className="flex items-start justify-between gap-4 mb-3">
-            {/* Title and badges */}
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-2">
                 <span className="font-semibold text-neutral-900 break-words">
@@ -308,7 +277,6 @@ function VersionCard({
                 )}
               </div>
 
-              {/* Metadata */}
               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-neutral-500">
                 <code className="font-mono bg-neutral-100 px-1.5 py-0.5 rounded text-xs text-neutral-600">
                   {shortHash(version.id)}
@@ -332,7 +300,6 @@ function VersionCard({
               </div>
             </div>
 
-            {/* Download button and expand icon */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={handleDownload}
@@ -347,23 +314,23 @@ function VersionCard({
                 )}
                 <span className="hidden sm:inline">Download</span>
               </button>
-              {canDiff && (
-                <FiChevronDown
-                  className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${
-                    expanded ? 'rotate-180' : ''
-                  }`}
-                />
-              )}
+              <FiChevronDown
+                className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${
+                  isOpen ? 'rotate-180' : ''
+                }`}
+              />
             </div>
           </div>
 
-          {/* Expanded diff view */}
-          {expanded && canDiff && (
-            <div className="mt-4 pt-4 border-t border-neutral-200">
+          {isOpen && (
+            <div
+              className="mt-4 pt-4 border-t border-neutral-200"
+              onClick={(e) => e.stopPropagation()}
+            >
               {diffLoading && (
                 <div className="flex items-center gap-2 text-sm text-neutral-400 py-6 justify-center">
                   <FiRefreshCw className="w-4 h-4 animate-spin" />
-                  Loading diff…
+                  Loading preview…
                 </div>
               )}
 
@@ -375,69 +342,68 @@ function VersionCard({
 
               {diff && !diff.supported && (
                 <p className="text-sm text-neutral-500 italic py-2">
-                  {diff.message || 'Diff not available for this file type.'}
+                  {diff.message || 'Preview not available for this file type.'}
                 </p>
               )}
 
-              {diff && diff.supported && diff.stats && diff.changes && (
+              {diff && diff.supported && (
                 <div className="space-y-3">
-                  {/* View mode toggle: Text or Rendered (HTML) */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex rounded-md bg-neutral-100 p-1">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setViewMode('text'); }}
-                          className={`px-3 py-1 text-sm rounded ${viewMode === 'text' ? 'bg-white' : 'text-neutral-600'}`}
-                        >
-                          Text
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setViewMode('rendered'); }}
-                          className={`px-3 py-1 text-sm rounded ${viewMode === 'rendered' ? 'bg-white' : 'text-neutral-600'}`}
-                        >
-                          Rendered
-                        </button>
-                      </div>
-
-                      {viewMode === 'rendered' && (
-                        <div className="ml-3 inline-flex items-center gap-2 text-sm text-neutral-600">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setRenderSide('current'); }}
-                            className={`px-2 py-1 rounded ${renderSide === 'current' ? 'bg-neutral-200' : ''}`}
-                          >
-                            Current
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setRenderSide('previous'); }}
-                            className={`px-2 py-1 rounded ${renderSide === 'previous' ? 'bg-neutral-200' : ''}`}
-                          >
-                            Previous
-                          </button>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-neutral-700">Document Preview</span>
+                      {!isFirst && diff.stats && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="flex items-center gap-1 text-success-700 font-medium">
+                            <FiPlus className="w-3.5 h-3.5" />
+                            +{diff.stats.addedWords}
+                          </span>
+                          <span className="flex items-center gap-1 text-error-700 font-medium">
+                            <FiMinus className="w-3.5 h-3.5" />
+                            −{diff.stats.removedWords}
+                          </span>
+                          <span className="text-neutral-400 text-xs">
+                            {diff.stats.previousWords} → {diff.stats.currentWords} words
+                          </span>
                         </div>
                       )}
                     </div>
-                    <div className="text-xs text-neutral-400">
-                      {diff.stats.previousWords} → {diff.stats.currentWords} words
+
+                    {!isFirst && diff.previousHtml && (
+                      <div className="inline-flex rounded-md bg-neutral-100 p-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setRenderSide('current'); }}
+                          className={`px-3 py-1 text-xs rounded transition-colors ${renderSide === 'current' ? 'bg-white shadow-sm font-medium text-neutral-800' : 'text-neutral-600 hover:text-neutral-800'}`}
+                        >
+                          Current
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setRenderSide('previous'); }}
+                          className={`px-3 py-1 text-xs rounded transition-colors ${renderSide === 'previous' ? 'bg-white shadow-sm font-medium text-neutral-800' : 'text-neutral-600 hover:text-neutral-800'}`}
+                        >
+                          Previous
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {!isFirst && diff.changes && diff.changes.length > 0 && (
+                    <div className="flex items-center gap-4 text-xs text-neutral-500">
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-3 h-3 rounded bg-success-100 border border-success-300" />
+                        Added text
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-3 h-3 rounded bg-error-100 border border-error-300" />
+                        Removed text
+                      </span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="flex items-center gap-1 text-success-700 font-medium">
-                      <FiPlus className="w-3.5 h-3.5" />
-                      +{diff.stats.addedWords} words
-                    </span>
-                    <span className="flex items-center gap-1 text-error-700 font-medium">
-                      <FiMinus className="w-3.5 h-3.5" />
-                      −{diff.stats.removedWords} words
-                    </span>
-                    <span className="text-neutral-400 text-xs">
-                      {diff.stats.previousWords} → {diff.stats.currentWords} total words
-                    </span>
-                  </div>
-                  {viewMode === 'text' ? (
-                    <DiffView changes={diff.changes} />
-                  ) : (
-                    <RenderedDiffView diff={diff} mode={renderSide} />
                   )}
+
+                  <RenderedDiffView
+                    diff={isFirst ? { ...diff, changes: [] } : diff}
+                    mode={isFirst ? 'current' : renderSide}
+                    className="min-h-[200px] max-h-[65vh]"
+                  />
                 </div>
               )}
             </div>
@@ -447,6 +413,7 @@ function VersionCard({
     </div>
   );
 }
+
 
 //Upload modal
 function UploadVersionModal({
@@ -622,6 +589,7 @@ export default function PaperVersionTimeline({
   const [uploadOpen, setUploadOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  const [openVersionId, setOpenVersionId] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -706,6 +674,8 @@ export default function PaperVersionTimeline({
               isLatest={idx === 0}
               isFirst={idx === versions.length - 1}
               projectId={projectId}
+              isOpen={openVersionId === v.id}
+              onToggle={() => setOpenVersionId((prev) => (prev === v.id ? null : v.id))}
             />
           ))}
           {/* End of timeline dot */}
