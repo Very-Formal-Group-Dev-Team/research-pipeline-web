@@ -132,6 +132,16 @@ export function getCourses() {
   return get<Course[]>('/coordinator/courses');
 }
 
+export interface CourseGroup {
+  id: string;
+  title: string;
+  project_code: string;
+}
+
+export function getCourseGroups(courseId: string) {
+  return get<CourseGroup[]>(`/coordinator/courses/${courseId}/groups`);
+}
+
 export function createCourse(payload: { courseName: string; code: string; description?: string }) {
   return post<Course>('/coordinator/courses', payload);
 }
@@ -312,6 +322,7 @@ export interface BookDefenseSchedulePayload {
   venue?: string;
   modality?: string;
   panelistIds?: string[];
+  projectIds?: string[];
   forceApprove?: boolean;
 }
 

@@ -24,6 +24,7 @@ import {
   COORDINATOR_SCHEDULE_MODAL_SIZE,
   CoordinatorTimeRangeFields,
 } from '@/components/coordinator/CoordinatorTimeRangeFields';
+import CoordinatorGroupMultiSelect from '@/components/coordinator/CoordinatorGroupMultiSelect';
 import CoordinatorDefenseSections from '@/components/coordinator/CoordinatorDefenseSections';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
@@ -45,11 +46,13 @@ import {
 import {
   bookDefenseSchedule,
   getCoordinatorRubrics,
+  getCourseGroups,
   getCourses,
   getInstitutionPanelists,
   getMyInstitution,
   getPendingDefenses,
   type Course,
+  type CourseGroup,
   type Institution,
   type InstitutionAdviser,
   type CoordinatorRubric,
@@ -57,6 +60,7 @@ import {
 
 type PageTab = 'events' | 'pending' | 'approved';
 type ScheduleKind = 'event' | 'defense' | null;
+type DefenseScheduleMode = 'course' | 'groups';
 
 const EMPTY_EVENT_FORM: InstitutionEventFormState = {
   title: '',
@@ -65,6 +69,18 @@ const EMPTY_EVENT_FORM: InstitutionEventFormState = {
   startTime: '',
   endTime: '',
   location: '',
+  modality: 'Online',
+};
+
+const EMPTY_DEFENSE_FORM = {
+  courseId: '',
+  rubricId: '',
+  defenseType: 'proposal' as const,
+  date: '',
+  startTime: '',
+  endTime: '',
+  location: '',
+  venue: '',
   modality: 'Online',
 };
 
@@ -96,30 +112,16 @@ export default function CoordinatorEventsPage() {
   const [rubrics, setRubrics] = useState<CoordinatorRubric[]>([]);
   const [panelistPool, setPanelistPool] = useState<InstitutionAdviser[]>([]);
 
-  const [eventForm, setEventForm] = useState({
-    title: '',
-    description: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    location: '',
-    modality: 'Online' as 'Online' | 'In-Person' | 'Hybrid',
-  });
+  const [eventForm, setEventForm] = useState(EMPTY_EVENT_FORM);
 
-  const [defenseForm, setDefenseForm] = useState({
-    courseId: '',
-    rubricId: '',
-    defenseType: 'proposal' as 'proposal' | 'midterm' | 'final',
-    date: '',
-    startTime: '',
-    endTime: '',
-    location: '',
-    venue: '',
-    modality: 'Online',
-  });
+  const [defenseForm, setDefenseForm] = useState(EMPTY_DEFENSE_FORM);
 
   const [selectedPanelists, setSelectedPanelists] = useState<InstitutionAdviser[]>([]);
   const [panelistQuery, setPanelistQuery] = useState('');
+  const [defenseScheduleMode, setDefenseScheduleMode] = useState<DefenseScheduleMode>('course');
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [courseGroups, setCourseGroups] = useState<CourseGroup[]>([]);
+  const [courseGroupsLoading, setCourseGroupsLoading] = useState(false);
 
   const loadEvents = useCallback(async () => {
     const [eventsRes, pendingRes] = await Promise.all([
@@ -181,6 +183,28 @@ export default function CoordinatorEventsPage() {
     setPanelistQuery('');
   }
 
+  function resetEventForm() {
+    setEventForm(EMPTY_EVENT_FORM);
+  }
+
+  function resetDefenseForm() {
+    setDefenseForm(EMPTY_DEFENSE_FORM);
+  }
+
+  function resetDefenseScheduleMode() {
+    setDefenseScheduleMode('course');
+    setSelectedGroupIds([]);
+    setCourseGroups([]);
+    setCourseGroupsLoading(false);
+  }
+
+  function switchDefenseScheduleMode(mode: DefenseScheduleMode) {
+    if (mode === defenseScheduleMode) return;
+    setDefenseScheduleMode(mode);
+    setSelectedGroupIds([]);
+    setDefenseForm((form) => ({ ...form, startTime: '', endTime: '' }));
+  }
+
   function addPanelist(adviser: InstitutionAdviser) {
     setSelectedPanelists((prev) => [...prev, adviser]);
     setPanelistQuery('');
@@ -209,8 +233,33 @@ export default function CoordinatorEventsPage() {
     setShowScheduleModal(false);
     setScheduleKind(null);
     setError(null);
+    setSubmitting(false);
+    resetEventForm();
+    resetDefenseForm();
     resetPanelistSelection();
+    resetDefenseScheduleMode();
   }
+
+  useEffect(() => {
+    if (defenseScheduleMode !== 'groups' || !defenseForm.courseId) {
+      setCourseGroups([]);
+      setCourseGroupsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCourseGroupsLoading(true);
+
+    void getCourseGroups(defenseForm.courseId).then((res) => {
+      if (cancelled) return;
+      setCourseGroups(res.data ?? []);
+      setCourseGroupsLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [defenseScheduleMode, defenseForm.courseId]);
 
   async function handleCreateEvent(e: React.FormEvent) {
     e.preventDefault();
@@ -233,15 +282,18 @@ export default function CoordinatorEventsPage() {
     }
 
     closeScheduleModal();
-    setEventForm({
-      title: '', description: '', date: '', startTime: '', endTime: '', location: '', modality: 'Online',
-    });
     await loadEvents();
   }
 
   async function handleCreateDefense(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (defenseScheduleMode === 'groups' && !selectedGroupIds.length) {
+      setError('Select at least one group.');
+      return;
+    }
+
     setSubmitting(true);
 
     const res = await bookDefenseSchedule({
@@ -257,6 +309,7 @@ export default function CoordinatorEventsPage() {
       panelistIds: selectedPanelists.length
         ? selectedPanelists.map((panelist) => panelist.id)
         : undefined,
+      projectIds: defenseScheduleMode === 'groups' ? selectedGroupIds : undefined,
     });
 
     setSubmitting(false);
@@ -278,11 +331,6 @@ export default function CoordinatorEventsPage() {
     }
 
     closeScheduleModal();
-    setDefenseForm({
-      courseId: '', rubricId: '', defenseType: 'proposal',
-      date: '', startTime: '', endTime: '', location: '', venue: '', modality: 'Online',
-    });
-    resetPanelistSelection();
     setDefenseRefreshKey((key) => key + 1);
     await loadEvents();
     setActiveTab('approved');
@@ -579,19 +627,56 @@ export default function CoordinatorEventsPage() {
         ) : (
           <form onSubmit={handleCreateDefense} className={`space-y-3 ${COORDINATOR_SCHEDULE_DEFENSE_FORM_CLASS}`}>
             {error ? <p className="text-sm text-error-600 bg-error-50 rounded-lg px-3 py-2">{error}</p> : null}
+            <div
+              className="inline-flex w-full rounded-lg border border-neutral-200 bg-neutral-50 p-1"
+              role="group"
+              aria-label="Defense scheduling mode"
+            >
+              {([
+                { value: 'course' as const, label: 'Course' },
+                { value: 'groups' as const, label: 'Select Groups' },
+              ]).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => switchDefenseScheduleMode(option.value)}
+                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    defenseScheduleMode === option.value
+                      ? 'bg-coordinator-rose text-white shadow-sm'
+                      : 'text-neutral-600 hover:text-coordinator-ink'
+                  }`}
+                  aria-pressed={defenseScheduleMode === option.value}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             <Select
               fullWidth
               responsiveText
               label="Course"
               placeholder="Select course"
               value={defenseForm.courseId}
-              onChange={(e) => setDefenseForm((f) => ({ ...f, courseId: e.target.value }))}
+              onChange={(e) => {
+                const courseId = e.target.value;
+                setDefenseForm((f) => ({ ...f, courseId }));
+                setSelectedGroupIds([]);
+              }}
               options={courses.map((c) => ({
                 value: c.id,
                 label: `${c.course_name} (${c.code})`,
               }))}
               required
             />
+            {defenseScheduleMode === 'groups' ? (
+              <CoordinatorGroupMultiSelect
+                groups={courseGroups}
+                selectedIds={selectedGroupIds}
+                onChange={setSelectedGroupIds}
+                disabled={!defenseForm.courseId}
+                loading={courseGroupsLoading}
+              />
+            ) : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 fullWidth
@@ -751,7 +836,16 @@ export default function CoordinatorEventsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setScheduleKind(null)}>Back</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setScheduleKind(null);
+                  resetDefenseScheduleMode();
+                }}
+              >
+                Back
+              </Button>
               <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Schedule Defense'}</Button>
             </div>
           </form>

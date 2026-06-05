@@ -18,8 +18,8 @@ export const COORDINATOR_SCHEDULE_FORM_CLASS = 'w-full min-w-0 max-w-[32rem]';
 
 /** Compact input/select height for coordinator schedule modals (excludes textareas). */
 const COORDINATOR_SCHEDULE_COMPACT_FIELD_CLASS = [
-  '[&_input]:!rounded-md [&_select]:!rounded-md',
-  '[&_input:not(.coordinator-panelist-search)]:!px-3 [&_input:not(.coordinator-panelist-search)]:!py-2 [&_input]:!text-sm',
+  '[&_input:not([type=checkbox]):not([type=radio])]:!rounded-md [&_select]:!rounded-md',
+  '[&_input:not(.coordinator-panelist-search):not([type=checkbox]):not([type=radio])]:!px-3 [&_input:not(.coordinator-panelist-search):not([type=checkbox]):not([type=radio])]:!py-2 [&_input:not([type=checkbox]):not([type=radio])]:!text-sm',
   '[&_select]:!px-3 [&_select]:!py-2 [&_select]:!pl-3 [&_select]:!pr-9 [&_select]:!text-sm',
   '[&_label]:!mb-1',
 ].join(' ');
@@ -41,6 +41,37 @@ export const COORDINATOR_SCHEDULE_DEFENSE_FORM_CLASS = [
 export const COORDINATOR_SCHEDULE_MODAL_SIZE = 'schedule' as const;
 
 const TIME_INPUT_CLASS = `${formControlResponsiveClassName} min-w-0 w-full flex-1 basis-0 sm:w-[9rem] sm:max-w-[9rem] sm:flex-none sm:shrink-0`;
+
+const TIME_SLOT_INPUT_CLASS = `${formControlResponsiveClassName} min-w-0 w-full sm:w-[9rem] sm:max-w-[9rem] sm:shrink-0`;
+
+export function CoordinatorTimeSlotField({
+  time,
+  onChange,
+  required,
+  label = 'Time',
+}: {
+  time: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  label?: string;
+}) {
+  return (
+    <div className="min-w-0 w-full max-w-full sm:w-auto">
+      <label className={formLabelClassName}>
+        {label}
+        {required ? <span className="text-error-500 ml-1">*</span> : null}
+      </label>
+      <input
+        type="time"
+        required={required}
+        value={time}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        className={TIME_SLOT_INPUT_CLASS}
+      />
+    </div>
+  );
+}
 
 export function CoordinatorTimeRangeFields({
   startTime,

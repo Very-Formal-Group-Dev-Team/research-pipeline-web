@@ -21,7 +21,7 @@ export interface CompleteProfilePayload {
   email: string;
   avatarFile?: File | null;
   googlePhotoUrl?: string | null;
-  institutionName?: string;
+  institutionId?: string;
 }
 
 export interface CompleteProfileResult {
@@ -97,7 +97,7 @@ export async function completeProfile(payload: CompleteProfilePayload): Promise<
   };
   if (avatarUrl) body.avatarUrl = avatarUrl;
   if (!avatarUrl && payload.googlePhotoUrl) body.googlePhotoUrl = payload.googlePhotoUrl;
-  if (payload.institutionName) body.institutionName = payload.institutionName;
+  if (payload.institutionId) body.institutionId = payload.institutionId;
 
   const { data, error } = await post<CompleteProfileResult>('/users/complete-profile', body);
   if (error) return { success: false, error };

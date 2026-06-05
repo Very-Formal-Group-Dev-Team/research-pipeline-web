@@ -11,6 +11,7 @@ import { FiUpload, FiX, FiTrash2, FiArrowLeft, FiUserPlus, FiPlus } from 'react-
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { createProject, inviteToProject } from '@/lib/api/projects';
 import type { SearchUserResult } from '@/lib/api/users';
+import { getMyInstitutionCourses, type InstitutionCourse } from '@/lib/api/institutions';
 import { toast } from 'sonner';
 
 type InviteMembershipRole = 'member' | 'adviser';
@@ -32,7 +33,9 @@ export default function CreateProjectPage() {
   // Form state
   const [title, setTitle] = useState('');
   const [program, setProgram] = useState('');
-  const [course, setCourse] = useState('');
+  const [courseId, setCourseId] = useState('');
+  const [institutionCourses, setInstitutionCourses] = useState<InstitutionCourse[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const [section, setSection] = useState('');
   const [projectType, setProjectType] = useState('');
   const [researchType, setResearchType] = useState('');
@@ -56,12 +59,33 @@ export default function CreateProjectPage() {
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadCourses() {
+      setCoursesLoading(true);
+      const res = await getMyInstitutionCourses();
+      if (!cancelled) {
+        setInstitutionCourses(res.data || []);
+        setCoursesLoading(false);
+      }
+    }
+
+    if (!profileLoading) {
+      void loadCourses();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profileLoading]);
+
+  useEffect(() => {
     if (
       title ||
       researchType ||
       projectType ||
       program ||
-      course ||
+      courseId ||
       section ||
       selectedFile ||
       invitedMembers.length > 0
@@ -70,7 +94,7 @@ export default function CreateProjectPage() {
     } else {
       setIsDirty(false);
     }
-  }, [title, researchType, projectType, program, course, section, selectedFile, invitedMembers]);
+  }, [title, researchType, projectType, program, courseId, section, selectedFile, invitedMembers]);
 
   const validateFile = (file: File): string | null => {
     // Validate file type
@@ -208,7 +232,7 @@ export default function CreateProjectPage() {
         researchType,
         projectType: projectType as 'thesis' | 'capstone',
         program: program.trim() || undefined,
-        course: course.trim() || undefined,
+        courseId: courseId || undefined,
         section: section.trim() || undefined,
         file: selectedFile,
       });
@@ -310,11 +334,16 @@ export default function CreateProjectPage() {
                   onChange={(e) => setProgram(e.target.value)}
                   responsiveText
                 />
-                <Input
+                <Select
                   label="Course"
-                  placeholder="Enter course name"
-                  value={course}
-                  onChange={(e) => setCourse(e.target.value)}
+                  placeholder={coursesLoading ? 'Loading courses...' : 'Select course'}
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                  options={institutionCourses.map((item) => ({
+                    value: item.id,
+                    label: `${item.course_name} (${item.code})`,
+                  }))}
+                  disabled={coursesLoading}
                   responsiveText
                 />
                 <Input
