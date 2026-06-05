@@ -53,14 +53,6 @@ import {
 } from '@/lib/utils/projectDisplay';
 import { formatProjectStageLabel } from '@/lib/utils/projectStage';
 
-function formatProjectDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
 function formatProjectDateTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
     month: 'long',
@@ -169,7 +161,7 @@ export default function ProjectDetailPage() {
     await Promise.all([loadPaperVersions(), reloadProject()]);
   }, [loadPaperVersions, reloadProject]);
 
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     if (!params.id) return;
     const [membersRes, invitesRes] = await Promise.all([
       getProjectMembers(params.id as string),
@@ -177,7 +169,7 @@ export default function ProjectDetailPage() {
     ]);
     setMembers(membersRes.data || []);
     setPendingInvites(invitesRes.data || []);
-  };
+  }, [params.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -200,16 +192,16 @@ export default function ProjectDetailPage() {
     loadPaperVersions();
     const interval = setInterval(loadMembers, 10000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [params.id, loadPaperVersions]);
+  }, [params.id, loadPaperVersions, loadMembers]);
 
   useEffect(() => {
     setEditableKeywords(project?.keywords || []);
-  }, [project?.id, project?.keywords]);
+  }, [project]);
 
   useEffect(() => {
     if (!project) return;
     setAbstractInput(project.description || project.abstract || '');
-  }, [project?.id, project?.description, project?.abstract]);
+  }, [project]);
 
   useEffect(() => {
     if (!project) return;
@@ -218,14 +210,7 @@ export default function ProjectDetailPage() {
     setDetailsProgram(project.program || '');
     setDetailsCourse(project.course || '');
     setDetailsSection(project.section || '');
-  }, [
-    project?.id,
-    project?.project_type,
-    project?.paper_standard,
-    project?.program,
-    project?.course,
-    project?.section,
-  ]);
+  }, [project]);
 
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
@@ -515,7 +500,6 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const headerSubtitle = project.abstract || project.description || '';
   const isProjectLeader =
     Boolean(profile?.id) &&
     (project.created_by === profile?.id ||

@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const PROTECTED_PATHS = ['/student', '/adviser', '/coordinator', '/onboarding'];
-const AUTH_PATHS = ['/login', '/register'];
-
 /**
  * Middleware — passthrough for frontend demo (no auth checks).
  */
@@ -12,7 +10,6 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED_PATHS.some(p => pathname.startsWith(p));
-  const isAuthPage = AUTH_PATHS.some(p => pathname.startsWith(p));
 
   if (isProtected && !token) {
     return NextResponse.redirect(new URL('/login', request.url));

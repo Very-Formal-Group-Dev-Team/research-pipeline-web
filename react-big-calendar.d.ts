@@ -1,11 +1,9 @@
 declare module 'react-big-calendar' {
-  import { ReactNode } from 'react';
-
   export interface Event {
     title: string;
     start: Date;
     end: Date;
-    [key: string]: any;
+    [key: string]: unknown;
   }
 
   export interface CalendarProps {
@@ -13,10 +11,10 @@ declare module 'react-big-calendar' {
     startAccessor?: string | ((event: Event) => Date);
     endAccessor?: string | ((event: Event) => Date);
     style?: React.CSSProperties;
-    [key: string]: any;
+    [key: string]: unknown;
   }
 
   export class Calendar extends React.Component<CalendarProps> {}
 
-  export function momentLocalizer(moment: any): any;
+  export function momentLocalizer(moment: unknown): unknown;
 }

@@ -113,11 +113,6 @@ export default function Header({ user, onLogout }: HeaderProps) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [bellOpen]);
 
-  async function handleMarkRead(notifId: string) {
-    await markNotificationRead(notifId);
-    await loadData();
-  }
-
   async function handleNotificationClick(notification: NotificationItem) {
     setBellOpen(false);
     if (!notification.is_read) {

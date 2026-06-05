@@ -38,7 +38,7 @@ describe('completeProfile', () => {
       const data: CompleteProfileData = {
         userId: 'user-123',
         displayName: 'John Doe',
-        role: '' as any,
+        role: '' as unknown as CompleteProfileData['role'],
         email: 'john@example.com',
       };
 

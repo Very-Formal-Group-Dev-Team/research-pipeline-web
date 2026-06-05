@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FaUser, FaLock } from "react-icons/fa";
 import { getUser, login, register, oAuthSignIn, resendVerification } from "@/lib/api/auth";
@@ -199,7 +200,14 @@ function AuthForm({ mode }: { mode: Mode }) {
           {/* Logo + Header */}
           <div className="w-full mb-8 sm:mb-6">
             <div className="flex justify-center">
-              <img src="/brand/student-research-portal-logo-alt.png" alt="logo" className="w-12 h-12 sm:w-16 sm:h-16" />
+              <Image
+                src="/brand/student-research-portal-logo-alt.png"
+                alt="Archivum logo"
+                width={64}
+                height={64}
+                className="w-12 h-12 sm:w-16 sm:h-16"
+                priority
+              />
             </div>
             <div className="text-center mt-3">
               <h1 className="text-3xl font-bold text-eerieBlack">{mode === 'login' ? 'Welcome back' : 'Get Started'}</h1>

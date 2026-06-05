@@ -180,14 +180,14 @@ export default function AdviserProjectDetailPage() {
     }
   }, [projectId]);
 
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     const [membersRes, invitesRes] = await Promise.all([
       getProjectMembers(projectId),
       getProjectInvitations(projectId),
     ]);
     setMembers(membersRes.data || []);
     setPendingInvites(invitesRes.data || []);
-  };
+  }, [projectId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -219,7 +219,7 @@ export default function AdviserProjectDetailPage() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [projectId, loadMeetings]);
+  }, [projectId, loadMeetings, loadMembers]);
 
   useEffect(() => {
     const refreshMeetings = () => {

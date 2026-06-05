@@ -5,7 +5,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getUserProfile, type UserProfile } from '@/lib/api/users';
+import { getUserProfile } from '@/lib/api/users';
 import { resolveAvatarUrl } from '@/lib/utils/avatarUrl';
 
 export interface UserProfileView {

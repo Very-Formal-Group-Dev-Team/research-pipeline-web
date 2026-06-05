@@ -28,7 +28,7 @@ export default function ComponentShowcasePage() {
 
   const tableColumns = [
     { key: 'name', header: 'Project Name' },
-    { key: 'status', header: 'Status', render: (item: any) => <Badge variant="primary">{item.status}</Badge> },
+    { key: 'status', header: 'Status', render: (item: { status: string }) => <Badge variant="primary">{item.status}</Badge> },
     { key: 'date', header: 'Date' },
   ];
 

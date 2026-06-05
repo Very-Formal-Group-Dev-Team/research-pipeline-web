@@ -73,6 +73,6 @@ export default function Tabs({ tabs, defaultValue, onChange, children, variant =
   );
 }
 
-export function TabPanel({ children, value }: { children: React.ReactNode; value: string }) {
+export function TabPanel({ children }: { children: React.ReactNode; value?: string }) {
   return <div className="animate-fade-in">{children}</div>;
 }

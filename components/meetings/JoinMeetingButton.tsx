@@ -3,7 +3,7 @@
 import React from 'react';
 import { FiVideo } from 'react-icons/fi';
 import Button, { type ButtonVariant } from '@/components/Button';
-import { hasJoinableMeeting, normalizeJitsiJoinUrl, type JitsiMeetingFields } from '@/lib/meetings/jitsi';
+import { normalizeJitsiJoinUrl, type JitsiMeetingFields } from '@/lib/meetings/jitsi';
 
 export interface JoinMeetingButtonProps extends JitsiMeetingFields {
   label?: string;
