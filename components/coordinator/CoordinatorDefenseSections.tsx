@@ -1,21 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Dropdown from '@/components/ui/Dropdown';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
-import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
-import {
-  COORDINATOR_DATE_FIELD_WRAPPER_CLASS,
-  COORDINATOR_DATE_TIME_ROW_CLASS,
-  COORDINATOR_TIME_FIELD_WRAPPER_CLASS,
-  COORDINATOR_SCHEDULE_FORM_CLASS,
-  COORDINATOR_SCHEDULE_MODAL_SIZE,
-  CoordinatorTimeRangeFields,
-} from '@/components/coordinator/CoordinatorTimeRangeFields';
 import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
 import { coordinatorDefenseUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import {
@@ -26,7 +17,6 @@ import {
   FiEdit2,
   FiMove,
   FiMoreVertical,
-  FiSave,
 } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { sortDefenses, type DefenseSortBy } from '@/lib/defenses/sort';
@@ -34,6 +24,8 @@ import { formatStatusLabel } from '@/lib/utils/formatStatus';
 import {
   getAllDefenses,
   getPendingDefenses,
+  getCourseGroups,
+  getCourses,
   verifyDefense,
   rejectDefense,
   cancelCoordinatorDefense,
@@ -41,6 +33,11 @@ import {
   revertCoordinatorDefense,
   type Defense,
 } from '@/lib/api/coordinator';
+import {
+  buildDefenseBatchSessionFromDefenses,
+  findRelatedDefenses,
+} from '@/lib/coordinator/defenseBatchEvent';
+import { saveDefenseBatchSession } from '@/lib/coordinator/defenseBatchSession';
 import DefenseCardExpandContent from '@/components/defenses/DefenseCardExpandContent';
 import DefenseSortControls from '@/components/defenses/DefenseSortControls';
 
@@ -56,38 +53,6 @@ function formatDateTime(iso?: string | null) {
     minute: '2-digit',
     hour12: true,
   });
-}
-
-type DefenseModality = 'Online' | 'In-Person' | 'Hybrid';
-
-const DEFENSE_MODALITY_OPTIONS: { value: DefenseModality; label: string }[] = [
-  { value: 'Online', label: 'Online' },
-  { value: 'In-Person', label: 'Face-to-Face' },
-  { value: 'Hybrid', label: 'Hybrid' },
-];
-
-function pad2(value: number) {
-  return String(value).padStart(2, '0');
-}
-
-function defenseScheduleToFormState(defense: Defense) {
-  const start = new Date(String(defense.start_time || '').replace(/Z$/i, ''));
-  const end = new Date(String(defense.end_time || defense.start_time || '').replace(/Z$/i, ''));
-
-  const modality = (defense.modality || 'Online') as DefenseModality;
-  const normalizedModality = DEFENSE_MODALITY_OPTIONS.some((o) => o.value === modality)
-    ? modality
-    : 'Online';
-
-  return {
-    date: Number.isNaN(start.getTime())
-      ? ''
-      : `${start.getFullYear()}-${pad2(start.getMonth() + 1)}-${pad2(start.getDate())}`,
-    startTime: Number.isNaN(start.getTime()) ? '' : `${pad2(start.getHours())}:${pad2(start.getMinutes())}`,
-    endTime: Number.isNaN(end.getTime()) ? '' : `${pad2(end.getHours())}:${pad2(end.getMinutes())}`,
-    location: (defense.venue || defense.location || '').trim(),
-    modality: normalizedModality,
-  };
 }
 
 function normalizeDefenseTimes(defense: Defense): Defense {
@@ -120,15 +85,14 @@ export interface CoordinatorDefenseSectionsProps {
 }
 
 export default function CoordinatorDefenseSections({ section, onDataChange }: CoordinatorDefenseSectionsProps) {
+  const router = useRouter();
   const [pendingDefenses, setPendingDefenses] = useState<Defense[]>([]);
   const [allDefenses, setAllDefenses] = useState<Defense[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedDefense, setSelectedDefense] = useState<Defense | null>(null);
-  const [modalType, setModalType] = useState<'approve' | 'move' | 'edit' | 'reject' | null>(null);
+  const [modalType, setModalType] = useState<'approve' | 'move' | 'reject' | null>(null);
   const [venue, setVenue] = useState('');
-  const [editLocation, setEditLocation] = useState('');
-  const [editModality, setEditModality] = useState<DefenseModality>('Online');
   const [moveDate, setMoveDate] = useState('');
   const [moveStartTime, setMoveStartTime] = useState('');
   const [moveEndTime, setMoveEndTime] = useState('');
@@ -172,44 +136,11 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     void loadDefenses();
   }, [loadDefenses]);
 
-  const editDefenseFormDirty = useMemo(() => {
-    if (modalType !== 'edit' || !selectedDefense) return false;
-    const baseline = defenseScheduleToFormState(selectedDefense);
-    return (
-      moveDate !== baseline.date ||
-      moveStartTime !== baseline.startTime ||
-      moveEndTime !== baseline.endTime ||
-      editLocation.trim() !== baseline.location ||
-      editModality !== baseline.modality
-    );
-  }, [
-    modalType,
-    selectedDefense,
-    moveDate,
-    moveStartTime,
-    moveEndTime,
-    editLocation,
-    editModality,
-  ]);
-
-  function openModal(defense: Defense, type: 'approve' | 'move' | 'edit' | 'reject') {
+  function openModal(defense: Defense, type: 'approve' | 'move' | 'reject') {
     setSelectedDefense(defense);
     setModalType(type);
     setVenue(defense.venue || defense.location || '');
     setNotes('');
-
-    if (type === 'edit') {
-      const form = defenseScheduleToFormState(defense);
-      setMoveDate(form.date);
-      setMoveStartTime(form.startTime);
-      setMoveEndTime(form.endTime);
-      setEditLocation(form.location);
-      setEditModality(form.modality);
-      return;
-    }
-
-    setEditLocation('');
-    setEditModality('Online');
     setMoveDate('');
     setMoveStartTime('');
     setMoveEndTime('');
@@ -219,12 +150,57 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     setSelectedDefense(null);
     setModalType(null);
     setVenue('');
-    setEditLocation('');
-    setEditModality('Online');
     setMoveDate('');
     setMoveStartTime('');
     setMoveEndTime('');
     setNotes('');
+  }
+
+  async function handleEditDefense(defense: Defense) {
+    if (!defense.course_id) {
+      toast.error('This defense cannot be edited in the batch planner.');
+      return;
+    }
+
+    setDefenseActionLoading(true);
+    setDefenseActionError(null);
+
+    try {
+      const relatedDefenses = findRelatedDefenses(defense, allDefenses);
+      const [coursesRes, groupsRes] = await Promise.all([
+        getCourses(),
+        getCourseGroups(defense.course_id),
+      ]);
+
+      if (coursesRes.error) {
+        setDefenseActionError(coursesRes.error);
+        return;
+      }
+
+      if (groupsRes.error) {
+        setDefenseActionError(groupsRes.error);
+        return;
+      }
+
+      const session = buildDefenseBatchSessionFromDefenses({
+        anchor: defense,
+        relatedDefenses,
+        courses: coursesRes.data ?? [],
+        courseGroups: groupsRes.data ?? [],
+      });
+
+      if (!session) {
+        setDefenseActionError('Unable to open batch planner for this defense.');
+        return;
+      }
+
+      saveDefenseBatchSession(session);
+      router.push('/coordinator/events/edit');
+    } catch {
+      setDefenseActionError('Failed to open batch planner.');
+    } finally {
+      setDefenseActionLoading(false);
+    }
   }
 
   async function handleApprove() {
@@ -281,42 +257,6 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     setSubmitting(false);
   }
 
-  async function handleEdit() {
-    if (!selectedDefense || !moveDate || !moveStartTime || !moveEndTime || !editDefenseFormDirty) return;
-    const verifiedSchedule = `${moveDate}T${moveStartTime}:00`;
-    const verifiedEndTime = `${moveDate}T${moveEndTime}:00`;
-    const location = editLocation.trim();
-    setSubmitting(true);
-    const res = await verifyDefense(selectedDefense.id, {
-      location: location || undefined,
-      venue: location || undefined,
-      modality: editModality,
-      verifiedSchedule,
-      verifiedEndTime,
-      notes: notes || undefined,
-    });
-    if (res.data && 'conflict' in res.data && res.data.conflict) {
-      setConflictPrompt({
-        defenseId: selectedDefense.id,
-        location: location || undefined,
-        venue: location || undefined,
-        modality: editModality,
-        verifiedSchedule,
-        verifiedEndTime,
-        notes: notes || undefined,
-        max_overlap_minutes: res.data.max_overlap_minutes,
-        candidate_total_minutes: res.data.candidate_total_minutes,
-        effective_minutes: res.data.effective_minutes,
-        conflicts: res.data.conflicts,
-      });
-    } else if (!res.error) {
-      toast.success('Changes saved');
-      closeModal();
-      await loadDefenses(true);
-    }
-    setSubmitting(false);
-  }
-
   async function handleConflictResolution(action: 'hold' | 'confirm') {
     if (!conflictPrompt) return;
     setSubmitting(true);
@@ -331,9 +271,6 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
       holdDefense: action === 'hold',
     });
     if (!res.error) {
-      if (modalType === 'edit') {
-        toast.success('Changes saved');
-      }
       setConflictPrompt(null);
       closeModal();
       await loadDefenses(true);
@@ -510,7 +447,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
                     label: 'Edit',
                     value: 'edit',
                     icon: <FiEdit2 className="h-4 w-4" aria-hidden />,
-                    onClick: () => openModal(defense, 'edit'),
+                    onClick: () => void handleEditDefense(defense),
                     disabled: defenseActionLoading,
                   },
                   {
@@ -604,86 +541,6 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
             </Button>
           </div>
         </div>
-      </Modal>
-
-      <Modal
-        isOpen={modalType === 'edit' && !!selectedDefense}
-        onClose={closeModal}
-        title="Edit Defense"
-        description={
-          <>
-            Update schedule and details for <strong>{selectedDefense?.project_title}</strong>.
-          </>
-        }
-        size={COORDINATOR_SCHEDULE_MODAL_SIZE}
-      >
-        <form
-          className={`space-y-4 ${COORDINATOR_SCHEDULE_FORM_CLASS}`}
-          onSubmit={(e) => {
-            e.preventDefault();
-            void handleEdit();
-          }}
-        >
-          <div className={COORDINATOR_DATE_TIME_ROW_CLASS}>
-            <div className={COORDINATOR_DATE_FIELD_WRAPPER_CLASS}>
-              <Input
-                label="Date"
-                type="date"
-                required
-                value={moveDate}
-                onChange={(e) => setMoveDate(e.target.value)}
-                responsiveText
-                fullWidth
-              />
-            </div>
-            <div className={COORDINATOR_TIME_FIELD_WRAPPER_CLASS}>
-              <CoordinatorTimeRangeFields
-                required
-                startTime={moveStartTime}
-                endTime={moveEndTime}
-                onStartChange={setMoveStartTime}
-                onEndChange={setMoveEndTime}
-              />
-            </div>
-          </div>
-          <Select
-            fullWidth
-            responsiveText
-            label="Modality"
-            value={editModality}
-            onChange={(e) => setEditModality(e.target.value as DefenseModality)}
-            options={DEFENSE_MODALITY_OPTIONS}
-          />
-          <Input
-            label="Location"
-            required
-            value={editLocation}
-            onChange={(e) => setEditLocation(e.target.value)}
-            responsiveText
-            fullWidth
-          />
-          <ModalFooter className="mt-4">
-            <Button type="button" variant="outline" onClick={closeModal} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              loading={submitting}
-              disabled={
-                submitting ||
-                !moveDate ||
-                !moveStartTime ||
-                !moveEndTime ||
-                !editLocation.trim() ||
-                !editDefenseFormDirty
-              }
-              leftIcon={!submitting ? <FiSave className="h-4 w-4" aria-hidden /> : undefined}
-            >
-              Save changes
-            </Button>
-          </ModalFooter>
-        </form>
       </Modal>
 
       <Modal isOpen={modalType === 'reject' && !!selectedDefense} onClose={closeModal} title="Reject Defense Schedule">

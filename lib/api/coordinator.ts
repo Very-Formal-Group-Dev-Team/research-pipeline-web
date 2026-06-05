@@ -53,9 +53,19 @@ export interface DashboardData {
   stats: CoordinatorStats;
 }
 
+export interface BookedDefenseSummary {
+  id: string;
+  project_id: string;
+  project_title: string;
+  project_code: string;
+}
+
 export interface Defense {
   id: string;
   project_id: string;
+  course_id?: string | null;
+  course_name?: string | null;
+  course_code?: string | null;
   adviser_id?: string;
   defense_type: string;
   start_time: string;
@@ -68,12 +78,18 @@ export interface Defense {
   proposed_schedule: string | null;
   project_title: string;
   project_code: string;
+  rubric_id?: string | null;
+  panelist_ids?: string | null;
   created_by_name: string;
   adviser_name?: string;
   panelist_names?: string | null;
   meeting_room?: string | null;
   meeting_url?: string | null;
   meeting_provider?: string | null;
+}
+
+export interface BookDefenseScheduleResult extends Defense {
+  booked_defenses?: BookedDefenseSummary[];
 }
 
 export interface VerifyDefenseConflict {
@@ -175,6 +191,9 @@ export function verifyDefense(
     notes?: string;
     forceApprove?: boolean;
     holdDefense?: boolean;
+    defenseType?: 'proposal' | 'midterm' | 'final';
+    rubricId?: string;
+    panelistIds?: string[];
   },
 ) {
   return post<Defense | VerifyDefenseConflict>(`/coordinator/defenses/${defenseId}/verify`, payload);
@@ -347,7 +366,7 @@ export function deleteCoordinatorRubric(rubricId: string) {
 }
 
 export function bookDefenseSchedule(payload: BookDefenseSchedulePayload) {
-  return post<Defense | VerifyDefenseConflict>('/coordinator/defenses/book', payload);
+  return post<BookDefenseScheduleResult | VerifyDefenseConflict>('/coordinator/defenses/book', payload);
 }
 
 // ─── Projects ───────────────────────────────────────────────────────────────
