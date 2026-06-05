@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FiPlus, FiSearch } from 'react-icons/fi';
+import { FiChevronDown, FiPlus, FiSearch } from 'react-icons/fi';
 
 import Button from '@/components/Button';
 import Card, { CARD_PADDING_CLASS, CARD_HEADER_SECTION_CLASS } from '@/components/ui/Card';
@@ -105,11 +105,13 @@ function GroupCard({
   onDragStart,
   onDragEnd,
   onDropTarget,
+  className = '',
 }: {
   group: CourseGroup;
   onDragStart: (groupId: string) => void;
   onDragEnd?: () => void;
   onDropTarget?: () => void;
+  className?: string;
 }) {
   return (
     <div
@@ -125,7 +127,7 @@ function GroupCard({
         event.preventDefault();
         onDropTarget?.();
       }}
-      className="cursor-grab rounded-md border-[1px] border-solid border-neutral-400 bg-white px-3 py-2 shadow-sm transition-all hover:shadow-md active:cursor-grabbing"
+      className={`cursor-grab rounded-md border-[1px] border-solid border-neutral-400 bg-white px-3 py-2 shadow-sm transition-all hover:shadow-md active:cursor-grabbing ${className}`.trim()}
     >
       <p className="truncate text-sm font-medium text-coordinator-ink">{group.title}</p>
       <p className="truncate text-xs text-neutral-500">{group.project_code}</p>
@@ -133,21 +135,82 @@ function GroupCard({
   );
 }
 
-function DropZone({
-  title,
-  subtitle,
+const UNASSIGNED_CARD_CLASS = 'w-full min-w-0';
+
+function BatchAccordionItem({
+  batchNumber,
+  timeRange,
+  isOpen,
+  onToggle,
   children,
   onDropGroup,
   emptyLabel,
 }: {
-  title: string;
-  subtitle?: string;
+  batchNumber: number;
+  timeRange: string;
+  isOpen: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
   onDropGroup: () => void;
   emptyLabel: string;
 }) {
+  const isEmpty = React.Children.count(children) === 0;
+
+  return (
+    <div className="overflow-hidden rounded-md border border-neutral-400 bg-white">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left"
+        aria-expanded={isOpen}
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-coordinator-ink">Batch {batchNumber}</p>
+          <p className="mt-0.5 text-xs text-neutral-500">{timeRange}</p>
+        </div>
+        <FiChevronDown
+          className={`h-5 w-5 shrink-0 text-neutral-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </button>
+      {isOpen ? (
+        <div
+          className="min-h-[4.5rem] border-t border-neutral-300 p-3"
+          onDragOver={(event) => event.preventDefault()}
+          onDragEnter={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            onDropGroup();
+          }}
+        >
+          <div className="space-y-2">
+            {children}
+            {isEmpty ? <p className="text-xs text-neutral-400">{emptyLabel}</p> : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function KanbanColumn({
+  batchNumber,
+  timeRange,
+  children,
+  onDropGroup,
+  emptyLabel,
+}: {
+  batchNumber: number;
+  timeRange: string;
+  children: React.ReactNode;
+  onDropGroup: () => void;
+  emptyLabel: string;
+}) {
+  const isEmpty = React.Children.count(children) === 0;
+
   return (
     <div
+      className="flex min-h-[14rem] w-full min-w-0 flex-col overflow-hidden rounded-md border border-neutral-400 bg-white lg:h-[24rem] lg:w-56 lg:shrink-0"
       onDragOver={(event) => event.preventDefault()}
       onDragEnter={(event) => event.preventDefault()}
       onDrop={(event) => {
@@ -155,18 +218,16 @@ function DropZone({
         onDropGroup();
       }}
     >
-      <Card padding="none" shadow="soft" hoverShadow className="overflow-hidden bg-white">
-        <div className={CARD_HEADER_SECTION_CLASS}>
-          <p className="text-base font-semibold text-coordinator-ink">{title}</p>
-          {subtitle ? <p className="mt-0.5 text-xs text-neutral-500">{subtitle}</p> : null}
-        </div>
-        <div className={`${CARD_PADDING_CLASS} min-h-[4.5rem] space-y-2`}>
+      <div className="shrink-0 border-b border-neutral-300 px-3 py-2.5">
+        <p className="text-sm font-semibold text-coordinator-ink">Batch {batchNumber}</p>
+        <p className="mt-0.5 text-xs text-neutral-500">{timeRange}</p>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+        <div className="space-y-2">
           {children}
-          {React.Children.count(children) === 0 ? (
-            <p className="text-xs text-neutral-400">{emptyLabel}</p>
-          ) : null}
+          {isEmpty ? <p className="text-xs text-neutral-400">{emptyLabel}</p> : null}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
@@ -195,6 +256,7 @@ export default function DefenseBatchPlanner({
   const [showAddGroupsModal, setShowAddGroupsModal] = useState(false);
   const [groupSearch, setGroupSearch] = useState('');
   const [selectedAddGroupIds, setSelectedAddGroupIds] = useState<string[]>([]);
+  const [openBatchIds, setOpenBatchIds] = useState<Set<string>>(() => new Set());
   const initialLanesApplied = useRef(false);
   const lastEventWindowKey = useRef(`${draft.date}|${draft.startTime}|${draft.endTime}`);
 
@@ -307,6 +369,34 @@ export default function DefenseBatchPlanner({
     setDraggedGroupId(null);
   }
 
+  function toggleBatchAccordion(laneId: string) {
+    setOpenBatchIds((current) => {
+      const next = new Set(current);
+      if (next.has(laneId)) {
+        next.delete(laneId);
+      } else {
+        next.add(laneId);
+      }
+      return next;
+    });
+  }
+
+  function renderLaneGroupCards(lane: BatchLane) {
+    return lane.groupIds.map((groupId) => {
+      const group = groupMap.get(groupId);
+      if (!group) return null;
+      return (
+        <GroupCard
+          key={groupId}
+          group={group}
+          onDragStart={setDraggedGroupId}
+          onDragEnd={handleDragEnd}
+          onDropTarget={() => handleDrop({ type: 'lane', laneId: lane.id })}
+        />
+      );
+    });
+  }
+
   function handleAddSelectedGroups() {
     if (!selectedAddGroupIds.length) return;
     const selectedGroups = availableGroups.filter((group) => selectedAddGroupIds.includes(group.id));
@@ -389,71 +479,42 @@ export default function DefenseBatchPlanner({
           </div>
       </Card>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-        <Card padding="none" shadow="soft" hoverShadow={false} className="h-full overflow-hidden">
-          <div className={CARD_HEADER_SECTION_CLASS}>
-            <h2 className="text-lg font-semibold coordinator-heading">Batch Assignments</h2>
-            <p className="mt-0.5 text-sm text-neutral-500">
-              Drag groups into each batch lane for its scheduled time slot.
-            </p>
-          </div>
-          <div className={`${CARD_PADDING_CLASS} space-y-4`}>
-            {lanes.map((lane) => (
-              <DropZone
-                key={lane.id}
-                title={`Batch ${lane.batchNumber}`}
-                subtitle={formatTimeRange(lane.startTime, lane.endTime)}
-                onDropGroup={() => handleDrop({ type: 'lane', laneId: lane.id })}
-                emptyLabel="Drag groups here"
-              >
-                {lane.groupIds.map((groupId) => {
-                  const group = groupMap.get(groupId);
-                  if (!group) return null;
-                  return (
-                    <GroupCard
-                      key={groupId}
-                      group={group}
-                      onDragStart={setDraggedGroupId}
-                      onDragEnd={handleDragEnd}
-                      onDropTarget={() => handleDrop({ type: 'lane', laneId: lane.id })}
-                    />
-                  );
-                })}
-              </DropZone>
-            ))}
-          </div>
-        </Card>
+      <Card padding="none" shadow="soft" hoverShadow={false} className="overflow-hidden">
+        <div className={CARD_HEADER_SECTION_CLASS}>
+          <h2 className="text-lg font-semibold coordinator-heading">Batch Assignments</h2>
+          <p className="mt-0.5 text-sm text-neutral-500">
+            Drag groups from the unassigned pool into batch columns for their scheduled time slots.
+          </p>
+        </div>
 
-        <Card padding="none" shadow="soft" hoverShadow={false} className="h-full overflow-hidden">
-          <div className={CARD_HEADER_SECTION_CLASS}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold coordinator-heading">Unassigned Groups</h2>
-                <p className="mt-0.5 text-sm text-neutral-500">
-                  {unassignedIds.length} group{unassignedIds.length === 1 ? '' : 's'} waiting to be placed in a batch.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                leftIcon={<FiPlus className="h-4 w-4" aria-hidden />}
-                onClick={() => setShowAddGroupsModal(true)}
-              >
-                Add Groups
-              </Button>
+        <div
+          className={`${CARD_PADDING_CLASS} border-b border-neutral-300`}
+          onDragOver={(event) => event.preventDefault()}
+          onDragEnter={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            handleDrop({ type: 'unassigned' });
+          }}
+        >
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-md font-semibold text-coordinator-ink">Unassigned Groups</h3>
+              <p className="mt-0.5 text-sm text-neutral-500">
+                {unassignedIds.length} group{unassignedIds.length === 1 ? '' : 's'} waiting to be placed in a batch.
+              </p>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              leftIcon={<FiPlus className="h-4 w-4" aria-hidden />}
+              onClick={() => setShowAddGroupsModal(true)}
+            >
+              Add Groups
+            </Button>
           </div>
-          <div
-            className={`${CARD_PADDING_CLASS} min-h-[4.5rem] space-y-2`}
-            onDragOver={(event) => event.preventDefault()}
-            onDragEnter={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault();
-              handleDrop({ type: 'unassigned' });
-            }}
-          >
+          <div className="grid min-h-[4.5rem] w-full grid-cols-1 gap-2 lg:grid-cols-3 xl:grid-cols-4">
             {unassignedIds.map((groupId) => {
               const group = groupMap.get(groupId);
               if (!group) return null;
@@ -461,6 +522,7 @@ export default function DefenseBatchPlanner({
                 <GroupCard
                   key={groupId}
                   group={group}
+                  className={UNASSIGNED_CARD_CLASS}
                   onDragStart={setDraggedGroupId}
                   onDragEnd={handleDragEnd}
                   onDropTarget={() => handleDrop({ type: 'unassigned' })}
@@ -468,11 +530,41 @@ export default function DefenseBatchPlanner({
               );
             })}
             {unassignedIds.length === 0 ? (
-              <p className="text-xs text-neutral-400">All groups are assigned to batches</p>
+              <p className="col-span-full text-xs text-neutral-400">All groups are assigned to batches</p>
             ) : null}
           </div>
-        </Card>
-      </div>
+        </div>
+
+        <div className="flex flex-col gap-3 p-4 lg:hidden">
+          {lanes.map((lane) => (
+            <BatchAccordionItem
+              key={lane.id}
+              batchNumber={lane.batchNumber}
+              timeRange={formatTimeRange(lane.startTime, lane.endTime)}
+              isOpen={openBatchIds.has(lane.id)}
+              onToggle={() => toggleBatchAccordion(lane.id)}
+              onDropGroup={() => handleDrop({ type: 'lane', laneId: lane.id })}
+              emptyLabel="Drag groups here"
+            >
+              {renderLaneGroupCards(lane)}
+            </BatchAccordionItem>
+          ))}
+        </div>
+
+        <div className="hidden gap-4 p-4 lg:flex lg:flex-row lg:overflow-x-auto lg:pb-4">
+          {lanes.map((lane) => (
+            <KanbanColumn
+              key={lane.id}
+              batchNumber={lane.batchNumber}
+              timeRange={formatTimeRange(lane.startTime, lane.endTime)}
+              onDropGroup={() => handleDrop({ type: 'lane', laneId: lane.id })}
+              emptyLabel="Drag groups here"
+            >
+              {renderLaneGroupCards(lane)}
+            </KanbanColumn>
+          ))}
+        </div>
+      </Card>
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onBack} disabled={submitting}>

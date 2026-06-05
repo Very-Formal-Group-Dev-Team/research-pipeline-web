@@ -61,6 +61,14 @@ function createLaneId(batchNumber: number) {
   return `batch-${batchNumber}`;
 }
 
+function getRemainderGroups(groupCount: number, baseBatchCount: number) {
+  return baseBatchCount > 0 ? groupCount % baseBatchCount : groupCount;
+}
+
+function getEffectiveBatchCount(baseBatchCount: number, remainderGroups: number) {
+  return baseBatchCount + (remainderGroups > 0 ? 1 : 0);
+}
+
 function buildSequentialSlots(
   startTime: string,
   slotDurationMinutes: number,
@@ -181,24 +189,21 @@ export function buildLaneTemplates({
 }): Omit<BatchLane, 'groupIds'>[] {
   if (method === 'by_batches') {
     const safeBatchCount = Math.max(1, Math.floor(batchCount));
-    let lanes = buildLanesForByBatches({ startTime, endTime, batchCount: safeBatchCount });
-    const remainderGroups = safeBatchCount > 0 ? groupCount % safeBatchCount : groupCount;
-    if (remainderGroups > 0 && lanes.length > 0) {
-      const slotDuration = getTimeframeMinutes(lanes[0].startTime, lanes[0].endTime) || 60;
-      lanes = appendRemainderLane(lanes, slotDuration);
-    }
-    return lanes;
+    const remainderGroups = getRemainderGroups(groupCount, safeBatchCount);
+    const effectiveBatchCount = getEffectiveBatchCount(safeBatchCount, remainderGroups);
+    return buildLanesForByBatches({ startTime, endTime, batchCount: effectiveBatchCount });
   }
 
   if (method === 'by_duration') {
     const safeDuration = Math.max(1, Math.floor(durationMinutes));
-    let lanes = buildLanesForByDuration({ startTime, endTime, durationMinutes: safeDuration });
-    const fullBatchCount = lanes.length;
-    const remainderGroups = fullBatchCount > 0 ? groupCount % fullBatchCount : groupCount;
+    const totalMinutes = getTimeframeMinutes(startTime, endTime);
+    const baseBatchCount = Math.max(1, Math.floor(totalMinutes / safeDuration));
+    const remainderGroups = getRemainderGroups(groupCount, baseBatchCount);
     if (remainderGroups > 0) {
-      lanes = appendRemainderLane(lanes, safeDuration);
+      const effectiveBatchCount = getEffectiveBatchCount(baseBatchCount, remainderGroups);
+      return buildLanesForByBatches({ startTime, endTime, batchCount: effectiveBatchCount });
     }
-    return lanes;
+    return buildLanesForByDuration({ startTime, endTime, durationMinutes: safeDuration });
   }
 
   return buildLanesForManual({ startTime, endTime, groupCount });
@@ -229,11 +234,13 @@ export function summarizeDivision({
 
   if (method === 'by_batches') {
     const safeBatchCount = Math.max(1, Math.floor(batchCount));
-    const durationPerBatch = totalMinutes > 0 ? Math.floor(totalMinutes / safeBatchCount) : 0;
+    const remainderGroups = getRemainderGroups(groupCount, safeBatchCount);
+    const effectiveBatchCount = getEffectiveBatchCount(safeBatchCount, remainderGroups);
+    const durationPerBatch =
+      totalMinutes > 0 ? Math.floor(totalMinutes / effectiveBatchCount) : 0;
     const groupsPerBatch = safeBatchCount > 0 ? Math.floor(groupCount / safeBatchCount) : 0;
-    const remainderGroups = safeBatchCount > 0 ? groupCount % safeBatchCount : groupCount;
     return {
-      batchCount: safeBatchCount + (remainderGroups > 0 ? 1 : 0),
+      batchCount: effectiveBatchCount,
       durationPerBatchMinutes: durationPerBatch,
       groupsPerBatch,
       remainderBatchCount: remainderGroups > 0 ? 1 : 0,
@@ -243,12 +250,17 @@ export function summarizeDivision({
 
   if (method === 'by_duration') {
     const safeDuration = Math.max(1, Math.floor(durationMinutes));
-    const fullBatchCount = Math.max(1, Math.floor(totalMinutes / safeDuration));
-    const groupsPerBatch = fullBatchCount > 0 ? Math.floor(groupCount / fullBatchCount) : 0;
-    const remainderGroups = fullBatchCount > 0 ? groupCount % fullBatchCount : groupCount;
+    const baseBatchCount = Math.max(1, Math.floor(totalMinutes / safeDuration));
+    const remainderGroups = getRemainderGroups(groupCount, baseBatchCount);
+    const effectiveBatchCount = getEffectiveBatchCount(baseBatchCount, remainderGroups);
+    const durationPerBatch =
+      remainderGroups > 0 && totalMinutes > 0
+        ? Math.floor(totalMinutes / effectiveBatchCount)
+        : safeDuration;
+    const groupsPerBatch = baseBatchCount > 0 ? Math.floor(groupCount / baseBatchCount) : 0;
     return {
-      batchCount: fullBatchCount + (remainderGroups > 0 ? 1 : 0),
-      durationPerBatchMinutes: safeDuration,
+      batchCount: effectiveBatchCount,
+      durationPerBatchMinutes: durationPerBatch,
       groupsPerBatch,
       remainderBatchCount: remainderGroups > 0 ? 1 : 0,
       remainderGroups,
