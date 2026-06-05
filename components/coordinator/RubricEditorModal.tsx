@@ -22,6 +22,11 @@ import {
   type DefenseType,
   type SaveCoordinatorRubricPayload,
 } from '@/lib/api/coordinator';
+import {
+  createAdviserRubric,
+  updateAdviserRubric,
+  getAdviserRubric,
+} from '@/lib/api/adviser';
 
 type CriterionRow = {
   key: string;
@@ -84,11 +89,14 @@ function rubricStateEquals(a: RubricFormBaseline, b: RubricFormBaseline) {
   );
 }
 
+export type RubricEditorScope = 'coordinator' | 'adviser';
+
 export interface RubricEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   rubricId?: string | null;
   onSaved: () => void;
+  scope?: RubricEditorScope;
 }
 
 export default function RubricEditorModal({
@@ -96,6 +104,7 @@ export default function RubricEditorModal({
   onClose,
   rubricId,
   onSaved,
+  scope = 'coordinator',
 }: RubricEditorModalProps) {
   const isEdit = Boolean(rubricId);
   const [name, setName] = useState(SAMPLE_COORDINATOR_RUBRIC.name);
@@ -125,7 +134,9 @@ export default function RubricEditorModal({
       }
 
       setLoading(true);
-      const res = await getCoordinatorRubric(rubricId);
+      const res = scope === 'adviser'
+        ? await getAdviserRubric(rubricId)
+        : await getCoordinatorRubric(rubricId);
       if (cancelled) return;
       setLoading(false);
 
@@ -153,7 +164,7 @@ export default function RubricEditorModal({
 
     init();
     return () => { cancelled = true; };
-  }, [isOpen, rubricId]);
+  }, [isOpen, rubricId, scope]);
 
   const totalWeight = useMemo(
     () => rows.reduce((sum, row) => sum + parseWeight(row.weight), 0),
@@ -220,8 +231,12 @@ export default function RubricEditorModal({
     };
 
     const res = isEdit && rubricId
-      ? await updateCoordinatorRubric(rubricId, payload)
-      : await createCoordinatorRubric(payload);
+      ? scope === 'adviser'
+        ? await updateAdviserRubric(rubricId, payload)
+        : await updateCoordinatorRubric(rubricId, payload)
+      : scope === 'adviser'
+        ? await createAdviserRubric(payload)
+        : await createCoordinatorRubric(payload);
 
     setSubmitting(false);
 

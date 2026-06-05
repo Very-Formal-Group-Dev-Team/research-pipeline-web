@@ -114,6 +114,7 @@ function MeetingJoinAction({
   if (online && joinUrl) {
     return (
       <JoinMeetingButton
+        meetingId={meeting.id}
         meeting_url={meeting.meeting_url}
         meeting_room={meeting.meeting_room}
         label={compact ? 'Join meeting' : 'Join Meeting'}

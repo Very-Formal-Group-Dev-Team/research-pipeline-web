@@ -43,7 +43,8 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Dashboard', href: '/adviser', icon: <FiHome /> },
     { label: 'My Advisees', href: '/adviser/advisees', icon: <FiUsers /> },
     { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell />, tooltip: 'Your recent notifications and alerts', mobileOnly: true },
-    { label: 'Meeting Schedule', href: '/adviser/meetings', icon: <FiCalendar />, tooltip: 'Adviser meetings with students (one-on-one or group)' },
+    { label: 'Events', href: '/adviser/events', icon: <FiCalendar />, tooltip: 'Institution events, meetings, and defense schedules' },
+    { label: 'Rubrics', href: '/adviser/rubrics', icon: <FiClipboard /> },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
   ],
   coordinator: [

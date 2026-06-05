@@ -111,6 +111,7 @@ export default function StudentDefensesPage() {
                   {isOnlineModality(defense.modality) && (
                     <div className="pt-2">
                       <JoinMeetingButton
+                        meetingId={defense.id}
                         meeting_url={defense.meeting_url}
                         meeting_room={defense.meeting_room}
                         label="Join Defense"
