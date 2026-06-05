@@ -6,12 +6,20 @@ import { get, post, patch, del } from './client';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+export interface ProjectItbi {
+  pain: string;
+  market: string;
+  solution: string;
+  competition: string;
+}
+
 export interface Project {
   id: string;
   project_code: string;
   title: string;
   description?: string;
   abstract?: string;
+  itbi?: ProjectItbi | null;
   project_type: string;
   paper_standard: string;
   status: string;
@@ -50,6 +58,7 @@ export interface CreateProjectPayload {
   projectType: 'thesis' | 'capstone';
   abstract?: string;
   keywords?: string[];
+  itbi?: ProjectItbi;
   program?: string;
   course?: string;
   section?: string;
@@ -168,6 +177,7 @@ export async function createProject(payload: CreateProjectPayload) {
   formData.append('keywords', JSON.stringify(payload.keywords ?? []));
   formData.append('researchType', payload.researchType);
   formData.append('projectType', payload.projectType);
+  if (payload.itbi) formData.append('itbi', JSON.stringify(payload.itbi));
   if (payload.program) formData.append('program', payload.program);
   if (payload.course) formData.append('course', payload.course);
   if (payload.section) formData.append('section', payload.section);

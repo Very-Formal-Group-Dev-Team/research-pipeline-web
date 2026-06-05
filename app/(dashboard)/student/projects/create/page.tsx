@@ -11,6 +11,7 @@ import { FiUpload, FiX, FiTrash2, FiArrowLeft, FiUserPlus, FiPlus } from 'react-
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { createProject, inviteToProject } from '@/lib/api/projects';
 import type { SearchUserResult } from '@/lib/api/users';
+import { formLabelClassName, formTextareaResponsiveClassName } from '@/lib/utils/formControls';
 import { toast } from 'sonner';
 
 type InviteMembershipRole = 'member' | 'adviser';
@@ -35,6 +36,10 @@ export default function CreateProjectPage() {
   const [course, setCourse] = useState('');
   const [section, setSection] = useState('');
   const [projectType, setProjectType] = useState('');
+  const [pain, setPain] = useState('');
+  const [market, setMarket] = useState('');
+  const [solution, setSolution] = useState('');
+  const [competition, setCompetition] = useState('');
   const [researchType, setResearchType] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -50,6 +55,10 @@ export default function CreateProjectPage() {
     researchType?: string;
     team?: string;
     file?: string;
+    pain?: string;
+    market?: string;
+    solution?: string;
+    competition?: string;
     general?: string;
   }>({});
 
@@ -60,6 +69,10 @@ export default function CreateProjectPage() {
       title ||
       researchType ||
       projectType ||
+      pain ||
+      market ||
+      solution ||
+      competition ||
       program ||
       course ||
       section ||
@@ -70,7 +83,20 @@ export default function CreateProjectPage() {
     } else {
       setIsDirty(false);
     }
-  }, [title, researchType, projectType, program, course, section, selectedFile, invitedMembers]);
+  }, [
+    title,
+    researchType,
+    projectType,
+    pain,
+    market,
+    solution,
+    competition,
+    program,
+    course,
+    section,
+    selectedFile,
+    invitedMembers,
+  ]);
 
   const validateFile = (file: File): string | null => {
     // Validate file type
@@ -171,6 +197,11 @@ export default function CreateProjectPage() {
       newErrors.researchType = 'Paper standard is required';
     }
 
+    if (!pain.trim()) newErrors.pain = 'Pain is required';
+    if (!market.trim()) newErrors.market = 'Market is required';
+    if (!solution.trim()) newErrors.solution = 'Solution is required';
+    if (!competition.trim()) newErrors.competition = 'Competition is required';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -207,6 +238,12 @@ export default function CreateProjectPage() {
         title: title.trim(),
         researchType,
         projectType: projectType as 'thesis' | 'capstone',
+        itbi: {
+          pain: pain.trim(),
+          market: market.trim(),
+          solution: solution.trim(),
+          competition: competition.trim(),
+        },
         program: program.trim() || undefined,
         course: course.trim() || undefined,
         section: section.trim() || undefined,
@@ -337,6 +374,64 @@ export default function CreateProjectPage() {
                   responsiveText
                   required
                 />
+              </div>
+
+              <div className="border-t border-neutral-200 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(
+                  [
+                    {
+                      id: 'project-pain',
+                      label: 'Pain',
+                      value: pain,
+                      onChange: setPain,
+                      error: errors.pain,
+                      placeholder: 'What problem or pain point are you addressing?',
+                    },
+                    {
+                      id: 'project-market',
+                      label: 'Market',
+                      value: market,
+                      onChange: setMarket,
+                      error: errors.market,
+                      placeholder: 'Who is affected and what is the market opportunity?',
+                    },
+                    {
+                      id: 'project-solution',
+                      label: 'Solution',
+                      value: solution,
+                      onChange: setSolution,
+                      error: errors.solution,
+                      placeholder: 'How does your project solve the problem?',
+                    },
+                    {
+                      id: 'project-competition',
+                      label: 'Competition',
+                      value: competition,
+                      onChange: setCompetition,
+                      error: errors.competition,
+                      placeholder: 'What alternatives or competitors exist today?',
+                    },
+                  ] as const
+                ).map((field) => (
+                  <div key={field.id}>
+                    <label htmlFor={field.id} className={formLabelClassName}>
+                      {field.label}
+                      <span className="text-error-500 ml-1">*</span>
+                    </label>
+                    <textarea
+                      id={field.id}
+                      rows={4}
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      placeholder={field.placeholder}
+                      className={formTextareaResponsiveClassName}
+                      required
+                    />
+                    {field.error ? (
+                      <p className="mt-1 text-sm text-error-600">{field.error}</p>
+                    ) : null}
+                  </div>
+                ))}
               </div>
             </div>
           </Card>
