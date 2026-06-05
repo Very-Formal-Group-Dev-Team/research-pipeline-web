@@ -32,7 +32,7 @@ export default function InstitutionSearchField({
   useEffect(() => {
     if (!value) return;
     setQuery(value.name);
-  }, [value]);
+  }, [value, setQuery]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

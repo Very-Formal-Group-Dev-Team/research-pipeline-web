@@ -152,7 +152,7 @@ export default function CoordinatorEventsPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [loadEvents]);
 
   useEffect(() => {
     const tab = searchParams.get('tab') as PageTab | null;
