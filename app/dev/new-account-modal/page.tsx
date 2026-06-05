@@ -179,7 +179,7 @@ export default function NewAccountModalDemo() {
             <li>Select a test scenario or use custom configuration</li>
             <li>Fill in the required fields (Role and Display Name)</li>
             <li>Optionally upload an avatar image or use Google photo</li>
-            <li>Click "Complete Setup" to trigger the profile completion flow</li>
+            <li>Click &quot;Complete Setup&quot; to trigger the profile completion flow</li>
             <li>Check browser console for API calls and responses</li>
             <li>Verify RLS policies are configured in Supabase before testing</li>
           </ul>

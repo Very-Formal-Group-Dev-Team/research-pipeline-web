@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
 import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
@@ -56,15 +56,6 @@ function formatDateTime(iso?: string | null) {
     minute: '2-digit',
     hour12: true,
   });
-}
-
-function formatMinutes(minutes: number) {
-  const safeMinutes = Math.max(0, Math.round(minutes));
-  const hours = Math.floor(safeMinutes / 60);
-  const mins = safeMinutes % 60;
-  if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
-  if (hours > 0) return `${hours}h`;
-  return `${mins}m`;
 }
 
 type DefenseModality = 'Online' | 'In-Person' | 'Hybrid';
@@ -156,7 +147,6 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     effective_minutes?: number;
     conflicts: Array<{ domain: string; defense_id: string; project_id: string; start_time: string; end_time: string | null }>;
   } | null>(null);
-  const [conflictAction, setConflictAction] = useState<'hold' | 'confirm' | null>(null);
   const [sortBy, setSortBy] = useState<DefenseSortBy>('time');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Defense | null>(null);
@@ -167,18 +157,18 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
 
   const ACTIVE_DEFENSE_ACTION_STATUSES = new Set(['scheduled', 'moved', 'approved']);
 
-  async function loadDefenses() {
+  const loadDefenses = useCallback(async () => {
     setLoading(true);
     const [pendingRes, allRes] = await Promise.all([getPendingDefenses(), getAllDefenses()]);
     if (pendingRes.data) setPendingDefenses(pendingRes.data.map(normalizeDefenseTimes));
     if (allRes.data) setAllDefenses(allRes.data.map(normalizeDefenseTimes));
     setLoading(false);
     onDataChange?.();
-  }
+  }, [onDataChange]);
 
   useEffect(() => {
-    loadDefenses();
-  }, []);
+    void loadDefenses();
+  }, [loadDefenses]);
 
   const editDefenseFormDirty = useMemo(() => {
     if (modalType !== 'edit' || !selectedDefense) return false;
@@ -327,7 +317,6 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
 
   async function handleConflictResolution(action: 'hold' | 'confirm') {
     if (!conflictPrompt) return;
-    setConflictAction(action);
     setSubmitting(true);
     const res = await verifyDefense(conflictPrompt.defenseId, {
       venue: conflictPrompt.venue,
@@ -344,7 +333,6 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
         toast.success('Changes saved');
       }
       setConflictPrompt(null);
-      setConflictAction(null);
       closeModal();
       await loadDefenses();
     }
@@ -706,7 +694,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
         </div>
       </Modal>
 
-      <Modal isOpen={!!conflictPrompt} onClose={() => { setConflictPrompt(null); setConflictAction(null); }} title="Schedule Conflict Found">
+      <Modal isOpen={!!conflictPrompt} onClose={() => { setConflictPrompt(null); }} title="Schedule Conflict Found">
         <div className="p-6 space-y-4">
           <ul className="space-y-1 text-sm text-neutral-700">
             {uniqueConflictSchedules.map((c) => (

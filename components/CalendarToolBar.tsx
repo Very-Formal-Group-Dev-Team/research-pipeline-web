@@ -1,4 +1,11 @@
-const CustomToolbar = ({ label, onNavigate, onView, view }: any) => {
+interface CustomToolbarProps {
+  label: string;
+  onNavigate: (action: 'PREV' | 'NEXT' | 'TODAY') => void;
+  onView: (view: string) => void;
+  view: string;
+}
+
+const CustomToolbar = ({ label, onNavigate, onView, view }: CustomToolbarProps) => {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 overflow-x-auto">
       

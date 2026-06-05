@@ -2,7 +2,7 @@
 
 import React, { useCallback, useRef, useState } from 'react';
 import Cropper, { Area } from 'react-easy-crop';
-import { uploadAvatar, uploadCroppedAvatar } from '../lib/api/upload';
+import { uploadCroppedAvatar } from '../lib/api/upload';
 import { getCroppedImg } from '../lib/image/crop';
 
 type Props = {
@@ -10,13 +10,13 @@ type Props = {
   initialSrc?: string | null;
 };
 
-export default function AvatarUploader({ onUploaded, initialSrc = null }: Props) {
+export default function AvatarUploader({ onUploaded }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [cropping, setCropping] = useState(false);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

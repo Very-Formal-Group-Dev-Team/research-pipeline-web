@@ -16,8 +16,6 @@ import {RenderGroupedEvents} from "@/features/calendar/views/week-and-day-view/r
 import {
     WeekViewMultiDayEventsRow
 } from "@/features/calendar/views/week-and-day-view/week-view-multi-day-events-row";
-import {AlertCircleIcon} from 'lucide-react'
-
 interface IProps {
     singleDayEvents: IEvent[];
     multiDayEvents: IEvent[];

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { FiChevronDown, FiChevronRight, FiFolder, FiUser } from 'react-icons/fi';
+import { FiChevronDown, FiChevronRight, FiFolder } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   getProjectsByAdviser,
@@ -12,7 +12,6 @@ import {
   type AdviserWithProjects,
   type InstitutionProject,
 } from '@/lib/api/coordinator';
-import Button from '@/components/Button';
 import {
   formatProjectStageLabel,
   projectStageBadgeVariant,

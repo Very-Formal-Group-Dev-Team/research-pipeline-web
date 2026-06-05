@@ -126,4 +126,6 @@ export function del<T>(path: string, body?: unknown) {
   });
 }
 
-export default { get, post, put, patch, del };
+const apiClient = { get, post, put, patch, del };
+
+export default apiClient;

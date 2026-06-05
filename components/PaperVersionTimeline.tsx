@@ -94,10 +94,6 @@ function RenderedDiffView({ diff, mode }: { diff: DiffResult; mode: 'current' | 
 
     // Build the plain text used for mapping: current = all non-removed parts; previous = all non-added parts
     const parts = diff.changes;
-    const plain = (mode === 'current'
-      ? parts.filter((p) => !p.removed).map((p) => p.value).join('')
-      : parts.filter((p) => !p.added).map((p) => p.value).join('')) || '';
-
     // Collect text nodes with cumulative offsets
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
     const nodes: { node: Text; start: number; end: number }[] = [];
@@ -172,7 +168,7 @@ function RenderedDiffView({ diff, mode }: { diff: DiffResult; mode: 'current' | 
           wrapper.className = 'bg-error-100 text-error-800 line-through decoration-error-400';
         }
         range.surroundContents(wrapper);
-      } catch (e) {
+      } catch {
         // surroundContents may throw for malformed ranges; ignore and continue
         // (best-effort highlighting)
         // console.error('wrap error', e);

@@ -15,7 +15,6 @@ export function useUserSearch({ role, debounceMs = 300, limit = 10 }: UseUserSea
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   const search = useCallback(
     async (term: string) => {
@@ -65,9 +64,6 @@ export function useUserSearch({ role, debounceMs = 300, limit = 10 }: UseUserSea
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-      }
-      if (abortRef.current) {
-        abortRef.current.abort();
       }
     };
   }, [query, debounceMs, search]);

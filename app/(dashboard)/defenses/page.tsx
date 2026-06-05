@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
-import { type ProjectMember } from '@/lib/api/projects';
 import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -95,12 +94,23 @@ function computeTotalTime(start?: string | null, end?: string | null) {
   return `${minutes}m`;
 }
 
-function normalizeDefense(item: any): ScheduledDefense {
-  const start = item?.start_time || item?.scheduled_at || '';
+function normalizeDefense(item: Partial<ScheduledDefense> & Record<string, unknown>): ScheduledDefense {
+  const start = String(item.start_time || item.scheduled_at || '');
   return {
-    ...item,
+    id: String(item.id ?? ''),
+    project_title: String(item.project_title ?? ''),
+    project_code: String(item.project_code ?? ''),
+    meeting_title: item.meeting_title != null ? String(item.meeting_title) : null,
     start_time: start,
-    end_time: item?.end_time || '',
+    end_time: String(item.end_time || ''),
+    scheduled_at: item.scheduled_at != null ? String(item.scheduled_at) : undefined,
+    defense_type: String(item.defense_type ?? ''),
+    location: String(item.location ?? ''),
+    modality: String(item.modality ?? ''),
+    status: String(item.status ?? ''),
+    status_label: String(item.status_label ?? ''),
+    meeting_url: item.meeting_url != null ? String(item.meeting_url) : null,
+    meeting_room: item.meeting_room != null ? String(item.meeting_room) : null,
   };
 }
 
@@ -150,7 +160,6 @@ export default function MeetingSchedule() {
 
   const [editFormBaseline, setEditFormBaseline] = useState<BookingFormState | null>(null);
 
-  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [projectLookupLoading, setProjectLookupLoading] = useState(false);
 
   //Clear Modal States
@@ -205,16 +214,8 @@ export default function MeetingSchedule() {
       }));
     }
 
-    // Load members passed from advisees detail page
-    const storedMembers = localStorage.getItem('projectMembers');
-    if (storedMembers) {
-      try {
-        setProjectMembers(JSON.parse(storedMembers));
-      } catch (err) {
-        console.error('Failed to parse stored members:', err);
-      }
-      localStorage.removeItem('projectMembers');
-    }
+    // Clear members passed from advisees detail page (consumed on navigation)
+    localStorage.removeItem('projectMembers');
   }, [searchParams]);
 
   useEffect(() => {
@@ -357,8 +358,8 @@ export default function MeetingSchedule() {
     if (!pendingSubmitPayload || isEditMode) return;
     try {
       await submitDefense({ ...pendingSubmitPayload, wait_for_slot: true });
-    } catch (err: any) {
-      showToast(err.message || 'Failed to queue meeting.', 'error');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to queue meeting.', 'error');
     }
   };
 
@@ -433,8 +434,11 @@ export default function MeetingSchedule() {
       } else {
         await submitDefense(payload);
       }
-    } catch (err: any) {
-      showToast(err.message || (isEditMode ? 'Failed to update meeting.' : 'Failed to book meeting.'), 'error');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : (isEditMode ? 'Failed to update meeting.' : 'Failed to book meeting.'),
+        'error',
+      );
     }
   };
 
@@ -450,8 +454,8 @@ export default function MeetingSchedule() {
       setCancelConfirmId(null);
       setSelectedDefense(null);
       await refreshDefenses();
-    } catch (err: any) {
-      showToast(err.message || 'Failed to cancel meeting.', 'error');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to cancel meeting.', 'error');
     }
   };
 
@@ -473,8 +477,8 @@ export default function MeetingSchedule() {
       setRescheduleModal(null);
       setSelectedDefense(null);
       await refreshDefenses();
-    } catch (err: any) {
-      showToast(err.message || 'Failed to reschedule meeting.', 'error');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to reschedule meeting.', 'error');
     }
   };
 

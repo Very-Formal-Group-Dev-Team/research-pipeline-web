@@ -1,4 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+
+let nextEventId = 1;
+
+function allocateEventId(): number {
+  const id = nextEventId;
+  nextEventId += 1;
+  return id;
+}
+
+function allocateUserId(): string {
+  return allocateEventId().toString();
+}
 import { addMinutes, format, set } from "date-fns";
 import { type ReactNode, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -105,11 +117,11 @@ export function AddEditEventDialog({
         ...values,
         startDate: format(values.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
         endDate: format(values.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
-        id: isEditing ? event.id : Math.floor(Math.random() * 1000000),
+        id: isEditing ? event.id : allocateEventId(),
         user: isEditing
           ? event.user
           : {
-              id: Math.floor(Math.random() * 1000000).toString(),
+              id: allocateUserId(),
               name: "Jeraidi Yassir",
               picturePath: null,
             },

@@ -55,25 +55,15 @@ export default function Avatar({ src, alt, name, size = 'md', className = '', st
         `}
       >
         {resolvedSrc && !imgError ? (
-          isUploadAsset ? (
-            <img
-              src={resolvedSrc}
-              alt={displayName}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              decoding="async"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <Image
-              src={resolvedSrc}
-              alt={displayName}
-              width={64}
-              height={64}
-              className="w-full h-full object-cover"
-              onError={() => setImgError(true)}
-            />
-          )
+          <Image
+            src={resolvedSrc}
+            alt={displayName}
+            width={64}
+            height={64}
+            unoptimized={isUploadAsset}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <span>{initials}</span>
         )}

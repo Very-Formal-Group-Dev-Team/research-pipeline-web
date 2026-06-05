@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
  * Project creation route (demo stub).
  * Returns a mock success response.
  */
-export async function POST(request: Request) {
+export async function POST() {
   return NextResponse.json({
     message: 'Project created successfully',
     project: {
