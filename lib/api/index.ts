@@ -5,5 +5,6 @@ export * as projectsApi from './projects';
 export * as uploadApi from './upload';
 export * as notificationsApi from './notifications';
 export * as coordinatorApi from './coordinator';
+export * as adviserApi from './adviser';
 export * as defensesApi from './defenses';
 export * as paperVersionsApi from './paperVersions';

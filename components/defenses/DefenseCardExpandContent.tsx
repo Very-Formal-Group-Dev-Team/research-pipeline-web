@@ -4,6 +4,7 @@ import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { isOnlineModality } from '@/lib/meetings/jitsi';
 
 export interface DefenseCardExpandFields {
+  id?: string;
   project_code: string;
   location?: string | null;
   venue?: string | null;
@@ -42,6 +43,7 @@ export default function DefenseCardExpandContent({ defense }: { defense: Defense
       {showJoin ? (
         <div className="flex shrink-0 items-center justify-start sm:justify-end">
           <JoinMeetingButton
+            meetingId={defense.id}
             meeting_url={defense.meeting_url}
             meeting_room={defense.meeting_room}
             label="Join Defense"

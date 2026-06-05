@@ -780,6 +780,7 @@ export default function MeetingSchedule() {
                     </p>
                     <div className="mb-4">
                       <JoinMeetingButton
+                        meetingId={selectedDefense.id}
                         meeting_url={selectedDefense.meeting_url}
                         meeting_room={selectedDefense.meeting_room}
                         label="Join Meeting"

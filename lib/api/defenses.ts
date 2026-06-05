@@ -2,7 +2,8 @@
  * Defenses API service.
  */
 
-import { get, patch, post } from './client';
+import { get, patch, post, put } from './client';
+import type { CoordinatorRubric } from './coordinator';
 
 export interface Defense {
   id: string;
@@ -113,3 +114,54 @@ export function completeMeeting(meetingId: string) {
 export function restoreMeeting(meetingId: string) {
   return patch<{ success: boolean; defense: Defense }>(`/defenses/${meetingId}/restore`);
 }
+
+export interface DefenseMeetingSessionDefense {
+  id: string;
+  project_id: string;
+  project_title: string;
+  project_code: string;
+  defense_type: string;
+  modality?: string | null;
+  status: string;
+  meeting_room?: string | null;
+  meeting_url?: string | null;
+  meeting_provider?: string | null;
+  start_time?: string;
+  end_time?: string | null;
+  schedule_source?: 'defense' | 'meeting';
+}
+
+export interface DefensePanelEvaluation {
+  criterion_id: string;
+  score: number;
+  comments?: string;
+}
+
+export interface DefenseMeetingSession {
+  defense: DefenseMeetingSessionDefense;
+  is_panelist: boolean;
+  rubric: CoordinatorRubric | null;
+  evaluations: DefensePanelEvaluation[];
+  notes: string;
+}
+
+export interface SaveDefensePanelEvaluationsPayload {
+  scores: Array<{
+    criterionId: string;
+    score: number;
+    comments?: string;
+  }>;
+  notes?: string;
+}
+
+export function getDefenseMeetingSession(defenseId: string) {
+  return get<DefenseMeetingSession>(`/defenses/${defenseId}/meeting-session`);
+}
+
+export function saveDefensePanelEvaluations(
+  defenseId: string,
+  payload: SaveDefensePanelEvaluationsPayload,
+) {
+  return put<DefenseMeetingSession>(`/defenses/${defenseId}/panel-evaluations`, payload);
+}
+

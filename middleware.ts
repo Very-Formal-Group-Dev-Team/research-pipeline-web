@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PROTECTED_PATHS = ['/student', '/adviser', '/coordinator', '/onboarding'];
+const PROTECTED_PATHS = ['/student', '/adviser', '/coordinator', '/onboarding', '/defenses'];
 /**
  * Middleware — passthrough for frontend demo (no auth checks).
  */
