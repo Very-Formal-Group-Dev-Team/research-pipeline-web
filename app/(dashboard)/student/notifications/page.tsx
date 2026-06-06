@@ -226,63 +226,62 @@ export default function StudentNotificationsPage() {
                     typeof notification.metadata?.projectId === 'string';
 
                   return (
-              <Card
-                key={notification.id}
-                id={notificationDomId(notification.id)}
-                className={`${!notification.is_read ? 'border-l-4 border-l-primary-500' : ''} ${
-                  isJoinRequestForLeader ? 'cursor-pointer transition-colors hover:bg-neutral-50' : ''
-                }`}
-                onClick={isJoinRequestForLeader ? () => handleNotificationClick(notification) : undefined}
-                role={isJoinRequestForLeader ? 'link' : undefined}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center">
-                    {notificationIcon(notification.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div>
-                        <h3 className={`font-semibold text-lg ${!notification.is_read ? 'text-primary-700' : 'text-neutral-700'}`}>
-                          {notification.title}
-                        </h3>
-                        <p className="text-xs text-neutral-500">
-                          {formatDate(notification.created_at)}
-                        </p>
+                    <Card
+                      key={notification.id}
+                      id={notificationDomId(notification.id)}
+                      className={`${!notification.is_read ? 'border-l-4 border-l-primary-500' : ''} ${
+                        isJoinRequestForLeader ? 'cursor-pointer transition-colors hover:bg-neutral-50' : ''
+                      }`}
+                      onClick={isJoinRequestForLeader ? () => handleNotificationClick(notification) : undefined}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center">
+                          {notificationIcon(notification.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div>
+                              <h3 className={`font-semibold text-lg ${!notification.is_read ? 'text-primary-700' : 'text-neutral-700'}`}>
+                                {notification.title}
+                              </h3>
+                              <p className="text-xs text-neutral-500">
+                                {formatDate(notification.created_at)}
+                              </p>
+                            </div>
+                            <Badge variant={getNotificationVariant(notification.type)}>
+                              {getNotificationTypeLabel(notification.type)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-neutral-600 mt-1">{notification.message}</p>
+                          {!notification.is_read && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleMarkRead(notification.id);
+                              }}
+                              className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                            >
+                              Mark as read
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <Badge variant={getNotificationVariant(notification.type)}>
-                        {getNotificationTypeLabel(notification.type)}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-neutral-600 mt-1">{notification.message}</p>
-                    {!notification.is_read && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleMarkRead(notification.id);
-                        }}
-                        className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
-                      >
-                        Mark as read
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </Card>
+                    </Card>
                   );
                 })}
-          </div>
-        ) : (
-          invitations.length === 0 && (
-            <Card>
-              <EmptyState
-                icon={<FiBell />}
-                title="No notifications"
-                description="You don't have any notifications yet. You'll be notified when defenses are scheduled or approved."
-              />
-            </Card>
-          )
-        )}
+              </div>
+            ) : (
+              invitations.length === 0 && (
+                <Card>
+                  <EmptyState
+                    icon={<FiBell />}
+                    title="No notifications"
+                    description="You don't have any notifications yet. You'll be notified when defenses are scheduled or approved."
+                  />
+                </Card>
+              )
+            )}
           </>
         )}
       </div>

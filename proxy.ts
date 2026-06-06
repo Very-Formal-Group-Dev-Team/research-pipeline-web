@@ -38,7 +38,7 @@ function requiresAuthentication(pathname: string): boolean {
   return AUTH_REQUIRED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get('session_token')?.value;
   const { pathname } = request.nextUrl;
 
