@@ -195,7 +195,7 @@ export default async function Home() {
 
         {/* Features */}
         <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 scroll-mt-20">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {features.map((feature) => (
               <Card key={feature.num} className="!rounded-sm h-full" hoverShadow>
                 <p className="text-sm font-medium text-archivumRed tabular-nums mb-4">
@@ -216,7 +216,7 @@ export default async function Home() {
             <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between md:gap-10">
               <h2 className="font-serif text-3xl sm:text-4xl font-semibold text-snow leading-snug flex-1 min-w-0">
                 <span className="block">Ready to begin?</span>
-                <span className="mt-2 block italic text-archivumRed font-serif text-pretty md:max-w-xl lg:max-w-2xl">
+                <span className="mt-2 block text-2xl italic text-archivumRed font-serif text-pretty sm:text-4xl md:max-w-xl lg:max-w-2xl">
                   Your&nbsp;research&nbsp;deserves&nbsp;structure.
                 </span>
               </h2>

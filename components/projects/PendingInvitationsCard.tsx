@@ -98,9 +98,9 @@ export default function PendingInvitationsCard({
   }
 
   return (
-    <Card className="flex flex-col min-h-0">
+    <Card className="flex h-full min-h-0 flex-col">
       <CardIconHeader
-        className="mb-4 flex-shrink-0"
+        className="flex-shrink-0"
         title="Pending Invitations"
         description={
           !loading && invitations.length > 0
@@ -110,15 +110,16 @@ export default function PendingInvitationsCard({
         icon={<FiMail className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
       />
 
-      {loading ? (
-        <p className="font-sans text-sm text-neutral-500 py-4">Loading invitations...</p>
-      ) : error ? (
-        <p className="font-sans text-sm text-archivumRed py-4">{error}</p>
-      ) : invitations.length === 0 ? (
-        <p className="font-sans text-sm text-neutral-500 py-4">{emptyMessage}</p>
-      ) : (
-        <div className="max-h-80 overflow-y-auto space-y-3 pr-1 -mr-1">
-          {invitations.map((invitation) => (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {loading ? (
+          <p className="font-sans text-sm text-neutral-500 py-4">Loading invitations...</p>
+        ) : error ? (
+          <p className="font-sans text-sm text-archivumRed py-4">{error}</p>
+        ) : invitations.length === 0 ? (
+          <p className="font-sans text-sm text-neutral-500 py-4">{emptyMessage}</p>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto space-y-3 pr-1 -mr-1">
+            {invitations.map((invitation) => (
             <div
               key={invitation.id}
               className="flex justify-between py-4 px-6 border border-neutral-200 rounded-lg hover:border-oxfordBlue/40 hover:bg-oxfordBlue/5 transition-all"
@@ -162,9 +163,10 @@ export default function PendingInvitationsCard({
                 </Button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </Card>
   );
 }

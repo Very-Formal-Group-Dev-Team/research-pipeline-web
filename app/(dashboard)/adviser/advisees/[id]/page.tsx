@@ -574,6 +574,7 @@ export default function AdviserProjectDetailPage() {
             members={members}
             pendingInvites={pendingInvites}
             currentUserId={profile?.id}
+            viewerContext="adviser"
             onMembersChange={loadMembers}
             onInviteClick={() => setInviteOpen(true)}
             inviteSuccess={inviteSuccess}

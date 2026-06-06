@@ -2,6 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSectionFocusScroll } from '@/lib/hooks/useSectionFocusScroll';
+import {
+  PROJECT_TEAM_MEMBERS_SECTION_ID,
+  PROJECT_TEAM_MEMBERS_SECTION_PARAM,
+} from '@/lib/projects/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -52,7 +57,13 @@ import {
   paperStandardFormValue,
   statusBadgeVariant,
 } from '@/lib/utils/projectDisplay';
-import { formatProjectStageLabel } from '@/lib/utils/projectStage';
+import { formatProjectStageLabel, isProjectLocked } from '@/lib/utils/projectStage';
+import LeaveProjectModal, { type LeaveProjectRole } from '@/components/projects/LeaveProjectModal';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/shadcn/ui/tooltip';
 
 function formatProjectDateTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -131,6 +142,7 @@ export default function ProjectDetailPage() {
   const [deleteTitleInput, setDeleteTitleInput] = useState('');
   const [deletingProject, setDeletingProject] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
@@ -145,6 +157,12 @@ export default function ProjectDetailPage() {
   const [detailsSection, setDetailsSection] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+
+  useSectionFocusScroll(
+    PROJECT_TEAM_MEMBERS_SECTION_PARAM,
+    PROJECT_TEAM_MEMBERS_SECTION_ID,
+    !loading && Boolean(project),
+  );
 
   const loadPaperVersions = useCallback(async () => {
     if (!params.id) return;
@@ -202,6 +220,10 @@ export default function ProjectDetailPage() {
     setMembers(membersRes.data || []);
     setPendingInvites(invitesRes.data || []);
   }, [params.id]);
+
+  const refreshTeamAndProject = useCallback(async () => {
+    await Promise.all([loadMembers(), reloadProject()]);
+  }, [loadMembers, reloadProject]);
 
   useEffect(() => {
     let cancelled = false;
@@ -546,6 +568,30 @@ export default function ProjectDetailPage() {
         (member) =>
           member.user_id === profile?.id && member.role === 'leader' && member.status === 'accepted',
       ));
+
+  const currentMembership = members.find(
+    (member) => member.user_id === profile?.id && member.status === 'accepted',
+  );
+  const acceptedMembers = members.filter((member) => member.status === 'accepted');
+  const otherAcceptedMembers = acceptedMembers.filter(
+    (member) => member.user_id !== profile?.id,
+  );
+  const projectIsLocked = isProjectLocked(project.status);
+  const isOwnerOnlyMember = isProjectLeader && otherAcceptedMembers.length === 0;
+  const leaveRole: LeaveProjectRole | null = currentMembership
+    ? currentMembership.role === 'leader'
+      ? 'leader'
+      : currentMembership.role === 'adviser'
+        ? 'adviser'
+        : 'member'
+    : null;
+  const leaveDisabled = projectIsLocked || isOwnerOnlyMember;
+  const leaveDisabledTooltip = projectIsLocked
+    ? 'Project is locked'
+    : isOwnerOnlyMember
+      ? "You're the only member. Delete the project instead."
+      : undefined;
+  const userDisplayName = profile?.name || user.name || '';
   const deleteTitleMatches = deleteTitleInput === project.title;
 
   const openDeleteModal = () => {
@@ -574,6 +620,17 @@ export default function ProjectDetailPage() {
     }
 
     router.push('/student/projects');
+  };
+
+  const handleLeaveCompleted = async (result: { action: string; removed?: boolean }) => {
+    setLeaveModalOpen(false);
+    if (result.removed) {
+      toast.success('You have left the project');
+      router.push('/student');
+      return;
+    }
+    toast.success('Project ownership transferred successfully');
+    await Promise.all([reloadProject(), loadMembers()]);
   };
 
   return (
@@ -624,14 +681,19 @@ export default function ProjectDetailPage() {
               </Button>
               <div className="flex items-center gap-2">
                 {!isEditingTitle ? (
-                  <button
-                    type="button"
-                    onClick={startEditingTitle}
-                    className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
-                    aria-label="Edit project title"
-                  >
-                    <FiEdit2 className="h-4 w-4" aria-hidden />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={startEditingTitle}
+                        className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                        aria-label="Edit project title"
+                      >
+                        <FiEdit2 className="h-4 w-4" aria-hidden />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Edit project title</TooltipContent>
+                  </Tooltip>
                 ) : null}
                 <Badge variant={statusBadgeVariant(project.status)} className="shrink-0">
                   {formatProjectStageLabel(project.status)}
@@ -641,14 +703,19 @@ export default function ProjectDetailPage() {
 
             <div className="hidden items-center gap-2 self-center sm:flex sm:shrink-0 sm:gap-3">
               {!isEditingTitle ? (
-                <button
-                  type="button"
-                  onClick={startEditingTitle}
-                  className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
-                  aria-label="Edit project title"
-                >
-                  <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={startEditingTitle}
+                      className="shrink-0 rounded-md p-1.5 text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+                      aria-label="Edit project title"
+                    >
+                      <FiEdit2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit project title</TooltipContent>
+                </Tooltip>
               ) : null}
               <Badge variant={statusBadgeVariant(project.status)} className="shrink-0 self-center">
                 {formatProjectStageLabel(project.status)}
@@ -837,7 +904,8 @@ export default function ProjectDetailPage() {
             members={members}
             pendingInvites={pendingInvites}
             currentUserId={profile?.id}
-            onMembersChange={loadMembers}
+            isProjectLeader={isProjectLeader}
+            onMembersChange={() => void refreshTeamAndProject()}
             onInviteClick={() => setInviteOpen(true)}
             inviteSuccess={inviteSuccess}
             inviteError={inviteError}
@@ -1041,21 +1109,64 @@ export default function ProjectDetailPage() {
           />
         </Card>
 
-        {isProjectLeader ? (
+        {currentMembership ? (
           <Card className="border-error-200">
             <CardHeader>
               <CardTitle className="text-archivumRed">Danger zone</CardTitle>
               <CardDescription>
-                Permanently delete this project and all related papers, meetings, and team data.
-                This cannot be undone.
+                Leave this project or permanently delete it and all related papers, meetings, and
+                team data. These actions cannot be undone.
               </CardDescription>
             </CardHeader>
-            <Button variant="error" size="sm" onClick={openDeleteModal}>
-              Delete project
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              {leaveDisabled && leaveDisabledTooltip ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="border-archivumRed text-archivumRed hover:bg-archivumRed/10 hover:text-archivumRed disabled:border-neutral-300 disabled:text-neutral-400"
+                      >
+                        Leave project
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{leaveDisabledTooltip}</TooltipContent>
+                </Tooltip>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-archivumRed text-archivumRed hover:bg-archivumRed/10 hover:text-archivumRed disabled:border-neutral-300 disabled:text-neutral-400"
+                  onClick={() => setLeaveModalOpen(true)}
+                >
+                  Leave project
+                </Button>
+              )}
+              {isProjectLeader ? (
+                <Button variant="error" size="sm" onClick={openDeleteModal}>
+                  Delete project
+                </Button>
+              ) : null}
+            </div>
           </Card>
         ) : null}
       </div>
+
+      {leaveRole ? (
+        <LeaveProjectModal
+          isOpen={leaveModalOpen}
+          onClose={() => setLeaveModalOpen(false)}
+          projectId={project.id}
+          projectTitle={project.title}
+          leaveRole={leaveRole}
+          displayName={userDisplayName}
+          successorCandidates={otherAcceptedMembers}
+          onLeft={(result) => void handleLeaveCompleted(result)}
+        />
+      ) : null}
 
       <Modal
         isOpen={deleteModalOpen}

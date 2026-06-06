@@ -169,7 +169,7 @@ export default function CoordinatorDefenseEditPage() {
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold coordinator-heading">
               {isEditMode ? 'Edit Defense' : 'Assign Defense Batches'}
@@ -184,7 +184,7 @@ export default function CoordinatorDefenseEditPage() {
             type="button"
             variant="ghost"
             size="sm"
-            className="shrink-0 self-start text-primary-700 hover:bg-primary-50"
+            className="shrink-0 self-start sm:self-center text-primary-700 hover:bg-primary-50"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => router.push('/coordinator/events?tab=approved')}
           >

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -34,6 +35,7 @@ import {
 } from '@/lib/notifications/display';
 import { useNotificationFocusScroll } from '@/lib/hooks/useNotificationFocusScroll';
 import { notificationDomId } from '@/lib/notifications/navigation';
+import { getProjectTeamMembersPath } from '@/lib/projects/navigation';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -58,12 +60,15 @@ function notificationIcon(type: string) {
       return <FiCalendar className="text-2xl text-primary-600" />;
     case 'project_stage_updated':
       return <FiArrowRight className="text-2xl text-primary-600" />;
+    case 'join_request':
+      return <FiUserPlus className="text-2xl text-warning-600" />;
     default:
       return <FiBell className="text-2xl text-accent-600" />;
   }
 }
 
 export default function StudentNotificationsPage() {
+  const router = useRouter();
   const { user, handleLogout } = useDashboardUser('Student');
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -97,6 +102,24 @@ export default function StudentNotificationsPage() {
     );
   }
 
+  async function handleNotificationClick(notification: NotificationItem) {
+    if (!notification.is_read) {
+      await markNotificationRead(notification.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)),
+      );
+    }
+
+    const projectId =
+      typeof notification.metadata?.projectId === 'string'
+        ? notification.metadata.projectId
+        : null;
+
+    if (notification.type === 'join_request' && projectId && notification.title === 'Join request') {
+      router.push(getProjectTeamMembersPath('student', projectId));
+    }
+  }
+
   async function handleMarkAllRead() {
     await markAllNotificationsRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
@@ -124,7 +147,7 @@ export default function StudentNotificationsPage() {
             </p>
           </div>
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
+            <Button variant="outline" size="sm" className="shrink-0 text-xs sm:text-sm" onClick={handleMarkAllRead}>
               <FiCheck className="mr-1" /> Mark all read
             </Button>
           )}
@@ -196,43 +219,57 @@ export default function StudentNotificationsPage() {
                     <FiBell /> Notifications
                   </h2>
                 )}
-                {notifications.map((notification) => (
-                  <Card
-                    key={notification.id}
-                    id={notificationDomId(notification.id)}
-                    className={!notification.is_read ? 'border-l-4 border-l-primary-500' : ''}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center">
-                        {notificationIcon(notification.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <div>
-                            <h3 className={`font-semibold text-lg ${!notification.is_read ? 'text-primary-700' : 'text-neutral-700'}`}>
-                              {notification.title}
-                            </h3>
-                            <p className="text-xs text-neutral-500">
-                              {formatDate(notification.created_at)}
-                            </p>
-                          </div>
-                          <Badge variant={getNotificationVariant(notification.type)}>
-                            {getNotificationTypeLabel(notification.type)}
-                          </Badge>
+                {notifications.map((notification) => {
+                  const isJoinRequestForLeader =
+                    notification.type === 'join_request' &&
+                    notification.title === 'Join request' &&
+                    typeof notification.metadata?.projectId === 'string';
+
+                  return (
+                    <Card
+                      key={notification.id}
+                      id={notificationDomId(notification.id)}
+                      className={`${!notification.is_read ? 'border-l-4 border-l-primary-500' : ''} ${
+                        isJoinRequestForLeader ? 'cursor-pointer transition-colors hover:bg-neutral-50' : ''
+                      }`}
+                      onClick={isJoinRequestForLeader ? () => handleNotificationClick(notification) : undefined}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center">
+                          {notificationIcon(notification.type)}
                         </div>
-                        <p className="text-sm text-neutral-600 mt-1">{notification.message}</p>
-                        {!notification.is_read && (
-                          <button
-                            onClick={() => handleMarkRead(notification.id)}
-                            className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
-                          >
-                            Mark as read
-                          </button>
-                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div>
+                              <h3 className={`font-semibold text-lg ${!notification.is_read ? 'text-primary-700' : 'text-neutral-700'}`}>
+                                {notification.title}
+                              </h3>
+                              <p className="text-xs text-neutral-500">
+                                {formatDate(notification.created_at)}
+                              </p>
+                            </div>
+                            <Badge variant={getNotificationVariant(notification.type)}>
+                              {getNotificationTypeLabel(notification.type)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-neutral-600 mt-1">{notification.message}</p>
+                          {!notification.is_read && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleMarkRead(notification.id);
+                              }}
+                              className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                            >
+                              Mark as read
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               invitations.length === 0 && (
