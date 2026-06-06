@@ -14,6 +14,7 @@ import {
   FiPlus,
   FiMinus,
 } from 'react-icons/fi';
+import { Sparkles } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
@@ -636,7 +637,7 @@ export default function PaperVersionTimeline({
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5">
-                    <FiZap className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
                     Generate {paperStandard.toUpperCase()} Template
                   </span>
                 )}

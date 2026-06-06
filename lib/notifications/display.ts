@@ -23,6 +23,8 @@ export function getNotificationTypeLabel(type: string): string {
       return 'Event';
     case 'project_stage_updated':
       return 'Stage';
+    case 'join_request':
+      return 'Join request';
     default:
       return formatStatusLabel(type.replace(/_/g, ' '));
   }
@@ -42,6 +44,8 @@ export function getNotificationVariant(type: string): NotificationBadgeVariant {
       return 'primary';
     case 'project_stage_updated':
       return 'primary';
+    case 'join_request':
+      return 'warning';
     default:
       return 'default';
   }
