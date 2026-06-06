@@ -576,8 +576,13 @@ export default function ProjectDetailPage() {
   const otherAcceptedMembers = acceptedMembers.filter(
     (member) => member.user_id !== profile?.id,
   );
+  const leaderSuccessorCandidates = acceptedMembers.filter(
+    (member) => member.user_id !== profile?.id && member.role === 'member',
+  );
   const projectIsLocked = isProjectLocked(project.status);
   const isOwnerOnlyMember = isProjectLeader && otherAcceptedMembers.length === 0;
+  const hasNoEligibleLeaderSuccessor =
+    isProjectLeader && otherAcceptedMembers.length > 0 && leaderSuccessorCandidates.length === 0;
   const leaveRole: LeaveProjectRole | null = currentMembership
     ? currentMembership.role === 'leader'
       ? 'leader'
@@ -585,12 +590,14 @@ export default function ProjectDetailPage() {
         ? 'adviser'
         : 'member'
     : null;
-  const leaveDisabled = projectIsLocked || isOwnerOnlyMember;
+  const leaveDisabled = projectIsLocked || isOwnerOnlyMember || hasNoEligibleLeaderSuccessor;
   const leaveDisabledTooltip = projectIsLocked
     ? 'Project is locked'
     : isOwnerOnlyMember
       ? "You're the only member. Delete the project instead."
-      : undefined;
+      : hasNoEligibleLeaderSuccessor
+        ? 'Leadership can only be transferred to a collaborator. Invite a team member first.'
+        : undefined;
   const userDisplayName = profile?.name || user.name || '';
   const deleteTitleMatches = deleteTitleInput === project.title;
 
@@ -1163,7 +1170,7 @@ export default function ProjectDetailPage() {
           projectTitle={project.title}
           leaveRole={leaveRole}
           displayName={userDisplayName}
-          successorCandidates={otherAcceptedMembers}
+          successorCandidates={leaderSuccessorCandidates}
           onLeft={(result) => void handleLeaveCompleted(result)}
         />
       ) : null}
