@@ -535,7 +535,7 @@ export default function DefenseBatchPlanner({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 p-4 lg:hidden">
+        <div className={`flex flex-col gap-3 lg:hidden ${CARD_PADDING_CLASS}`}>
           {lanes.map((lane) => (
             <BatchAccordionItem
               key={lane.id}
@@ -551,7 +551,7 @@ export default function DefenseBatchPlanner({
           ))}
         </div>
 
-        <div className="hidden gap-4 p-4 lg:flex lg:flex-row lg:overflow-x-auto lg:pb-4">
+        <div className={`hidden gap-4 lg:flex lg:flex-row lg:overflow-x-auto ${CARD_PADDING_CLASS}`}>
           {lanes.map((lane) => (
             <KanbanColumn
               key={lane.id}

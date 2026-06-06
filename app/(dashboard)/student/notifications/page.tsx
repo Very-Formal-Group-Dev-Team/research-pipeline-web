@@ -147,7 +147,7 @@ export default function StudentNotificationsPage() {
             </p>
           </div>
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
+            <Button variant="outline" size="sm" className="shrink-0 text-xs sm:text-sm" onClick={handleMarkAllRead}>
               <FiCheck className="mr-1" /> Mark all read
             </Button>
           )}

@@ -26,6 +26,10 @@ import {
 } from '@/components/coordinator/CoordinatorTimeRangeFields';
 import CoordinatorGroupMultiSelect from '@/components/coordinator/CoordinatorGroupMultiSelect';
 import CoordinatorDefenseSections from '@/components/coordinator/CoordinatorDefenseSections';
+import DefenseSortControls, {
+  INSTITUTION_EVENT_SORT_OPTIONS,
+} from '@/components/defenses/DefenseSortControls';
+import { sortInstitutionEvents, type DefenseSortDirection } from '@/lib/defenses/sort';
 import { buildDefenseIdsByProjectId } from '@/lib/coordinator/defenseBatchEvent';
 import { saveDefenseBatchSession } from '@/lib/coordinator/defenseBatchSession';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -126,6 +130,8 @@ export default function CoordinatorEventsPage() {
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [courseGroups, setCourseGroups] = useState<CourseGroup[]>([]);
   const [courseGroupsLoading, setCourseGroupsLoading] = useState(false);
+  const [eventSortBy, setEventSortBy] = useState<'time' | 'status'>('time');
+  const [eventSortDirection, setEventSortDirection] = useState<DefenseSortDirection>('asc');
   const loadEvents = useCallback(async () => {
     const [eventsRes, pendingRes] = await Promise.all([
       getCoordinatorEvents(),
@@ -167,6 +173,11 @@ export default function CoordinatorEventsPage() {
   const filteredRubrics = useMemo(
     () => rubrics.filter((r) => r.defense_type === defenseForm.defenseType),
     [rubrics, defenseForm.defenseType],
+  );
+
+  const sortedEvents = useMemo(
+    () => sortInstitutionEvents(events, eventSortBy, eventSortDirection),
+    [events, eventSortBy, eventSortDirection],
   );
 
   const panelistSuggestions = useMemo(() => {
@@ -553,25 +564,39 @@ export default function CoordinatorEventsPage() {
           ) : events.length === 0 ? (
             <Card><p className="text-sm text-neutral-600">No events scheduled yet.</p></Card>
           ) : (
-            <div className="space-y-3">
-              {events.map((event) => (
-                <CoordinatorScheduleCard
-                  key={event.id}
-                  title={event.title}
-                  description={event.description}
-                  startTime={event.start_time}
-                  endTime={event.end_time}
-                  modality={event.modality}
-                  location={event.location}
-                  status={event.status}
-                  actions={{
-                    onEdit: () => openEditEvent(event),
-                    onCancel: () => setCancelEventId(event.id),
-                    onComplete: () => void handleCompleteEvent(event.id),
-                    disabled: eventActionLoading,
-                  }}
-                />
-              ))}
+            <div className="space-y-4">
+              <DefenseSortControls
+                sortBy={eventSortBy}
+                direction={eventSortDirection}
+                onSortByChange={(value) => {
+                  if (value === 'time' || value === 'status') {
+                    setEventSortBy(value);
+                  }
+                }}
+                onDirectionChange={setEventSortDirection}
+                tone="coordinator"
+                options={INSTITUTION_EVENT_SORT_OPTIONS}
+              />
+              <div className="space-y-3">
+                {sortedEvents.map((event) => (
+                  <CoordinatorScheduleCard
+                    key={event.id}
+                    title={event.title}
+                    description={event.description}
+                    startTime={event.start_time}
+                    endTime={event.end_time}
+                    modality={event.modality}
+                    location={event.location}
+                    status={event.status}
+                    actions={{
+                      onEdit: () => openEditEvent(event),
+                      onCancel: () => setCancelEventId(event.id),
+                      onComplete: () => void handleCompleteEvent(event.id),
+                      disabled: eventActionLoading,
+                    }}
+                  />
+                ))}
+              </div>
               {eventActionError ? (
                 <p className="text-center text-sm text-archivumRed">{eventActionError}</p>
               ) : null}
