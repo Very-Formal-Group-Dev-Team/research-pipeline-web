@@ -32,7 +32,7 @@ export default function ProjectCodeCopyRow({ projectCode }: { projectCode: strin
           type="button"
           variant="outline"
           size="sm"
-          className="flex size-9 shrink-0 items-center justify-center !p-0"
+          className="flex size-9 shrink-0 items-center justify-center !rounded-sm !border !p-0"
           onClick={() => void handleCopy()}
           aria-label={copied ? 'Copied to clipboard' : 'Copy project code'}
         >

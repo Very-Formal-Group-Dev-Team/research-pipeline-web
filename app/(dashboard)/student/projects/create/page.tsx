@@ -564,7 +564,7 @@ export default function CreateProjectPage() {
             </div>
           </Card>
 
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-2">
+          <div className="flex flex-row justify-between gap-3 pt-2">
             <Button
               type="button"
               variant="outline"

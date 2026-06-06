@@ -17,6 +17,7 @@ import PendingInvitationsCard, {
   PROJECT_INVITATION_RESPONDED_EVENT,
   type ProjectInvitationRespondedDetail,
 } from '@/components/projects/PendingInvitationsCard';
+import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import { formatProjectCardDate, formatProjectCardMeta } from '@/lib/utils/projectDisplay';
 
 const ABSTRACT_PREVIEW_MAX_CHARS = 92;
@@ -183,6 +184,9 @@ export default function AdviserAdviseesPage() {
                   <h2 className="mt-1 font-serif text-2xl font-bold leading-tight text-primary-700 break-words">
                     {expandedProject.title}
                   </h2>
+                  {expandedProject.project_code ? (
+                    <ProjectCodeCopyRow projectCode={expandedProject.project_code} />
+                  ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {expandedProject.member_role &&
                     expandedProject.member_role !== 'adviser' ? (
