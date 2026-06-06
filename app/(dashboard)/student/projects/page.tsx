@@ -197,8 +197,10 @@ export default function StudentProjectsPage() {
             >
               <div className="flex items-start justify-between gap-4 border-b border-neutral-300 bg-neutral-50 px-5 py-4 sm:px-6 sm:py-5">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs uppercase tracking-[0.14em] text-primary-600">Project overview</p>
-                  <h2 className="mt-1 font-serif text-2xl text-primary-700 break-words">{expandedProject.title}</h2>
+                  <p className="font-sans text-sm text-neutral-600">Project Overview</p>
+                  <h2 className="mt-1 font-serif text-2xl font-bold leading-tight text-primary-700 break-words">
+                    {expandedProject.title}
+                  </h2>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {expandedProject.member_role && (
                       <Badge
@@ -225,24 +227,24 @@ export default function StudentProjectsPage() {
 
               <div className="max-h-[72vh] space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
                 <section className="rounded-sm border border-neutral-300 bg-neutral-50 p-4 transition-all hover:border-neutral-400 hover:shadow-lg sm:p-5">
-                  <p className="text-xs uppercase tracking-[0.14em] text-primary-600">Abstract</p>
-                  <p className="mt-2 text-sm leading-relaxed text-neutral-700 sm:text-base">
+                  <h3 className="font-serif text-lg font-semibold text-eerieBlack">Abstract</h3>
+                  <p className="mt-2 font-sans text-sm leading-relaxed text-neutral-700 sm:text-base">
                     {projectAbstract(expandedProject) || 'No abstract available yet.'}
                   </p>
                 </section>
 
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary-700">
-                    <FiClock className="h-4 w-4" />
-                    Last updated
+                  <div className="flex items-center gap-2">
+                    <FiClock className="h-4 w-4 shrink-0 text-primary-600" />
+                    <h3 className="font-serif text-lg font-semibold text-eerieBlack">Last updated</h3>
                   </div>
-                  <p className="text-sm text-neutral-700 sm:text-base">{formatUpdatedDate(expandedProject.updated_at)}</p>
+                  <p className="font-sans text-sm text-neutral-700 sm:text-base">{formatUpdatedDate(expandedProject.updated_at)}</p>
                 </section>
 
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary-700">
-                    <FiUsers className="h-4 w-4" />
-                    Team members
+                  <div className="flex items-center gap-2">
+                    <FiUsers className="h-4 w-4 shrink-0 text-primary-600" />
+                    <h3 className="font-serif text-lg font-semibold text-eerieBlack">Team members</h3>
                   </div>
                   {expandedMembersLoading ? (
                     <p className="text-sm text-neutral-600">Loading team members...</p>
@@ -282,9 +284,9 @@ export default function StudentProjectsPage() {
                 </section>
 
                 <section className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary-700">
-                    <FiTag className="h-4 w-4" />
-                    Keywords
+                  <div className="flex items-center gap-2">
+                    <FiTag className="h-4 w-4 shrink-0 text-primary-600" />
+                    <h3 className="font-serif text-lg font-semibold text-eerieBlack">Keywords</h3>
                   </div>
                   {expandedProject.keywords?.length ? (
                     <div className="flex flex-wrap gap-2">
