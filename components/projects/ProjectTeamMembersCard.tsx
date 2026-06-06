@@ -314,7 +314,7 @@ export default function ProjectTeamMembersCard({
               const showMakeLeader =
                 viewerContext === 'student' &&
                 isProjectLeader &&
-                member.role !== 'leader' &&
+                member.role === 'member' &&
                 member.status === 'accepted' &&
                 member.user_id !== currentUserId;
               const showMakeMainAdviser =
