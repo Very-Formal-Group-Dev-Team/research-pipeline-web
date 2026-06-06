@@ -18,6 +18,7 @@ import {
   FiInfo,
   FiCalendar,
   FiArrowRight,
+  FiUserPlus,
 } from 'react-icons/fi';
 import { useSidebar } from './SidebarContext';
 import {
@@ -30,6 +31,7 @@ import {
   getRoleNotificationsPath,
   notificationFocusQuery,
 } from '@/lib/notifications/navigation';
+import { getProjectTeamMembersPath } from '@/lib/projects/navigation';
 import {
   getMyInvitations,
   respondToInvitation,
@@ -119,6 +121,17 @@ export default function Header({ user, onLogout }: HeaderProps) {
     if (!notification.is_read) {
       await markNotificationRead(notification.id);
     }
+
+    const projectId =
+      typeof notification.metadata?.projectId === 'string'
+        ? notification.metadata.projectId
+        : null;
+
+    if (notification.type === 'join_request' && projectId && notification.title === 'Join request') {
+      router.push(getProjectTeamMembersPath(user?.role || 'student', projectId));
+      return;
+    }
+
     const base = getRoleNotificationsPath(user?.role || 'student');
     router.push(`${base}${notificationFocusQuery(notification.id)}`);
   }
@@ -185,7 +198,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
     <div ref={bellRef} className="relative">
       <button
         type="button"
-        className="relative rounded-lg p-2 text-snow transition-colors hover:bg-antiFlashWhite hover:text-oxfordBlue"
+        className="relative rounded-lg p-2 text-snow transition-colors hover:bg-white/10"
         aria-label="Notifications"
         title="Notifications"
         onClick={() => {
@@ -204,8 +217,8 @@ export default function Header({ user, onLogout }: HeaderProps) {
       </button>
 
       {bellOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 max-h-[28rem] overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-lg z-50">
-          <div className="sticky top-0 bg-white border-b border-neutral-100 px-4 py-3 flex items-center justify-between">
+        <div className="absolute right-0 top-full z-50 mt-2 max-h-[28rem] w-96 overflow-y-auto rounded-md border border-solid border-neutral-400 bg-white shadow-lg">
+          <div className="sticky top-0 flex items-center justify-between border-b border-neutral-300 bg-white px-4 py-3">
             <h3 className="text-sm font-semibold text-neutral-800">Notifications</h3>
             {notifications.some((n) => !n.is_read) && (
               <button
@@ -278,13 +291,15 @@ export default function Header({ user, onLogout }: HeaderProps) {
                   {n.type === 'project_stage_updated' && (
                     <FiArrowRight className="text-primary-500" />
                   )}
+                  {n.type === 'join_request' && <FiUserPlus className="text-warning-600" />}
                   {n.type !== 'defense_approved' &&
                     n.type !== 'defense_rejected' &&
                     n.type !== 'defense_moved' &&
                     n.type !== 'invitation' &&
                     n.type !== 'schedule' &&
                     n.type !== 'event' &&
-                    n.type !== 'project_stage_updated' && <FiBell className="text-primary-500" />}
+                    n.type !== 'project_stage_updated' &&
+                    n.type !== 'join_request' && <FiBell className="text-primary-500" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-neutral-800 truncate">{n.title}</p>
