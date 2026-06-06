@@ -3,6 +3,7 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useAuth from '@/lib/hooks/useAuth';
+import { getRoleHomePath } from '@/lib/auth/roleAccess';
 
 function AuthContinueContent() {
   const router = useRouter();
@@ -37,16 +38,7 @@ function AuthContinueContent() {
       return;
     }
 
-    const role = (user.role || '').toLowerCase();
-    if (role === 'student') {
-      router.replace('/student');
-    } else if (role === 'adviser' || role === 'teacher') {
-      router.replace('/adviser');
-    } else if (role === 'coordinator') {
-      router.replace('/coordinator');
-    } else {
-      router.replace('/student');
-    }
+    router.replace(getRoleHomePath(user.role));
   }, [tokenSaved, loading, user, router]);
 
   return (

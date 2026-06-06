@@ -1,9 +1,8 @@
+import { getRoleNotificationsPath as getRoleNotificationsPathFromRole } from '@/lib/auth/roleAccess';
+
 /** Notifications list route for a dashboard role. */
 export function getRoleNotificationsPath(role: string): string {
-  const r = (role || 'student').toLowerCase();
-  if (r === 'coordinator') return '/coordinator/notifications';
-  if (r === 'adviser') return '/adviser/notifications';
-  return '/student/notifications';
+  return getRoleNotificationsPathFromRole(role);
 }
 
 export function notificationFocusQuery(notificationId: string): string {

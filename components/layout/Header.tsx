@@ -32,6 +32,7 @@ import {
   notificationFocusQuery,
 } from '@/lib/notifications/navigation';
 import { getProjectTeamMembersPath } from '@/lib/projects/navigation';
+import { getRoleHomePath, getRoleProfilePath } from '@/lib/auth/roleAccess';
 import {
   getMyInvitations,
   respondToInvitation,
@@ -60,7 +61,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const bellRef = useRef<HTMLDivElement>(null);
 
-  const homeHref = user?.role ? `/${user.role.toLowerCase()}` : '/';
+  const homeHref = user?.role ? getRoleHomePath(user.role) : '/';
 
   const loadData = useCallback(async () => {
     if (!user) {
@@ -166,7 +167,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
       icon: <FiUser />,
       onClick: () => {
         if (user) {
-          const url = `/${user.role.toLowerCase()}/profile`;
+          const url = getRoleProfilePath(user.role);
           if (pathname === url) {
             return;
           }
