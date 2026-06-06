@@ -57,7 +57,7 @@ export default function StudentDashboardPage() {
           loading={scheduleLoading}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
           <JoinGroupCard />
           <PendingInvitationsCard />
         </div>

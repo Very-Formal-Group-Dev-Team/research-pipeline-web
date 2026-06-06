@@ -55,11 +55,12 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
   };
 
   return (
-    <Card>
+    <Card className="flex h-full flex-col gap-3">
       <CardIconHeader
         title="Join a Project"
         description="Enter the project code provided by the team leader to join a research project"
         icon={<LuLink className="h-8 w-8 stroke-[2.25]" strokeWidth={2.25} aria-hidden />}
+        className="mb-0"
       />
 
       <div className="space-y-3">
@@ -75,49 +76,52 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
           </div>
         )}
 
-        <div>
-          <label className="font-sans block text-xs font-medium text-neutral-700 mb-1.5">
-            Project Code
-          </label>
-          <input
-            type="text"
-            value={groupCode}
-            onChange={(e) => {
-              setGroupCode(e.target.value);
-              setError(null);
-              setSuccess(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isLoading) {
-                handleJoinGroup();
-              }
-            }}
-            placeholder="Enter project code"
-            disabled={isLoading}
-            className={`font-sans w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm placeholder:text-neutral-400 disabled:bg-neutral-100 disabled:cursor-not-allowed ${formControlFocusGlowClassName}`}
-          />
-        </div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end lg:flex-col lg:items-stretch xl:flex-row xl:items-end">
+          <div className="min-w-0 w-full flex-1">
+            <label className="font-sans block text-xs font-medium text-neutral-700 mb-1.5">
+              Project Code
+            </label>
+            <input
+              type="text"
+              value={groupCode}
+              onChange={(e) => {
+                setGroupCode(e.target.value);
+                setError(null);
+                setSuccess(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isLoading) {
+                  handleJoinGroup();
+                }
+              }}
+              placeholder="Enter project code"
+              disabled={isLoading}
+              className={`font-sans h-11 w-full px-4 border border-neutral-300 rounded-lg text-sm placeholder:text-neutral-400 disabled:bg-neutral-100 disabled:cursor-not-allowed ${formControlFocusGlowClassName}`}
+            />
+          </div>
 
-        <Button
-          variant="primary"
-          fullWidth
-          onClick={handleJoinGroup}
-          disabled={isLoading}
-          loading={isLoading}
-          leftIcon={
-            !isLoading ? (
-              <RxEnter
-                className="h-4 w-4 shrink-0 stroke-current stroke-[0.5px] [paint-order:stroke_fill]"
-                aria-hidden
-              />
-            ) : undefined
-          }
-        >
-          {isLoading ? 'Joining...' : 'Join Group'}
-        </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            className="h-11 w-full shrink-0 px-4 text-sm md:w-auto lg:w-full xl:w-auto"
+            onClick={handleJoinGroup}
+            disabled={isLoading}
+            loading={isLoading}
+            leftIcon={
+              !isLoading ? (
+                <RxEnter
+                  className="h-4 w-4 shrink-0 stroke-current stroke-[0.5px] [paint-order:stroke_fill]"
+                  aria-hidden
+                />
+              ) : undefined
+            }
+          >
+            {isLoading ? 'Joining...' : 'Join Group'}
+          </Button>
+        </div>
       </div>
 
-      <p className="font-sans text-xs text-neutral-500 mt-3">
+      <p className="font-sans text-xs text-neutral-500">
         Project code is available in the projects page.
       </p>
     </Card>
