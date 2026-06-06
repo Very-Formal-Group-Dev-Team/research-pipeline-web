@@ -16,7 +16,7 @@ import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import type { Defense } from '@/lib/api/defenses';
 import type { InstitutionEvent } from '@/lib/api/events';
 import { getMySchedule } from '@/lib/api/schedule';
-import { sortDefenses, type DefenseSortBy } from '@/lib/defenses/sort';
+import { sortDefenses, type DefenseSortBy, type DefenseSortDirection } from '@/lib/defenses/sort';
 import {
   MEETING_STATUS_FILTER_OPTIONS,
   MEETINGS_FILTER_CONTROL_CLASS,
@@ -90,7 +90,11 @@ function MeetingsList({
 
 function DefensesList({ items }: { items: Defense[] }) {
   const [sortBy, setSortBy] = useState<DefenseSortBy>('time');
-  const sortedItems = useMemo(() => sortDefenses(items, sortBy), [items, sortBy]);
+  const [sortDirection, setSortDirection] = useState<DefenseSortDirection>('asc');
+  const sortedItems = useMemo(
+    () => sortDefenses(items, sortBy, sortDirection),
+    [items, sortBy, sortDirection],
+  );
 
   if (items.length === 0) {
     return (
@@ -102,7 +106,13 @@ function DefensesList({ items }: { items: Defense[] }) {
 
   return (
     <div className="space-y-4">
-      <DefenseSortControls sortBy={sortBy} onSortByChange={setSortBy} tone="student" />
+      <DefenseSortControls
+        sortBy={sortBy}
+        direction={sortDirection}
+        onSortByChange={setSortBy}
+        onDirectionChange={setSortDirection}
+        tone="student"
+      />
       <div className="space-y-3">
         {sortedItems.map((item) => (
           <DefenseScheduleCard key={item.id} defense={item} />

@@ -19,7 +19,7 @@ import {
   FiMoreVertical,
 } from 'react-icons/fi';
 import { toast } from 'sonner';
-import { sortDefenses, type DefenseSortBy } from '@/lib/defenses/sort';
+import { sortDefenses, type DefenseSortBy, type DefenseSortDirection } from '@/lib/defenses/sort';
 import { formatStatusLabel } from '@/lib/utils/formatStatus';
 import {
   getAllDefenses,
@@ -112,6 +112,7 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
     conflicts: Array<{ domain: string; defense_id: string; project_id: string; start_time: string; end_time: string | null }>;
   } | null>(null);
   const [sortBy, setSortBy] = useState<DefenseSortBy>('time');
+  const [sortDirection, setSortDirection] = useState<DefenseSortDirection>('asc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Defense | null>(null);
   const [defenseActionLoading, setDefenseActionLoading] = useState(false);
@@ -357,8 +358,8 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
       section === 'pending'
         ? pendingDefenses
         : allDefenses.filter((d) => d.status !== 'pending');
-    return sortDefenses(list, sortBy);
-  }, [section, pendingDefenses, allDefenses, sortBy]);
+    return sortDefenses(list, sortBy, sortDirection);
+  }, [section, pendingDefenses, allDefenses, sortBy, sortDirection]);
 
   const uniqueConflictSchedules = conflictPrompt
     ? Array.from(new Map(conflictPrompt.conflicts.map((item) => [item.defense_id, item])).values())
@@ -385,7 +386,13 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
   return (
     <>
       <div className="space-y-4">
-        <DefenseSortControls sortBy={sortBy} onSortByChange={setSortBy} tone="coordinator" />
+        <DefenseSortControls
+          sortBy={sortBy}
+          direction={sortDirection}
+          onSortByChange={setSortBy}
+          onDirectionChange={setSortDirection}
+          tone="coordinator"
+        />
 
         {displayedDefenses.map((defense) => {
           const badge = statusBadge(defense.status);
