@@ -18,6 +18,7 @@ import {
   FiInfo,
   FiCalendar,
   FiArrowRight,
+  FiUserPlus,
 } from 'react-icons/fi';
 import { useSidebar } from './SidebarContext';
 import {
@@ -30,6 +31,7 @@ import {
   getRoleNotificationsPath,
   notificationFocusQuery,
 } from '@/lib/notifications/navigation';
+import { getProjectTeamMembersPath } from '@/lib/projects/navigation';
 import {
   getMyInvitations,
   respondToInvitation,
@@ -119,6 +121,17 @@ export default function Header({ user, onLogout }: HeaderProps) {
     if (!notification.is_read) {
       await markNotificationRead(notification.id);
     }
+
+    const projectId =
+      typeof notification.metadata?.projectId === 'string'
+        ? notification.metadata.projectId
+        : null;
+
+    if (notification.type === 'join_request' && projectId && notification.title === 'Join request') {
+      router.push(getProjectTeamMembersPath(user?.role || 'student', projectId));
+      return;
+    }
+
     const base = getRoleNotificationsPath(user?.role || 'student');
     router.push(`${base}${notificationFocusQuery(notification.id)}`);
   }
@@ -278,13 +291,15 @@ export default function Header({ user, onLogout }: HeaderProps) {
                   {n.type === 'project_stage_updated' && (
                     <FiArrowRight className="text-primary-500" />
                   )}
+                  {n.type === 'join_request' && <FiUserPlus className="text-warning-600" />}
                   {n.type !== 'defense_approved' &&
                     n.type !== 'defense_rejected' &&
                     n.type !== 'defense_moved' &&
                     n.type !== 'invitation' &&
                     n.type !== 'schedule' &&
                     n.type !== 'event' &&
-                    n.type !== 'project_stage_updated' && <FiBell className="text-primary-500" />}
+                    n.type !== 'project_stage_updated' &&
+                    n.type !== 'join_request' && <FiBell className="text-primary-500" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-neutral-800 truncate">{n.title}</p>

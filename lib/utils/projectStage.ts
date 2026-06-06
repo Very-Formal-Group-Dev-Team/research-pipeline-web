@@ -117,6 +117,16 @@ export function isProjectStageComplete(status?: string | null): boolean {
   return stage === 'completed' || stage === 'for_publication';
 }
 
+/** True when the project is archived or in a terminal stage and cannot be left. */
+export function isProjectLocked(status?: string | null): boolean {
+  const raw = String(status || '')
+    .trim()
+    .toLowerCase();
+  if (raw === 'archived') return true;
+  const stage = normalizeProjectStage(status);
+  return stage === 'completed' || stage === 'for_publication';
+}
+
 export function isProjectStageRejected(status?: string | null): boolean {
   return normalizeProjectStage(status) === 'rejected';
 }

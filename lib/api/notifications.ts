@@ -11,7 +11,8 @@ export type NotificationType =
   | 'defense_rejected'
   | 'defense_moved'
   | 'event'
-  | 'project_stage_updated';
+  | 'project_stage_updated'
+  | 'join_request';
 
 export interface NotificationItem {
   id: string;

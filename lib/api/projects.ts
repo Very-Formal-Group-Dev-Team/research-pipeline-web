@@ -27,11 +27,16 @@ export interface Project {
   member_role?: string;
 }
 
+export type ProjectMemberJoinSource = 'invite' | 'code_request';
+
 export interface ProjectMember {
   id: string;
   user_id: string;
   role: string;
   status: string;
+  is_main_adviser?: boolean | null;
+  join_source?: ProjectMemberJoinSource;
+  invited_at?: string;
   users: {
     full_name: string;
     email: string;
@@ -65,6 +70,7 @@ export interface JoinProjectPayload {
 
 export interface JoinProjectResult {
   success: boolean;
+  pending?: boolean;
   message?: string;
   project?: { id: string; title: string };
   error?: string;
@@ -296,6 +302,14 @@ export function removeProjectMember(projectId: string, memberId: string) {
   );
 }
 
+/** Accept or reject a student join request (project leader only). */
+export function respondToJoinRequest(projectId: string, memberId: string, accept: boolean) {
+  return post<{ success: boolean; status: string; userId?: string }>(
+    `/projects/${projectId}/join-requests/${memberId}/respond`,
+    { accept },
+  );
+}
+
 /** Create a defense schedule for a project. */
 export function scheduleProjectDefense(projectId: string, payload: ScheduleDefensePayload) {
   return post<ScheduleDefenseResult>(`/projects/${projectId}/schedule`, payload);
@@ -344,4 +358,61 @@ export function updateProjectStatus(projectId: string, status: string) {
 /** Permanently delete a project (project leader only). Requires exact title confirmation. */
 export function deleteProject(projectId: string, confirmTitle: string) {
   return del<{ success: boolean; message: string }>(`/projects/${projectId}`, { confirmTitle });
+}
+
+export interface LeaveProjectPayload {
+  reason?: string;
+  successorMemberId?: string;
+  confirmDisplayName?: string;
+}
+
+/** Leave a project (members/advisers) or transfer ownership (leaders). */
+export function leaveProject(projectId: string, payload?: LeaveProjectPayload) {
+  return post<{ success: boolean; action: string; removed?: boolean }>(
+    `/projects/${projectId}/leave`,
+    payload ?? {},
+  );
+}
+
+export interface LeadershipTransferRevertPayload {
+  previousLeaderUserId: string;
+  newLeaderUserId: string;
+  previousNewLeaderRole: string;
+}
+
+/** Transfer project leadership to another accepted member (current leader only). */
+export function transferProjectLeadership(projectId: string, memberId: string) {
+  return post<{ success: boolean; revert: LeadershipTransferRevertPayload }>(
+    `/projects/${projectId}/transfer-leadership`,
+    { memberId },
+  );
+}
+
+/** Revert a recent leadership transfer (previous leader only). */
+export function revertProjectLeadership(
+  projectId: string,
+  payload: LeadershipTransferRevertPayload,
+) {
+  return post<{ success: boolean }>(`/projects/${projectId}/transfer-leadership/revert`, payload);
+}
+
+export interface MainAdviserTransferRevertPayload {
+  previousMainAdviserUserId: string;
+  newMainAdviserUserId: string;
+}
+
+/** Transfer main adviser role to another project adviser (current main adviser only). */
+export function transferMainAdviser(projectId: string, memberId: string) {
+  return post<{ success: boolean; revert: MainAdviserTransferRevertPayload }>(
+    `/projects/${projectId}/transfer-main-adviser`,
+    { memberId },
+  );
+}
+
+/** Revert a recent main adviser transfer (previous main adviser only). */
+export function revertMainAdviserTransfer(
+  projectId: string,
+  payload: MainAdviserTransferRevertPayload,
+) {
+  return post<{ success: boolean }>(`/projects/${projectId}/transfer-main-adviser/revert`, payload);
 }

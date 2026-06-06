@@ -34,9 +34,16 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
       if (res.error) {
         setError(res.error);
       } else if (res.data) {
-        setSuccess(res.data.message || 'Successfully joined project!');
+        setSuccess(
+          res.data.message ||
+            (res.data.pending
+              ? 'Join request sent. The project leader will review your request.'
+              : 'Successfully joined project!'),
+        );
         setGroupCode('');
-        onJoined?.();
+        if (!res.data.pending) {
+          onJoined?.();
+        }
       } else {
         setError('Unexpected response from server');
       }
