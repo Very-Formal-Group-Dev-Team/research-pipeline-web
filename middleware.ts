@@ -1,24 +1,74 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import {
+  canAccessPath,
+  getRoleHomePath,
+  isRoleProtectedPath,
+} from '@/lib/auth/roleAccess';
 
-const PROTECTED_PATHS = ['/student', '/adviser', '/coordinator', '/onboarding', '/defenses'];
-/**
- * Middleware — passthrough for frontend demo (no auth checks).
- */
+const AUTH_REQUIRED_PREFIXES = ['/student', '/adviser', '/coordinator', '/onboarding', '/defenses'];
+
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/+$/, '');
+
+async function fetchUserRole(token: string): Promise<{ role: string | null; authenticated: boolean }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Cookie: `session_token=${encodeURIComponent(token)}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      return { role: null, authenticated: false };
+    }
+
+    const user = (await res.json()) as { role?: string | null };
+    return {
+      role: typeof user.role === 'string' ? user.role : null,
+      authenticated: true,
+    };
+  } catch {
+    return { role: null, authenticated: false };
+  }
+}
+
+function requiresAuthentication(pathname: string): boolean {
+  return AUTH_REQUIRED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get('session_token')?.value;
   const { pathname } = request.nextUrl;
 
-  const isProtected = PROTECTED_PATHS.some(p => pathname.startsWith(p));
+  if (!requiresAuthentication(pathname)) {
+    return NextResponse.next();
+  }
 
-  if (isProtected && !token) {
+  if (!token) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Don't perform client auth-page redirects here. Client has the
-  // full session/profile context and will route to onboarding or
-  // dashboard as appropriate. Server-side middleware should only
-  // protect pages that require a session token.
+  const { role, authenticated } = await fetchUserRole(token);
+
+  if (!authenticated) {
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    response.cookies.set('session_token', '', { path: '/', maxAge: 0 });
+    return response;
+  }
+
+  if (pathname.startsWith('/onboarding')) {
+    return NextResponse.next();
+  }
+
+  if (!role && isRoleProtectedPath(pathname)) {
+    return NextResponse.redirect(new URL('/onboarding', request.url));
+  }
+
+  if (role && isRoleProtectedPath(pathname) && !canAccessPath(role, pathname)) {
+    return NextResponse.redirect(new URL(getRoleHomePath(role), request.url));
+  }
 
   return NextResponse.next();
 }
