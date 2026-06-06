@@ -11,6 +11,7 @@ export interface CardProps {
   /** Clickable card — includes hover shadow and pointer cursor. */
   hover?: boolean;
   onClick?: () => void;
+  role?: React.AriaRole;
 }
 
 /** Default card content padding — use for split sections when padding="none". */
@@ -44,7 +45,8 @@ export default function Card({
   shadow = 'soft',
   hoverShadow = true,
   hover = false,
-  onClick 
+  onClick,
+  role,
 }: CardProps) {
   const elevateOnHover = hoverShadow || hover;
 
@@ -60,6 +62,7 @@ export default function Card({
         ${className}
       `}
       onClick={onClick}
+      role={role}
     >
       {children}
     </div>

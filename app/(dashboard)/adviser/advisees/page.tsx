@@ -180,12 +180,12 @@ export default function AdviserAdviseesPage() {
             >
               <div className="flex items-start justify-between gap-4 border-b border-neutral-300 bg-neutral-50 px-5 py-4 sm:px-6 sm:py-5">
                 <div className="min-w-0 flex-1">
-                  <p className="font-sans text-sm text-neutral-600">Project overview</p>
+                  <p className="font-sans text-sm text-neutral-600">Project Overview</p>
                   <h2 className="mt-1 font-serif text-2xl font-bold leading-tight text-primary-700 break-words">
                     {expandedProject.title}
                   </h2>
                   {expandedProject.project_code ? (
-                    <ProjectCodeCopyRow projectCode={expandedProject.project_code} />
+                    <ProjectCodeCopyRow projectCode={expandedProject.project_code} compact />
                   ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {expandedProject.member_role &&

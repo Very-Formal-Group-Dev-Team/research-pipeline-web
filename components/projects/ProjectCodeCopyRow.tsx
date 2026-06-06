@@ -9,7 +9,13 @@ import { projectCodeDisplayClassName } from '@/lib/utils/formControls';
 
 const COPY_FEEDBACK_MS = 2000;
 
-export default function ProjectCodeCopyRow({ projectCode }: { projectCode: string }) {
+export default function ProjectCodeCopyRow({
+  projectCode,
+  compact = false,
+}: {
+  projectCode: string;
+  compact?: boolean;
+}) {
   const { toasts, addToast, removeToast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -27,7 +33,11 @@ export default function ProjectCodeCopyRow({ projectCode }: { projectCode: strin
   return (
     <>
       <div className="mt-4 flex min-w-0 items-center gap-2">
-        <code className={projectCodeDisplayClassName}>{projectCode}</code>
+        <code
+          className={`${projectCodeDisplayClassName}${compact ? ' !rounded-sm' : ''}`}
+        >
+          {projectCode}
+        </code>
         <Button
           type="button"
           variant="outline"

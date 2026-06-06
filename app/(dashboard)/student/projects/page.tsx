@@ -203,7 +203,7 @@ export default function StudentProjectsPage() {
                     {expandedProject.title}
                   </h2>
                   {expandedProject.project_code ? (
-                    <ProjectCodeCopyRow projectCode={expandedProject.project_code} />
+                    <ProjectCodeCopyRow projectCode={expandedProject.project_code} compact />
                   ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {expandedProject.member_role && (
