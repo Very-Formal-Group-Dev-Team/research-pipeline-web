@@ -198,7 +198,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
     <div ref={bellRef} className="relative">
       <button
         type="button"
-        className="relative rounded-md border border-solid border-neutral-400 bg-snow p-2 text-oxfordBlue transition-all hover:border-neutral-400 hover:shadow-lg"
+        className="relative rounded-lg p-2 text-snow transition-colors hover:bg-white/10"
         aria-label="Notifications"
         title="Notifications"
         onClick={() => {
