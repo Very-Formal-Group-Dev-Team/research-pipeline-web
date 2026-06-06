@@ -198,7 +198,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
     <div ref={bellRef} className="relative">
       <button
         type="button"
-        className="relative rounded-lg p-2 text-snow transition-colors hover:bg-antiFlashWhite hover:text-oxfordBlue"
+        className="relative rounded-md border border-solid border-neutral-400 bg-snow p-2 text-oxfordBlue transition-all hover:border-neutral-400 hover:shadow-lg"
         aria-label="Notifications"
         title="Notifications"
         onClick={() => {
@@ -217,8 +217,8 @@ export default function Header({ user, onLogout }: HeaderProps) {
       </button>
 
       {bellOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 max-h-[28rem] overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-lg z-50">
-          <div className="sticky top-0 bg-white border-b border-neutral-100 px-4 py-3 flex items-center justify-between">
+        <div className="absolute right-0 top-full z-50 mt-2 max-h-[28rem] w-96 overflow-y-auto rounded-md border border-solid border-neutral-400 bg-white shadow-lg">
+          <div className="sticky top-0 flex items-center justify-between border-b border-neutral-300 bg-white px-4 py-3">
             <h3 className="text-sm font-semibold text-neutral-800">Notifications</h3>
             {notifications.some((n) => !n.is_read) && (
               <button

@@ -175,7 +175,7 @@ export default function AdviserAdviseesPage() {
               padding="none"
               shadow="hard"
               hoverShadow={false}
-              className="overflow-hidden rounded-md border border-neutral-300"
+              className="overflow-hidden !rounded-sm border border-neutral-300"
             >
               <div className="flex items-start justify-between gap-4 border-b border-neutral-300 bg-neutral-50 px-5 py-4 sm:px-6 sm:py-5">
                 <div className="min-w-0 flex-1">
@@ -186,7 +186,7 @@ export default function AdviserAdviseesPage() {
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {expandedProject.member_role &&
                     expandedProject.member_role !== 'adviser' ? (
-                      <Badge variant="primary" size="sm" className="capitalize">
+                      <Badge variant="primary" size="sm" className="!rounded-sm capitalize">
                         {expandedProject.member_role === 'leader' ? 'leader' : 'contributor'}
                       </Badge>
                     ) : null}
@@ -197,14 +197,14 @@ export default function AdviserAdviseesPage() {
                   type="button"
                   onClick={closeExpandedProject}
                   aria-label="Close details"
-                  className="rounded-md p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                  className="rounded-sm p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
                 >
                   <FiX className="h-5 w-5" />
                 </button>
               </div>
 
               <div className="max-h-[72vh] space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
-                <section className="rounded-sm border border-neutral-300 bg-neutral-50 p-4 transition-all hover:border-neutral-400 hover:shadow-lg sm:p-5">
+                <section className="rounded border border-neutral-300 bg-neutral-50 p-4 transition-all hover:border-neutral-400 hover:shadow-lg sm:p-5">
                   <h3 className="font-serif text-lg font-semibold text-eerieBlack">Abstract</h3>
                   <p className="mt-2 font-sans text-sm leading-relaxed text-neutral-700 sm:text-base">
                     {projectAbstract(expandedProject) || 'No abstract available yet.'}
@@ -238,7 +238,7 @@ export default function AdviserAdviseesPage() {
                         return (
                           <li
                             key={member.id}
-                            className="flex items-center justify-between gap-3 rounded-sm border border-neutral-300 bg-white px-3 py-2 transition-all hover:border-neutral-400 hover:shadow-lg"
+                            className="flex items-center justify-between gap-3 rounded border border-neutral-300 bg-white px-3 py-2 transition-all hover:border-neutral-400 hover:shadow-lg"
                           >
                             <div className="flex min-w-0 items-center gap-3">
                               <Avatar
@@ -251,7 +251,7 @@ export default function AdviserAdviseesPage() {
                                 <p className="truncate text-xs text-neutral-500">{member.users?.email || ''}</p>
                               </div>
                             </div>
-                            <Badge variant="default" size="sm" className="capitalize">
+                            <Badge variant="default" size="sm" className="!rounded-sm capitalize">
                               {formatMemberRole(member.role)}
                             </Badge>
                           </li>
@@ -271,7 +271,7 @@ export default function AdviserAdviseesPage() {
                       {expandedProject.keywords.map((keyword) => (
                         <span
                           key={keyword}
-                          className="rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 sm:text-sm"
+                          className="rounded-sm border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 sm:text-sm"
                         >
                           {keyword}
                         </span>
