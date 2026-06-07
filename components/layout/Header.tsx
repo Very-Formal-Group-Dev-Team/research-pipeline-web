@@ -218,7 +218,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
       </button>
 
       {bellOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 max-h-[28rem] w-96 overflow-y-auto rounded-md border border-solid border-neutral-400 bg-white shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-2 max-h-[28rem] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-md border border-solid border-neutral-400 bg-white shadow-lg">
           <div className="sticky top-0 flex items-center justify-between border-b border-neutral-300 bg-white px-4 py-3">
             <h3 className="text-sm font-semibold text-neutral-800">Notifications</h3>
             {notifications.some((n) => !n.is_read) && (
@@ -361,7 +361,10 @@ export default function Header({ user, onLogout }: HeaderProps) {
           <ArchivumBrand compact />
         </Link>
 
-        <div className="justify-self-end">{profileDropdown}</div>
+        <div className="flex items-center justify-self-end gap-1">
+          {notificationsDropdown}
+          {profileDropdown}
+        </div>
       </div>
 
       {/* Desktop: logo (left) | notifications + user (right) */}
@@ -371,7 +374,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
         </Link>
 
         <div className="flex items-center gap-4">
-          <div className="hidden lg:block">{notificationsDropdown}</div>
+          {notificationsDropdown}
           {profileDropdown}
         </div>
       </div>

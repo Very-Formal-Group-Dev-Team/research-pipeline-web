@@ -23,7 +23,7 @@ export interface MenuItem {
   badge?: number;
   tooltip?: string;
   roles?: string[];
-  /** Show in sidebar only below lg (header has notifications bell on desktop). */
+  /** Show in sidebar only below lg. */
   mobileOnly?: boolean;
 }
 
@@ -35,14 +35,14 @@ const menuItems: Record<string, MenuItem[]> = {
   student: [
     { label: 'Dashboard', href: '/student', icon: <FiHome /> },
     { label: 'My Projects', href: '/student/projects', icon: <FiFolder /> },
-    { label: 'Notifications', href: '/student/notifications', icon: <FiBell />, mobileOnly: true },
+    { label: 'Notifications', href: '/student/notifications', icon: <FiBell /> },
     { label: 'Events', href: '/student/events', icon: <FiCalendar />, tooltip: 'Defenses, meetings, and institution events' },
     { label: 'Profile', href: '/student/profile', icon: <FiUser /> },
   ],
   adviser: [
     { label: 'Dashboard', href: '/adviser', icon: <FiHome /> },
     { label: 'My Advisees', href: '/adviser/advisees', icon: <FiUsers /> },
-    { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell />, tooltip: 'Your recent notifications and alerts', mobileOnly: true },
+    { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell />, tooltip: 'Your recent notifications and alerts' },
     { label: 'Events', href: '/adviser/events', icon: <FiCalendar />, tooltip: 'Institution events, meetings, and defense schedules' },
     { label: 'Rubrics', href: '/adviser/rubrics', icon: <FiClipboard /> },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
@@ -50,7 +50,7 @@ const menuItems: Record<string, MenuItem[]> = {
   coordinator: [
     { label: 'Dashboard', href: '/coordinator', icon: <FiHome /> },
     { label: 'Events', href: '/coordinator/events', icon: <FiCalendar />, tooltip: 'Institution events and defense schedules' },
-    { label: 'Notifications', href: '/coordinator/notifications', icon: <FiBell />, tooltip: 'Defense and schedule notifications', mobileOnly: true },
+    { label: 'Notifications', href: '/coordinator/notifications', icon: <FiBell />, tooltip: 'Defense and schedule notifications' },
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
     { label: 'Rubrics', href: '/coordinator/rubrics', icon: <FiClipboard /> },
