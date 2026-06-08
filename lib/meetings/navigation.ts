@@ -8,3 +8,15 @@ export function adviserProjectMeetingsUrl(projectId: string): string {
 export function defenseMeetingUrl(defenseId: string): string {
   return `/defenses/${encodeURIComponent(defenseId)}/meeting`;
 }
+
+export function defenseTranscriptionUrl(defenseId: string): string {
+  return `/defenses/${encodeURIComponent(defenseId)}/transcription`;
+}
+
+export function defenseRecordingTranscriptionUrl(scheduleId: string, recordingId: string): string {
+  return `/defenses/${encodeURIComponent(scheduleId)}/transcription/${encodeURIComponent(recordingId)}`;
+}
+
+export function defenseTranscriptionArchiveUrl(): string {
+  return '/defenses/transcription';
+}

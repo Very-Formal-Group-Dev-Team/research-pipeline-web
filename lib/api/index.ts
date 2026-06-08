@@ -7,4 +7,6 @@ export * as notificationsApi from './notifications';
 export * as coordinatorApi from './coordinator';
 export * as adviserApi from './adviser';
 export * as defensesApi from './defenses';
+export * as transcriptionsApi from './transcriptions';
+export * as recordingsApi from './recordings';
 export * as paperVersionsApi from './paperVersions';

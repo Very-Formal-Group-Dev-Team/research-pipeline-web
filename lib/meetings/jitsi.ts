@@ -16,16 +16,19 @@ export function hasJoinableMeeting(item: JitsiMeetingFields) {
 
 const DEFAULT_JITSI_BASE = 'https://localhost:8443';
 
+export function getJitsiBaseUrl(): string {
+  const base =
+    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_JITSI_BASE_URL) ||
+    DEFAULT_JITSI_BASE;
+  return base.replace(/\/+$/, '');
+}
+
 /** Use HTTPS :8443; rewrite old http://localhost:8000 links from the database. */
 export function normalizeJitsiJoinUrl(
   meetingUrl?: string | null,
   meetingRoom?: string | null,
 ): string | null {
-  const base =
-    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_JITSI_BASE_URL) ||
-    DEFAULT_JITSI_BASE;
-
-  const normalizedBase = base.replace(/\/+$/, '');
+  const normalizedBase = getJitsiBaseUrl();
 
   if (meetingRoom?.trim()) {
     return `${normalizedBase}/${encodeURIComponent(meetingRoom.trim())}`;

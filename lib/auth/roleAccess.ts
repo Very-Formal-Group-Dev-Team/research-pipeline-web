@@ -36,8 +36,15 @@ function isDefenseMeetingPath(pathname: string): boolean {
   return /^\/defenses\/[^/]+\/meeting\/?$/.test(pathname);
 }
 
+function isDefenseTranscriptionPath(pathname: string): boolean {
+  return (
+    /^\/defenses\/transcription\/?$/.test(pathname)
+    || /^\/defenses\/[^/]+\/transcription(\/[^/]+)?\/?$/.test(pathname)
+  );
+}
+
 function getRequiredRoleForPath(pathname: string): DashboardRole | null {
-  if (isDefenseMeetingPath(pathname)) {
+  if (isDefenseMeetingPath(pathname) || isDefenseTranscriptionPath(pathname)) {
     return null;
   }
 

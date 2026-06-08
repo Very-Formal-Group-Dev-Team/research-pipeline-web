@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { FiCheck, FiEdit2, FiMoreVertical, FiX } from 'react-icons/fi';
 
 import CoordinatorScheduleMetadataRow from '@/components/coordinator/CoordinatorScheduleMetadataRow';
@@ -17,6 +18,7 @@ import {
   meetingStatusBadgeVariant,
 } from '@/lib/meetings/display';
 import { isOnlineModality, normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
+import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
 
 const MEETING_CARD_TITLE_ROW_CLASS = `truncate font-semibold text-coordinator-ink ${MEETING_CARD_TITLE_CLASS}`;
 const MEETING_CARD_METADATA_CLASS = `${MEETING_CARD_BODY_CLASS} text-neutral-600`;
@@ -194,6 +196,12 @@ function MeetingScheduleCardLayout({
             <MeetingActionsMenu actions={actions} isTerminalStatus={isTerminalStatus} />
           ) : null}
           {joinAction}
+          <Link
+            href={defenseTranscriptionArchiveUrl()}
+            className="inline-flex items-center rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+          >
+            Transcription
+          </Link>
         </div>
       </div>
     </Card>
