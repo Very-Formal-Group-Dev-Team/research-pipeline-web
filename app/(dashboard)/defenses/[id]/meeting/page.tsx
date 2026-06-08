@@ -1,24 +1,29 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { FiArrowLeft, FiLoader } from 'react-icons/fi';
 
 import DefensePanelOverlay from '@/components/defenses/DefensePanelOverlay';
+import JitsiMeetingFrame from '@/components/meetings/JitsiMeetingFrame';
+import MeetingRecordingControls from '@/components/meetings/MeetingRecordingControls';
 import {
   getDefenseMeetingSession,
   type DefenseMeetingSession,
 } from '@/lib/api/defenses';
+import { useMeetingRecording } from '@/lib/hooks/useMeetingRecording';
 import { normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
+import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
 
 export default function DefenseMeetingPage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const defenseId = typeof params?.id === 'string' ? params.id : '';
-
   const [session, setSession] = useState<DefenseMeetingSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasJoinedMeeting, setHasJoinedMeeting] = useState(false);
 
   useEffect(() => {
     if (!defenseId) {
@@ -57,9 +62,35 @@ export default function DefenseMeetingPage() {
     return normalizeJitsiJoinUrl(session.defense.meeting_url, session.defense.meeting_room);
   }, [session]);
 
+  const meetingTitle = useMemo(
+    () => `Defense meeting for ${session?.defense?.project_title || 'Defense'}`,
+    [session?.defense?.project_title],
+  );
+
   const showPanelOverlay = Boolean(
     session?.is_panelist && session.defense.schedule_source === 'defense',
   );
+
+  const handleConferenceJoined = useCallback(() => {
+    setHasJoinedMeeting(true);
+  }, []);
+
+  const handleConferenceLeft = useCallback(() => {
+    setHasJoinedMeeting(false);
+  }, []);
+
+  const meetingRecording = useMeetingRecording(defenseId, hasJoinedMeeting);
+
+  const { savedRecordingId, dismissSaved } = meetingRecording;
+
+  useEffect(() => {
+    if (!savedRecordingId) return undefined;
+    const timer = window.setTimeout(() => {
+      dismissSaved();
+      router.push(defenseTranscriptionArchiveUrl());
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [dismissSaved, router, savedRecordingId]);
 
   if (loading) {
     return (
@@ -104,14 +135,17 @@ export default function DefenseMeetingPage() {
             {session.defense.project_code} · {session.defense.defense_type}
           </p>
         </div>
+        {hasJoinedMeeting ? (
+          <MeetingRecordingControls recording={meetingRecording} />
+        ) : null}
       </div>
 
       {joinUrl ? (
-        <iframe
-          title={`Defense meeting for ${session.defense.project_title}`}
-          src={joinUrl}
-          className="h-full w-full border-0"
-          allow="camera; microphone; fullscreen; display-capture; autoplay"
+        <JitsiMeetingFrame
+          joinUrl={joinUrl}
+          title={meetingTitle}
+          onConferenceJoined={handleConferenceJoined}
+          onConferenceLeft={handleConferenceLeft}
         />
       ) : (
         <div className="flex h-full items-center justify-center px-6 text-center text-sm text-neutral-300">

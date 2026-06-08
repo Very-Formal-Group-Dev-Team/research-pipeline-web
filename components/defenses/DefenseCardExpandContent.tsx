@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
+import { defenseMeetingUrl, defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
 import { isOnlineModality } from '@/lib/meetings/jitsi';
 
 export interface DefenseCardExpandFields {
@@ -40,16 +42,26 @@ export default function DefenseCardExpandContent({ defense }: { defense: Defense
           </div>
         ) : null}
       </div>
-      {showJoin ? (
-        <div className="flex shrink-0 items-center justify-start sm:justify-end">
-          <JoinMeetingButton
-            meetingId={defense.id}
-            meeting_url={defense.meeting_url}
-            meeting_room={defense.meeting_room}
-            label="Join Defense"
-            size="sm"
-            className="shrink-0"
-          />
+      {showJoin || defense.id ? (
+        <div className="flex shrink-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
+          {defense.id ? (
+            <Link
+              href={defenseTranscriptionArchiveUrl()}
+              className="inline-flex items-center rounded-md border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+            >
+              Transcription
+            </Link>
+          ) : null}
+          {showJoin && defense.id ? (
+            <JoinMeetingButton
+              meetingId={defense.id}
+              meeting_url={defense.meeting_url}
+              meeting_room={defense.meeting_room}
+              label="Join Defense"
+              size="sm"
+              className="shrink-0"
+            />
+          ) : null}
         </div>
       ) : null}
     </div>
