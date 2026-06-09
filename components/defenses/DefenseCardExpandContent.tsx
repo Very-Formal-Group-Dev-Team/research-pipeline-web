@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
-import { defenseMeetingUrl, defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
+import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
 import { isOnlineModality } from '@/lib/meetings/jitsi';
 
 export interface DefenseCardExpandFields {

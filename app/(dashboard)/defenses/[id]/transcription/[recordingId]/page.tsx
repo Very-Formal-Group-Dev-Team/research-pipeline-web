@@ -7,7 +7,7 @@ import { FiArrowLeft, FiLoader } from 'react-icons/fi';
 
 import TranscriptionArchiveViewer from '@/components/defenses/TranscriptionArchiveViewer';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { getRoleHomePath, normalizeUserRole } from '@/lib/auth/roleAccess';
+import { normalizeUserRole } from '@/lib/auth/roleAccess';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
 

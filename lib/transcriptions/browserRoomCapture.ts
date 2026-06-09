@@ -12,7 +12,7 @@ export type BrowserCaptureStatus =
 
 interface GatePayload {
   device?: string;
-  speaking?: boolean | string;
+  speaking?: boolean | string | number;
 }
 
 export interface BrowserRoomCaptureCallbacks {
@@ -156,7 +156,9 @@ export async function startBrowserRoomCapture(
     await ensureSerialPortOpen(serialPort);
 
     const textDecoder = new TextDecoderStream();
-    const readable = serialPort.readable?.pipeThrough(textDecoder);
+    const readable = serialPort.readable?.pipeThrough(
+      textDecoder as unknown as ReadableWritablePair<string, Uint8Array>,
+    );
     if (!readable) {
       callbacks.onStatus('error', 'Could not read from Arduino serial port.');
       await cleanup();
