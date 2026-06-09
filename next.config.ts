@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-const API_ORIGIN = API_URL.replace(/\/api\/?$/, '');
+const INTERNAL_ORIGIN = (process.env.INTERNAL_API_URL || 'http://localhost:4000/api').replace(/\/api\/?$/, '');
 
 const nextConfig: NextConfig = {
   images: {
@@ -22,13 +21,18 @@ const nextConfig: NextConfig = {
         port: '4000',
         pathname: '/uploads/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'archivum-portal.duckdns.org',
+        pathname: '/uploads/**',
+      },
     ],
   },
   async rewrites() {
     return [
       {
         source: '/uploads/:path*',
-        destination: `${API_ORIGIN}/uploads/:path*`,
+        destination: `${INTERNAL_ORIGIN}/uploads/:path*`,
       },
     ];
   },
