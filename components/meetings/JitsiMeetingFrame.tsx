@@ -56,6 +56,9 @@ export default function JitsiMeetingFrame({
   useEffect(() => {
     if (!roomKey || !room || !containerRef.current) return undefined;
 
+    const resolvedRoom = room;
+    const container = containerRef.current;
+
     // Avoid remounting when React re-renders with the same room.
     if (mountedKeyRef.current === roomKey && apiRef.current) {
       return undefined;
@@ -66,14 +69,14 @@ export default function JitsiMeetingFrame({
     async function mountJitsi() {
       try {
         await loadJitsiExternalApiScript(jitsiBaseUrl);
-        if (disposed || !containerRef.current || !window.JitsiMeetExternalAPI) return;
+        if (disposed || !container || !window.JitsiMeetExternalAPI) return;
 
         apiRef.current?.dispose();
-        containerRef.current.innerHTML = '';
+        container.innerHTML = '';
 
-        const api = new window.JitsiMeetExternalAPI(room.domain, {
-          roomName: room.roomName,
-          parentNode: containerRef.current,
+        const api = new window.JitsiMeetExternalAPI(resolvedRoom.domain, {
+          roomName: resolvedRoom.roomName,
+          parentNode: container,
           width: '100%',
           height: '100%',
           userInfo: {
@@ -121,9 +124,7 @@ export default function JitsiMeetingFrame({
       apiRef.current?.dispose();
       apiRef.current = null;
       mountedKeyRef.current = null;
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
+      container.innerHTML = '';
     };
   }, [roomKey, jitsiBaseUrl, room]);
 
