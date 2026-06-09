@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiLoader } from 'react-icons/fi';
+import { FiArrowLeft } from 'react-icons/fi';
 
 import TranscriptionRecordingList from '@/components/defenses/TranscriptionRecordingList';
+import Button from '@/components/Button';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { getRoleHomePath, normalizeUserRole } from '@/lib/auth/roleAccess';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -16,35 +16,37 @@ export default function TranscriptionArchivePage() {
   const role = normalizeUserRole(user?.role);
   const backHref = `${getRoleHomePath(user?.role)}/events?tab=meetings`;
 
-  if (isLoading || !role) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
-        <FiLoader className="animate-spin text-neutral-400" aria-hidden />
-      </div>
-    );
-  }
-
   return (
-    <DashboardLayout role={role} user={user} onLogout={handleLogout}>
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
-        <button
-          type="button"
-          onClick={() => router.push(backHref)}
-          className="mb-6 inline-flex items-center gap-2 text-sm text-neutral-600 transition-colors hover:text-neutral-900"
-        >
-          <FiArrowLeft aria-hidden />
-          Back to schedule
-        </button>
-
-        <div className="mb-6 space-y-2">
-          <h1 className="text-2xl font-semibold text-neutral-900">Transcription archive</h1>
-          <p className="text-sm text-neutral-600">
-            Meetings you participated in appear here with all available recordings. Open any recording to watch the
-            video and read the synced transcript. Only the person who recorded a meeting can delete it.
-          </p>
+    <DashboardLayout role={role || 'student'} user={user} onLogout={handleLogout}>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-primary-700">Transcription Archive</h1>
+            <p className="mt-1 text-neutral-600">
+              Meetings you participated in appear here with all available recordings. Open any recording to watch the
+              video and read the synced transcript. Only the person who recorded a meeting can delete it.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:text-md"
+            leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+            onClick={() => router.push(backHref)}
+            disabled={isLoading || !role}
+          >
+            Back to Schedule
+          </Button>
         </div>
 
-        <TranscriptionRecordingList />
+        {isLoading || !role ? (
+          <div className="flex h-64 items-center justify-center">
+            <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
+          </div>
+        ) : (
+          <TranscriptionRecordingList />
+        )}
       </div>
     </DashboardLayout>
   );

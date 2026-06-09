@@ -4,7 +4,15 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { FiCalendar, FiFileText, FiLoader, FiTrash2, FiVideo } from 'react-icons/fi';
 
-import Card from '@/components/ui/Card';
+import Button from '@/components/Button';
+import EmptyState from '@/components/layout/EmptyState';
+import Badge, { type BadgeVariant } from '@/components/ui/Badge';
+import Card, {
+  CARD_HEADER_SECTION_CLASS,
+  CARD_INSET_X_CLASS,
+  CardDescription,
+  CardTitle,
+} from '@/components/ui/Card';
 import {
   deleteMeetingRecording,
   getMyMeetingRecordings,
@@ -26,7 +34,14 @@ function formatDate(value?: string | null): string {
   if (!value) return 'Unknown date';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Unknown date';
-  return date.toLocaleString();
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
 function groupTitle(group: ScheduleGroup): string {
@@ -41,13 +56,14 @@ function transcriptionLabel(status?: TranscriptionStatus, hasArchive?: boolean):
   return 'Video only';
 }
 
-function transcriptionBadgeClass(status?: TranscriptionStatus, hasArchive?: boolean): string {
-  if (status === 'processing' || status === 'pending') {
-    return 'bg-amber-100 text-amber-800';
-  }
-  if (status === 'failed') return 'bg-red-100 text-red-800';
-  if (hasArchive || status === 'completed') return 'bg-green-100 text-green-800';
-  return 'bg-neutral-100 text-neutral-600';
+function transcriptionBadgeVariant(
+  status?: TranscriptionStatus,
+  hasArchive?: boolean,
+): BadgeVariant {
+  if (status === 'processing' || status === 'pending') return 'warning';
+  if (status === 'failed') return 'error';
+  if (hasArchive || status === 'completed') return 'success';
+  return 'default';
 }
 
 export default function TranscriptionRecordingList() {
@@ -120,63 +136,66 @@ export default function TranscriptionRecordingList() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-16 text-sm text-neutral-500">
-        <FiLoader className="animate-spin" aria-hidden />
-        Loading recorded meetings...
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      <div className="rounded-md border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
+        {error}
+      </div>
     );
   }
 
   if (!groups.length) {
     return (
-      <Card padding="lg">
-        <div className="py-10 text-center">
-          <FiVideo className="mx-auto mb-3 text-3xl text-neutral-300" aria-hidden />
-          <p className="text-sm font-medium text-neutral-800">No recorded meetings yet</p>
-          <p className="mt-2 text-sm text-neutral-500">
-            Join a meeting and click <strong>Record meeting</strong>. Video is saved immediately and gated voice
-            audio is transcribed automatically in the background.
-          </p>
-        </div>
+      <Card>
+        <EmptyState
+          icon={<FiVideo />}
+          title="No recorded meetings yet"
+          description="Join a meeting and click Record meeting. Video is saved immediately and gated voice audio is transcribed automatically in the background."
+        />
       </Card>
     );
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {groups.map((group) => (
-        <section key={group.schedule_id} className="rounded-xl border border-neutral-200 bg-white">
-          <div className="border-b border-neutral-200 px-4 py-3">
-            <p className="text-base font-semibold text-neutral-900">{groupTitle(group)}</p>
-            <p className="text-sm text-neutral-500">
+        <Card key={group.schedule_id} padding="none" className="overflow-hidden">
+          <div className={CARD_HEADER_SECTION_CLASS}>
+            <CardTitle>{groupTitle(group)}</CardTitle>
+            <CardDescription lines={2} className="!mt-1">
               {group.project_code || group.schedule_id}
               {group.defense_type ? ` · ${group.defense_type}` : ''}
               {` · ${group.recordings.length} recording${group.recordings.length === 1 ? '' : 's'}`}
-            </p>
+            </CardDescription>
           </div>
 
           <div className="divide-y divide-neutral-100">
             {group.recordings.map((row) => (
-              <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div
+                key={row.id}
+                className={`flex flex-wrap items-center justify-between gap-3 py-4 ${CARD_INSET_X_CLASS}`}
+              >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-neutral-900">
+                  <p className="text-sm font-medium text-neutral-800">
                     Recording · {formatDate(row.recorded_at)}
                   </p>
-                  <p className="mt-1 inline-flex items-center gap-1 text-xs text-neutral-500">
-                    <FiCalendar aria-hidden />
+                  <p className="mt-1 inline-flex items-center gap-1 text-sm text-neutral-600">
+                    <FiCalendar className="h-4 w-4 shrink-0" aria-hidden />
                     {row.duration_ms ? `${Math.round(row.duration_ms / 1000)}s` : 'Duration unknown'}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${transcriptionBadgeClass(row.transcription_status, Boolean(row.transcription_id))}`}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant={transcriptionBadgeVariant(row.transcription_status, Boolean(row.transcription_id))}
+                    size="sm"
+                    className="inline-flex items-center gap-1"
                   >
                     {(row.transcription_status === 'processing' || row.transcription_status === 'pending') ? (
                       <FiLoader className="animate-spin" aria-hidden />
@@ -184,35 +203,39 @@ export default function TranscriptionRecordingList() {
                       <FiFileText aria-hidden />
                     )}
                     {transcriptionLabel(row.transcription_status, Boolean(row.transcription_id))}
-                  </span>
+                  </Badge>
 
                   <Link
                     href={defenseRecordingTranscriptionUrl(row.schedule_id, row.id)}
-                    className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-oxfordBlue px-3 py-1.5 text-sm font-medium text-oxfordBlue transition-all duration-200 hover:bg-oxfordBlue hover:text-snow"
                   >
                     View
                   </Link>
 
                   {row.can_delete ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
+                      className="!border-error-200 !text-error-700 hover:!bg-error-50"
+                      leftIcon={
+                        deletingId === row.id ? (
+                          <FiLoader className="animate-spin" aria-hidden />
+                        ) : (
+                          <FiTrash2 aria-hidden />
+                        )
+                      }
                       onClick={() => void handleDelete(row)}
                       disabled={deletingId === row.id}
-                      className="inline-flex items-center gap-1 rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-60"
                     >
-                      {deletingId === row.id ? (
-                        <FiLoader className="animate-spin" aria-hidden />
-                      ) : (
-                        <FiTrash2 aria-hidden />
-                      )}
                       Delete
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </Card>
       ))}
     </div>
   );
