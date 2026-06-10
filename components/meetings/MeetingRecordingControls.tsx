@@ -42,9 +42,19 @@ export default function MeetingRecordingControls({ recording }: MeetingRecording
 
   if (status === 'done') {
     return (
-      <span className="hidden text-xs text-green-300 sm:inline">
-        Recording saved. Transcription will process in the background.
-      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="hidden text-xs text-green-300 sm:inline">
+          Recording saved. You can keep the meeting open and record again.
+        </span>
+        <button
+          type="button"
+          onClick={() => void startRecording()}
+          className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-neutral-900/80 px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800"
+        >
+          <FiMic aria-hidden />
+          Record again
+        </button>
+      </div>
     );
   }
 
