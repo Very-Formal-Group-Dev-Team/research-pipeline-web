@@ -24,8 +24,8 @@ A comprehensive web-based platform for managing academic research projects from 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
-- pnpm (recommended) or npm
+- Node.js 20+
+- npm
 
 ### Installation
 
@@ -37,7 +37,7 @@ cd student-research-web
 
 2. Install dependencies
 ```bash
-pnpm install
+npm install
 ```
 
 3. Set up environment variables
@@ -49,7 +49,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 4. Run the development server
 ```bash
-pnpm dev
+npm run dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser
@@ -185,10 +185,10 @@ export default function MyPage() {
 ## 🛠️ Development
 
 ### Available Scripts
-- \`pnpm dev\` - Start development server
-- \`pnpm build\` - Build for production
-- \`pnpm start\` - Start production server
-- \`pnpm lint\` - Run ESLint
+- \`npm run dev\` - Start development server
+- \`npm run build\` - Build for production
+- \`npm start\` - Start production server
+- \`npm run lint\` - Run ESLint
 
 ### Code Style
 - TypeScript for type safety

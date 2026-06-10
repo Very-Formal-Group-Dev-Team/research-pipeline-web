@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiDownload, FiLoader, FiTrash2 } from 'react-icons/fi';
 
+import TranscriptionEditorPanel from '@/components/defenses/TranscriptionEditorPanel';
 import {
   deleteMeetingRecording,
   getRecordingDetail,
@@ -13,6 +14,8 @@ import {
   type TranscriptionArchiveSegment,
 } from '@/lib/api/recordings';
 import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
+
+type TranscriptTab = 'original' | 'editor';
 
 interface TranscriptionArchiveViewerProps {
   scheduleId: string;
@@ -42,11 +45,13 @@ export default function TranscriptionArchiveViewer({
 }: TranscriptionArchiveViewerProps) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [detail, setDetail] = useState<RecordingDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [transcriptTab, setTranscriptTab] = useState<TranscriptTab>('original');
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -77,12 +82,44 @@ export default function TranscriptionArchiveViewer({
     return () => window.clearInterval(timer);
   }, [detail, loadDetail]);
 
-  const seekToSegment = (segment: TranscriptionArchiveSegment) => {
+  const seekToMs = useCallback((startMs: number) => {
     const video = videoRef.current;
-    if (!video || segment.start_ms == null) return;
-    video.currentTime = segment.start_ms / 1000;
+    if (!video) return;
+    video.currentTime = startMs / 1000;
     void video.play().catch(() => {});
+  }, []);
+
+  const seekToSegment = (segment: TranscriptionArchiveSegment) => {
+    if (segment.start_ms == null) return;
+    seekToMs(segment.start_ms);
     setActiveSegmentId(segment.id);
+  };
+
+  const syncAudioToVideo = useCallback(() => {
+    const video = videoRef.current;
+    const audio = audioRef.current;
+    if (!video || !audio) return;
+    if (Math.abs(audio.currentTime - video.currentTime) > 0.25) {
+      audio.currentTime = video.currentTime;
+    }
+  }, []);
+
+  const handleVideoPlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    syncAudioToVideo();
+    void audio.play().catch(() => {});
+  };
+
+  const handleVideoPause = () => {
+    audioRef.current?.pause();
+  };
+
+  const handleVideoSeeked = () => {
+    const video = videoRef.current;
+    const audio = audioRef.current;
+    if (!video || !audio) return;
+    audio.currentTime = video.currentTime;
   };
 
   const handleDownloadTranscript = () => {
@@ -134,10 +171,16 @@ export default function TranscriptionArchiveViewer({
   }
 
   const videoUrl = recordingMediaUrl(detail.recording.file_url || '');
+  const audioUrl = detail.recording.audio_url ? recordingMediaUrl(detail.recording.audio_url) : '';
   const title = detail.recording.project_title || detail.recording.meeting_title || 'Meeting recording';
   const listHref = backHref || defenseTranscriptionArchiveUrl();
   const transcriptionStatus = detail.recording.transcription_status;
   const isProcessing = transcriptionStatus === 'pending' || transcriptionStatus === 'processing';
+
+  const isEditorTab = transcriptTab === 'editor';
+  const workspaceHeightClass = isEditorTab
+    ? 'min-h-[calc(100dvh-22rem)]'
+    : 'min-h-[calc(100dvh-24rem)]';
 
   return (
     <div className="space-y-4">
@@ -173,16 +216,30 @@ export default function TranscriptionArchiveViewer({
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-black">
+      <div className="flex flex-col gap-4 lg:gap-6">
+        <div className="mx-auto w-full max-w-4xl shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-black">
           {videoUrl ? (
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              controls
-              className="aspect-video w-full bg-black"
-              preload="metadata"
-            />
+            <>
+              {audioUrl ? (
+                <audio ref={audioRef} src={audioUrl} preload="metadata" className="hidden" />
+              ) : null}
+              <video
+                ref={videoRef}
+                src={videoUrl}
+                controls
+                className="aspect-video w-full bg-black"
+                preload="metadata"
+                onPlay={audioUrl ? handleVideoPlay : undefined}
+                onPause={audioUrl ? handleVideoPause : undefined}
+                onSeeked={audioUrl ? handleVideoSeeked : undefined}
+                onTimeUpdate={audioUrl ? syncAudioToVideo : undefined}
+              />
+              {audioUrl ? (
+                <p className="bg-neutral-900 px-3 py-2 text-xs text-neutral-400">
+                  Audio is synced from the gated voice track recorded separately from the screen capture.
+                </p>
+              ) : null}
+            </>
           ) : (
             <div className="flex aspect-video items-center justify-center text-sm text-neutral-400">
               Recording file unavailable
@@ -190,31 +247,85 @@ export default function TranscriptionArchiveViewer({
           )}
         </div>
 
-        <div className="flex min-h-[24rem] flex-col rounded-xl border border-neutral-200 bg-white">
-          <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-900">Transcript</h2>
-              <p className="text-xs text-neutral-500">
-                {isProcessing
-                  ? 'Transcription is processing in the background.'
-                  : detail.segments.length
-                    ? 'Click any line to jump to that moment in the video.'
-                    : 'No transcript for this recording yet.'}
-              </p>
-            </div>
-            {detail.transcription ? (
+        <div
+          className={`flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm ${workspaceHeightClass} ${
+            isEditorTab ? 'ring-1 ring-primary-100' : ''
+          }`}
+        >
+          <div className="shrink-0 border-b border-neutral-200 px-4 py-3 lg:px-5 lg:py-4">
+            <div className="mb-3 flex gap-1 rounded-lg bg-neutral-100 p-1">
               <button
                 type="button"
-                onClick={handleDownloadTranscript}
-                className="inline-flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                onClick={() => setTranscriptTab('original')}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                  transcriptTab === 'original'
+                    ? 'bg-white text-neutral-900 shadow-sm'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
               >
-                <FiDownload aria-hidden />
-                Download
+                Original
               </button>
-            ) : null}
+              <button
+                type="button"
+                onClick={() => setTranscriptTab('editor')}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                  transcriptTab === 'editor'
+                    ? 'bg-white text-neutral-900 shadow-sm'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                Editor workspace
+              </button>
+            </div>
+
+            {transcriptTab === 'original' ? (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-neutral-900">Transcript</h2>
+                  <p className="text-xs text-neutral-500">
+                    {isProcessing
+                      ? 'Transcription is processing in the background.'
+                      : detail.segments.length
+                        ? 'Click any line to jump to that moment in the video.'
+                        : 'No transcript for this recording yet.'}
+                  </p>
+                </div>
+                {detail.transcription ? (
+                  <button
+                    type="button"
+                    onClick={handleDownloadTranscript}
+                    className="inline-flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                  >
+                    <FiDownload aria-hidden />
+                    Download
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div>
+                <h2 className="text-base font-semibold text-neutral-900">Transcript editor workspace</h2>
+                <p className="text-sm text-neutral-500">
+                  Select statements to assign names or merge. Save to persist speaker list changes.
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className="min-h-0 flex-1 overflow-hidden">
+          {transcriptTab === 'editor' ? (
+            <TranscriptionEditorPanel
+              className="h-full min-h-0"
+              scheduleId={scheduleId}
+              recordingId={recordingId}
+              projectCode={detail.recording.project_code}
+              initialSegments={detail.segments}
+              initialFullText={detail.transcription?.full_text}
+              isProcessing={isProcessing}
+              canManage={Boolean(detail.recording.can_manage ?? detail.recording.can_delete)}
+              onSeek={seekToMs}
+            />
+          ) : (
+          <div className="h-full min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
             {isProcessing ? (
               <div className="flex items-center gap-2 py-8 text-sm text-neutral-500">
                 <FiLoader className="animate-spin" aria-hidden />
@@ -245,6 +356,8 @@ export default function TranscriptionArchiveViewer({
                   : 'This recording has no transcript.'}
               </p>
             )}
+          </div>
+          )}
           </div>
         </div>
       </div>

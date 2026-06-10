@@ -2,7 +2,7 @@
  * Meeting/defense recording and archived transcription API.
  */
 
-import { del, get, post } from './client';
+import { del, get, post, put } from './client';
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/api\/?$/, '');
 
@@ -13,6 +13,7 @@ export interface MeetingRecordingSummary {
   schedule_id: string;
   schedule_source: 'defense' | 'meeting';
   file_url?: string | null;
+  audio_url?: string | null;
   file_size?: number | null;
   duration_ms?: number | null;
   mime_type?: string;
@@ -52,6 +53,37 @@ export interface RecordingDetailResponse {
   recording: MeetingRecordingSummary;
   transcription: TranscriptionArchive | null;
   segments: TranscriptionArchiveSegment[];
+}
+
+export interface TranscriptionEditSpeaker {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface TranscriptionEditLine {
+  id: string;
+  text: string;
+  speaker_id: string | null;
+  start_ms?: number | null;
+  end_ms?: number | null;
+}
+
+export interface TranscriptionEditContent {
+  speakers: TranscriptionEditSpeaker[];
+  lines: TranscriptionEditLine[];
+}
+
+export interface TranscriptionEditResponse {
+  recording_id: string;
+  can_edit: boolean;
+  edit: {
+    id: string;
+    edited_by: string;
+    created_at: string;
+    updated_at: string;
+  } | null;
+  content: TranscriptionEditContent;
 }
 
 export function recordingMediaUrl(fileUrl: string): string {
@@ -137,4 +169,86 @@ export function getScheduleRecordings(scheduleId: string) {
 
 export function getRecordingDetail(scheduleId: string, recordingId: string) {
   return get<RecordingDetailResponse>(`/defenses/${scheduleId}/recordings/${recordingId}`);
+}
+
+export function getTranscriptionEdit(scheduleId: string, recordingId: string) {
+  return get<TranscriptionEditResponse>(`/defenses/${scheduleId}/recordings/${recordingId}/transcription-edit`);
+}
+
+export function saveTranscriptionEdit(
+  scheduleId: string,
+  recordingId: string,
+  content: TranscriptionEditContent,
+) {
+  return put<{ recording_id: string; edit_id: string | null; content: TranscriptionEditContent }>(
+    `/defenses/${scheduleId}/recordings/${recordingId}/transcription-edit`,
+    content,
+  );
+}
+
+export function mergeTranscriptionLines(
+  scheduleId: string,
+  recordingId: string,
+  lineIds: string[],
+  speakers?: TranscriptionEditSpeaker[],
+) {
+  return post<{ recording_id: string; merged_id: string; content: TranscriptionEditContent }>(
+    `/defenses/${scheduleId}/recordings/${recordingId}/transcription-edit/merge`,
+    { line_ids: lineIds, ...(speakers ? { speakers } : {}) },
+  );
+}
+
+export function assignTranscriptionSpeaker(
+  scheduleId: string,
+  recordingId: string,
+  lineIds: string[],
+  speakerId: string,
+  speakers?: TranscriptionEditSpeaker[],
+) {
+  return post<{ recording_id: string; speaker_id: string; assigned_count: number; content: TranscriptionEditContent }>(
+    `/defenses/${scheduleId}/recordings/${recordingId}/transcription-edit/assign`,
+    { line_ids: lineIds, speaker_id: speakerId, ...(speakers ? { speakers } : {}) },
+  );
+}
+
+export function getTranscriptionEditDownloadUrl(scheduleId: string, recordingId: string): string {
+  const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/+$/, '');
+  return `${API_BASE_URL}/defenses/${encodeURIComponent(scheduleId)}/recordings/${encodeURIComponent(recordingId)}/transcription-edit/download`;
+}
+
+export async function downloadEditedTranscription(
+  scheduleId: string,
+  recordingId: string,
+  filename = 'edited-transcription.txt',
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const tokenMatch = document.cookie.match(/(?:^|;\s*)session_token=([^;]*)/);
+    const token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const res = await fetch(getTranscriptionEditDownloadUrl(scheduleId, recordingId), {
+      credentials: 'include',
+      headers,
+    });
+
+    if (!res.ok) {
+      return { ok: false, error: 'Download failed' };
+    }
+
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(objectUrl);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Download failed' };
+  }
 }
