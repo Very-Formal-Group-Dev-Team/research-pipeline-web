@@ -147,7 +147,7 @@ export default function JitsiMeetingFrame({
             <ol className="mb-5 list-decimal space-y-2 pl-5 text-sm text-neutral-300">
               <li>
                 Start Jitsi:{' '}
-                <code className="text-neutral-100">pnpm docker:jitsi:setup</code> then{' '}
+                <code className="text-neutral-100">npm run docker:jitsi:setup</code> then{' '}
                 <code className="text-neutral-100">docker compose up -d jitsi-web jitsi-prosody jitsi-jicofo jitsi-jvb</code>
               </li>
               <li>

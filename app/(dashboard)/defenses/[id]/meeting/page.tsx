@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { FiArrowLeft, FiLoader } from 'react-icons/fi';
 
 import DefensePanelOverlay from '@/components/defenses/DefensePanelOverlay';
@@ -14,10 +14,7 @@ import {
 } from '@/lib/api/defenses';
 import { useMeetingRecording } from '@/lib/hooks/useMeetingRecording';
 import { normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
-import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
-
 export default function DefenseMeetingPage() {
-  const router = useRouter();
   const params = useParams<{ id: string }>();
   const defenseId = typeof params?.id === 'string' ? params.id : '';
   const [session, setSession] = useState<DefenseMeetingSession | null>(null);
@@ -81,16 +78,15 @@ export default function DefenseMeetingPage() {
 
   const meetingRecording = useMeetingRecording(defenseId, hasJoinedMeeting);
 
-  const { savedRecordingId, dismissSaved } = meetingRecording;
+  const { dismissSaved } = meetingRecording;
 
   useEffect(() => {
-    if (!savedRecordingId) return undefined;
+    if (meetingRecording.status !== 'done') return undefined;
     const timer = window.setTimeout(() => {
       dismissSaved();
-      router.push(defenseTranscriptionArchiveUrl());
-    }, 2500);
+    }, 4000);
     return () => window.clearTimeout(timer);
-  }, [dismissSaved, router, savedRecordingId]);
+  }, [dismissSaved, meetingRecording.status]);
 
   if (loading) {
     return (

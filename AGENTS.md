@@ -1,7 +1,7 @@
 # Student Research Portal Frontend Instructions
 
 ## What to optimize for
-- This repo is a Next.js 16 App Router app on Node.js 20+ with TypeScript, Tailwind CSS, and pnpm.
+- This repo is a Next.js 16 App Router app on Node.js 20+ with TypeScript, Tailwind CSS, and npm.
 - Keep changes consistent with the existing route groups, dashboard structure, and API wrapper layer.
 - Prefer focused UI and data-flow edits over broad refactors.
 
@@ -16,10 +16,10 @@
 - Use `react-icons/fi` for icons unless the surrounding code already uses something else.
 
 ## Commands
-- Install dependencies with `pnpm install`.
-- Run the app locally with `pnpm dev`.
-- Run lint with `pnpm lint`.
-- Build with `pnpm build`.
+- Install dependencies with `npm install`.
+- Run the app locally with `npm run dev`.
+- Run lint with `npm run lint`.
+- Build with `npm run build`.
 
 ## Before changing behavior
 - Check [README.md](README.md), [Tasks.md](Tasks.md), and the existing convention file at [.github/instructions/paper-version-control.instructions.md](.github/instructions/paper-version-control.instructions.md).
