@@ -39,7 +39,12 @@ import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import type { SearchUserResult } from '@/lib/api/users';
-import { getMyInstitutionCourses, type InstitutionCourse } from '@/lib/api/institutions';
+import {
+  getMyInstitutionCourses,
+  getMyInstitutionPrograms,
+  type InstitutionCourse,
+  type InstitutionProgram,
+} from '@/lib/api/institutions';
 import { toast } from 'sonner';
 import {
   formControlResponsiveClassName,
@@ -150,10 +155,12 @@ export default function ProjectDetailPage() {
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const [detailsProjectType, setDetailsProjectType] = useState('thesis');
   const [detailsPaperStandard, setDetailsPaperStandard] = useState('IEEE');
-  const [detailsProgram, setDetailsProgram] = useState('');
+  const [detailsProgramId, setDetailsProgramId] = useState('');
   const [detailsCourseId, setDetailsCourseId] = useState('');
   const [institutionCourses, setInstitutionCourses] = useState<InstitutionCourse[]>([]);
+  const [institutionPrograms, setInstitutionPrograms] = useState<InstitutionProgram[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
+  const [programsLoading, setProgramsLoading] = useState(true);
   const [detailsSection, setDetailsSection] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
@@ -202,13 +209,40 @@ export default function ProjectDetailPage() {
     [],
   );
 
-  const loadInstitutionCourses = useCallback(async () => {
+  const resolveProgramId = useCallback(
+    (projectData: Project, programs: InstitutionProgram[]) => {
+      if (projectData.program_id) {
+        return projectData.program_id;
+      }
+
+      const savedProgram = projectData.program?.trim().toLowerCase();
+      if (!savedProgram) return '';
+
+      const matched = programs.find((item) => {
+        const byName = item.name.trim().toLowerCase() === savedProgram;
+        const byLabel = `${item.name} (${item.code})`.trim().toLowerCase() === savedProgram;
+        return byName || byLabel;
+      });
+
+      return matched?.id || '';
+    },
+    [],
+  );
+
+  const loadInstitutionCatalog = useCallback(async () => {
     setCoursesLoading(true);
-    const res = await getMyInstitutionCourses();
-    const courses = res.data || [];
+    setProgramsLoading(true);
+    const [coursesRes, programsRes] = await Promise.all([
+      getMyInstitutionCourses(),
+      getMyInstitutionPrograms(),
+    ]);
+    const courses = coursesRes.data || [];
+    const programs = programsRes.data || [];
     setInstitutionCourses(courses);
+    setInstitutionPrograms(programs);
     setCoursesLoading(false);
-    return courses;
+    setProgramsLoading(false);
+    return { courses, programs };
   }, []);
 
   const loadMembers = useCallback(async () => {
@@ -230,11 +264,11 @@ export default function ProjectDetailPage() {
     async function load() {
       if (!params.id) return;
       setLoading(true);
-      const [projRes, membersRes, invitesRes, courses] = await Promise.all([
+      const [projRes, membersRes, invitesRes, catalog] = await Promise.all([
         getProject(params.id as string),
         getProjectMembers(params.id as string),
         getProjectInvitations(params.id as string),
-        loadInstitutionCourses(),
+        loadInstitutionCatalog(),
       ]);
       if (!cancelled) {
         const projectData = projRes.data || null;
@@ -242,7 +276,8 @@ export default function ProjectDetailPage() {
         setMembers(membersRes.data || []);
         setPendingInvites(invitesRes.data || []);
         if (projectData) {
-          setDetailsCourseId(resolveCourseId(projectData, courses));
+          setDetailsCourseId(resolveCourseId(projectData, catalog.courses));
+          setDetailsProgramId(resolveProgramId(projectData, catalog.programs));
         }
         setLoading(false);
       }
@@ -251,7 +286,7 @@ export default function ProjectDetailPage() {
     loadPaperVersions();
     const interval = setInterval(loadMembers, 10000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCourses, resolveCourseId]);
+  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCatalog, resolveCourseId, resolveProgramId]);
 
   useEffect(() => {
     setEditableKeywords(project?.keywords || []);
@@ -266,10 +301,10 @@ export default function ProjectDetailPage() {
     if (!project) return;
     setDetailsProjectType(project.project_type || 'thesis');
     setDetailsPaperStandard(paperStandardFormValue(project.paper_standard));
-    setDetailsProgram(project.program || '');
+    setDetailsProgramId(resolveProgramId(project, institutionPrograms));
     setDetailsCourseId(resolveCourseId(project, institutionCourses));
     setDetailsSection(project.section || '');
-  }, [project, institutionCourses, resolveCourseId]);
+  }, [project, institutionCourses, institutionPrograms, resolveCourseId, resolveProgramId]);
 
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
@@ -299,7 +334,8 @@ export default function ProjectDetailPage() {
     return (
       detailsProjectType !== (project.project_type || 'thesis') ||
       detailsPaperStandard !== paperStandardFormValue(project.paper_standard) ||
-      detailsProgram !== (project.program || '') ||
+      detailsProgramId !==
+        (project.program_id || resolveProgramId(project, institutionPrograms)) ||
       detailsCourseId !== (project.course_id || resolveCourseId(project, institutionCourses)) ||
       detailsSection !== (project.section || '')
     );
@@ -307,11 +343,13 @@ export default function ProjectDetailPage() {
     project,
     detailsProjectType,
     detailsPaperStandard,
-    detailsProgram,
+    detailsProgramId,
     detailsCourseId,
     detailsSection,
     institutionCourses,
+    institutionPrograms,
     resolveCourseId,
+    resolveProgramId,
   ]);
 
   const abstractDirty = useMemo(() => {
@@ -441,7 +479,7 @@ export default function ProjectDetailPage() {
       title: trimmed,
       projectType: detailsProjectType,
       paperStandard: detailsPaperStandard,
-      program: detailsProgram.trim(),
+      programId: detailsProgramId || undefined,
       courseId: detailsCourseId || undefined,
       section: detailsSection.trim(),
     });
@@ -480,7 +518,7 @@ export default function ProjectDetailPage() {
       title: project.title,
       projectType: detailsProjectType,
       paperStandard: detailsPaperStandard,
-      program: detailsProgram.trim(),
+      programId: detailsProgramId || undefined,
       courseId: detailsCourseId || undefined,
       section: detailsSection.trim(),
     });
@@ -798,13 +836,22 @@ export default function ProjectDetailPage() {
               <div className="flex min-h-0 flex-1 flex-col justify-center">
                 <div className="project-detail-inline-fields flex flex-col gap-3 md:gap-3.5">
                 <ProjectDetailFieldRow label="Program" htmlFor="project-detail-program">
-                  <Input
+                  <select
                     id="project-detail-program"
-                    value={detailsProgram}
-                    onChange={(e) => setDetailsProgram(e.target.value)}
-                    placeholder="Program name"
-                    className={PROJECT_DETAIL_CONTROL_CLASS}
-                  />
+                    value={detailsProgramId}
+                    onChange={(e) => setDetailsProgramId(e.target.value)}
+                    disabled={programsLoading}
+                    className={`${formSelectResponsiveClassName} ${PROJECT_DETAIL_CONTROL_CLASS} !pr-8 bg-[length:0.875rem_0.875rem] bg-[right_0.5rem_center]`}
+                  >
+                    <option value="">
+                      {programsLoading ? 'Loading programs...' : 'Select program'}
+                    </option>
+                    {institutionPrograms.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({item.code})
+                      </option>
+                    ))}
+                  </select>
                 </ProjectDetailFieldRow>
                 <ProjectDetailFieldRow label="Course" htmlFor="project-detail-course">
                   <select
