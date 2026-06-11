@@ -2,7 +2,7 @@
  * Meeting/defense recording and archived transcription API.
  */
 
-import { del, get, post, put } from './client';
+import { del, get, patch, post, put } from './client';
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/api\/?$/, '');
 
@@ -17,6 +17,7 @@ export interface MeetingRecordingSummary {
   file_size?: number | null;
   duration_ms?: number | null;
   mime_type?: string;
+  display_name?: string | null;
   recorded_by?: string;
   recorded_at: string;
   ended_at?: string | null;
@@ -149,8 +150,31 @@ export function transcribeMeetingRecording(scheduleId: string, recordingId: stri
 }
 
 export function deleteMeetingRecording(scheduleId: string, recordingId: string) {
-  return del<{ deleted: boolean; recording_id: string }>(
+  return del<{ deleted: boolean; recording_id: string; soft_deleted?: boolean }>(
     `/defenses/${scheduleId}/recordings/${recordingId}`,
+  );
+}
+
+export function restoreMeetingRecording(scheduleId: string, recordingId: string) {
+  return patch<{ restored: boolean; recording_id: string }>(
+    `/defenses/${scheduleId}/recordings/${recordingId}/restore`,
+  );
+}
+
+export function purgeMeetingRecording(scheduleId: string, recordingId: string) {
+  return del<{ purged: boolean; recording_id: string }>(
+    `/defenses/${scheduleId}/recordings/${recordingId}/purge`,
+  );
+}
+
+export function renameMeetingRecording(
+  scheduleId: string,
+  recordingId: string,
+  displayName: string,
+) {
+  return patch<{ recording_id: string; display_name: string }>(
+    `/defenses/${scheduleId}/recordings/${recordingId}`,
+    { display_name: displayName },
   );
 }
 

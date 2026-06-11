@@ -20,6 +20,7 @@ import {
   type TranscriptionStatus,
 } from '@/lib/api/recordings';
 import { defenseRecordingTranscriptionUrl } from '@/lib/meetings/navigation';
+import { recordingDisplayTitle } from '@/lib/recordings/display';
 
 interface ScheduleGroup {
   schedule_id: string;
@@ -175,65 +176,67 @@ export default function TranscriptionRecordingList() {
             </CardDescription>
           </div>
 
-          <div className="divide-y divide-neutral-100">
-            {group.recordings.map((row) => (
-              <div
-                key={row.id}
-                className={`flex flex-wrap items-center justify-between gap-3 py-4 ${CARD_INSET_X_CLASS}`}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-neutral-800">
-                    Recording · {formatDate(row.recorded_at)}
-                  </p>
-                  <p className="mt-1 inline-flex items-center gap-1 text-sm text-neutral-600">
-                    <FiCalendar className="h-4 w-4 shrink-0" aria-hidden />
-                    {row.duration_ms ? `${Math.round(row.duration_ms / 1000)}s` : 'Duration unknown'}
-                  </p>
-                </div>
+          <div className="divide-y divide-neutral-300">
+            {group.recordings.map((row) => {
+              const recordingHref = defenseRecordingTranscriptionUrl(row.schedule_id, row.id);
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    variant={transcriptionBadgeVariant(row.transcription_status, Boolean(row.transcription_id))}
-                    size="sm"
-                    className="inline-flex items-center gap-1"
-                  >
-                    {(row.transcription_status === 'processing' || row.transcription_status === 'pending') ? (
-                      <FiLoader className="animate-spin" aria-hidden />
-                    ) : (
-                      <FiFileText aria-hidden />
-                    )}
-                    {transcriptionLabel(row.transcription_status, Boolean(row.transcription_id))}
-                  </Badge>
-
+              return (
+                <div
+                  key={row.id}
+                  className={`relative flex flex-wrap items-center justify-between gap-3 py-4 transition-colors hover:bg-neutral-100 ${CARD_INSET_X_CLASS}`}
+                >
                   <Link
-                    href={defenseRecordingTranscriptionUrl(row.schedule_id, row.id)}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-oxfordBlue px-3 py-1.5 text-sm font-medium text-oxfordBlue transition-all duration-200 hover:bg-oxfordBlue hover:text-snow"
-                  >
-                    View
-                  </Link>
+                    href={recordingHref}
+                    className="absolute inset-0 z-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                    aria-label={`Open recording: ${recordingDisplayTitle(row)}`}
+                  />
+                  <div className="relative z-10 min-w-0 flex-1 pointer-events-none">
+                    <p className="text-sm font-medium text-neutral-800">
+                      {recordingDisplayTitle(row)} · {formatDate(row.recorded_at)}
+                    </p>
+                    <p className="mt-1 inline-flex items-center gap-1 text-sm text-neutral-600">
+                      <FiCalendar className="h-4 w-4 shrink-0" aria-hidden />
+                      {row.duration_ms ? `${Math.round(row.duration_ms / 1000)}s` : 'Duration unknown'}
+                    </p>
+                  </div>
 
-                  {row.can_delete ? (
-                    <Button
-                      type="button"
-                      variant="outline"
+                  <div className="relative z-10 flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant={transcriptionBadgeVariant(row.transcription_status, Boolean(row.transcription_id))}
                       size="sm"
-                      className="!border-error-200 !text-error-700 hover:!bg-error-50"
-                      leftIcon={
-                        deletingId === row.id ? (
-                          <FiLoader className="animate-spin" aria-hidden />
-                        ) : (
-                          <FiTrash2 aria-hidden />
-                        )
-                      }
-                      onClick={() => void handleDelete(row)}
-                      disabled={deletingId === row.id}
+                      className="pointer-events-none inline-flex items-center gap-1"
                     >
-                      Delete
-                    </Button>
-                  ) : null}
+                      {(row.transcription_status === 'processing' || row.transcription_status === 'pending') ? (
+                        <FiLoader className="animate-spin" aria-hidden />
+                      ) : (
+                        <FiFileText aria-hidden />
+                      )}
+                      {transcriptionLabel(row.transcription_status, Boolean(row.transcription_id))}
+                    </Badge>
+
+                    {row.can_delete ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="relative z-10 !border-error-200 !text-error-700 hover:!bg-error-50"
+                        leftIcon={
+                          deletingId === row.id ? (
+                            <FiLoader className="animate-spin" aria-hidden />
+                          ) : (
+                            <FiTrash2 aria-hidden />
+                          )
+                        }
+                        onClick={() => void handleDelete(row)}
+                        disabled={deletingId === row.id}
+                      >
+                        Delete
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       ))}

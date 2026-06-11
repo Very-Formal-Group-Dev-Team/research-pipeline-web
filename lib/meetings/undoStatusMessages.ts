@@ -36,3 +36,7 @@ export function adminProgramUndoToastMessage(action: ActiveStatusUndoAction): st
   }
   return 'Program enabled. Sure about this change?';
 }
+
+export function recordingDeleteUndoToastMessage(): string {
+  return 'Recording deleted. Sure about this change?';
+}
