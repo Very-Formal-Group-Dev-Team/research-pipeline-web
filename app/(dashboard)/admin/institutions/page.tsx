@@ -2,36 +2,63 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { FiEdit2, FiPlus } from 'react-icons/fi';
-import { toast } from 'sonner';
+import { FiCheckCircle, FiEdit2, FiMinusCircle, FiPlus } from 'react-icons/fi';
 
 import Button from '@/components/Button';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
+import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
+import { adminInstitutionUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import {
   createAdminInstitution,
   listAdminInstitutions,
   updateAdminInstitution,
   type AdminInstitution,
 } from '@/lib/api/admin';
+import { toast } from 'sonner';
 
 function isActive(value: AdminInstitution['is_active']): boolean {
   return value === true || value === 1;
+}
+
+function ActiveStatusButton({
+  active,
+  onClick,
+}: {
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant={active ? 'success' : 'outline'}
+      size="sm"
+      leftIcon={active ? <FiCheckCircle aria-hidden /> : <FiMinusCircle aria-hidden />}
+      onClick={onClick}
+      title={active ? 'Click to disable' : 'Click to enable'}
+      className={active ? undefined : 'border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50 hover:text-neutral-700'}
+    >
+      {active ? 'Active' : 'Inactive'}
+    </Button>
+  );
 }
 
 export default function AdminInstitutionsPage() {
   const { user, handleLogout } = useDashboardUser('Admin');
   const [institutions, setInstitutions] = useState<AdminInstitution[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editing, setEditing] = useState<AdminInstitution | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [statusConfirmTarget, setStatusConfirmTarget] = useState<AdminInstitution | null>(null);
+  const [statusActionLoading, setStatusActionLoading] = useState(false);
+  const [statusActionError, setStatusActionError] = useState<string | null>(null);
+  const { toast: statusUndoToast, showUndoToast: showStatusUndoToast, dismissUndoToast: dismissStatusUndoToast } =
+    useUndoActionToast();
 
   async function loadInstitutions() {
     setLoading(true);
@@ -44,81 +71,83 @@ export default function AdminInstitutionsPage() {
     void loadInstitutions();
   }, []);
 
-  const formDirty = useMemo(() => {
-    if (!editing) return Boolean(formData.name.trim() && formData.code.trim());
-    return (
-      formData.name.trim() !== editing.name ||
-      formData.code.trim().toUpperCase() !== editing.code
-    );
-  }, [editing, formData]);
+  const formDirty = useMemo(
+    () => Boolean(formData.name.trim() && formData.code.trim()),
+    [formData],
+  );
+
+  const willEnableInstitution = statusConfirmTarget
+    ? !isActive(statusConfirmTarget.is_active)
+    : false;
 
   function openCreate() {
-    setEditing(null);
     setFormData({ name: '', code: '' });
     setFormError('');
-    setIsFormOpen(true);
+    setIsCreateOpen(true);
   }
 
-  function openEdit(institution: AdminInstitution) {
-    setEditing(institution);
-    setFormData({ name: institution.name, code: institution.code });
-    setFormError('');
-    setIsFormOpen(true);
-  }
-
-  function closeForm() {
-    setIsFormOpen(false);
-    setEditing(null);
+  function closeCreate() {
+    setIsCreateOpen(false);
     setFormError('');
   }
 
-  async function handleSubmit() {
+  async function handleCreate() {
     if (!formData.name.trim() || !formData.code.trim()) {
       setFormError('Name and code are required.');
       return;
     }
-    if (editing && !formDirty) return;
 
     setSubmitting(true);
     setFormError('');
 
-    if (editing) {
-      const res = await updateAdminInstitution(editing.id, {
-        name: formData.name.trim(),
-        code: formData.code.trim(),
-      });
-      if (res.error) setFormError(res.error);
-      else {
-        closeForm();
-        await loadInstitutions();
-        toast.success('Institution updated');
-      }
-    } else {
-      const res = await createAdminInstitution({
-        name: formData.name.trim(),
-        code: formData.code.trim(),
-      });
-      if (res.error) setFormError(res.error);
-      else {
-        closeForm();
-        await loadInstitutions();
-        toast.success('Institution created');
-      }
+    const res = await createAdminInstitution({
+      name: formData.name.trim(),
+      code: formData.code.trim(),
+    });
+    if (res.error) setFormError(res.error);
+    else {
+      closeCreate();
+      await loadInstitutions();
+      toast.success('Institution created');
     }
 
     setSubmitting(false);
   }
 
-  async function toggleActive(institution: AdminInstitution) {
-    const res = await updateAdminInstitution(institution.id, {
-      isActive: !isActive(institution.is_active),
-    });
+  async function handleRevertInstitutionStatus(institutionId: string, previousActive: boolean) {
+    const res = await updateAdminInstitution(institutionId, { isActive: previousActive });
     if (res.error) {
-      toast.error(res.error);
+      setStatusActionError(res.error);
       return;
     }
+    dismissStatusUndoToast();
     await loadInstitutions();
-    toast.success(isActive(institution.is_active) ? 'Institution disabled' : 'Institution enabled');
+  }
+
+  async function handleConfirmStatusChange() {
+    if (!statusConfirmTarget) return;
+    const institution = statusConfirmTarget;
+    const previousActive = isActive(institution.is_active);
+    const nextActive = !previousActive;
+
+    setStatusActionLoading(true);
+    setStatusActionError(null);
+    dismissStatusUndoToast();
+
+    const res = await updateAdminInstitution(institution.id, { isActive: nextActive });
+    if (res.error) {
+      setStatusActionError(res.error);
+      setStatusActionLoading(false);
+      return;
+    }
+
+    setStatusConfirmTarget(null);
+    await loadInstitutions();
+    showStatusUndoToast({
+      message: adminInstitutionUndoToastMessage(nextActive ? 'enable' : 'disable'),
+      onUndo: () => handleRevertInstitutionStatus(institution.id, previousActive),
+    });
+    setStatusActionLoading(false);
   }
 
   return (
@@ -131,7 +160,7 @@ export default function AdminInstitutionsPage() {
               Register schools on Archivum and manage their program catalogs
             </p>
           </div>
-          <Button variant="primary" onClick={openCreate}>
+          <Button variant="primary" size="sm" onClick={openCreate}>
             <FiPlus className="mr-2" aria-hidden />
             New Institution
           </Button>
@@ -160,30 +189,20 @@ export default function AdminInstitutionsPage() {
                     <p className="text-sm text-neutral-500">{institution.code}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={isActive(institution.is_active) ? 'success' : 'default'} size="sm">
-                      {isActive(institution.is_active) ? 'Active' : 'Inactive'}
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<FiEdit2 aria-hidden />}
-                      onClick={() => openEdit(institution)}
-                    >
-                      Edit
-                    </Button>
+                    <ActiveStatusButton
+                      active={isActive(institution.is_active)}
+                      onClick={() => {
+                        setStatusActionError(null);
+                        setStatusConfirmTarget(institution);
+                      }}
+                    />
                     <Link
-                      href={`/admin/institutions/${institution.id}/programs`}
+                      href={`/admin/institutions/${institution.id}`}
                       className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-oxfordBlue px-3 py-1.5 text-sm font-medium text-oxfordBlue transition-all duration-200 hover:bg-oxfordBlue hover:text-snow"
                     >
-                      Programs
+                      <FiEdit2 className="h-4 w-4" aria-hidden />
+                      Manage
                     </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void toggleActive(institution)}
-                    >
-                      {isActive(institution.is_active) ? 'Disable' : 'Enable'}
-                    </Button>
                   </div>
                 </li>
               ))}
@@ -192,11 +211,7 @@ export default function AdminInstitutionsPage() {
         )}
       </div>
 
-      <Modal
-        isOpen={isFormOpen}
-        onClose={closeForm}
-        title={editing ? 'Edit Institution' : 'New Institution'}
-      >
+      <Modal isOpen={isCreateOpen} onClose={closeCreate} title="New Institution">
         <div className="space-y-4">
           {formError ? (
             <div className="rounded-md border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
@@ -223,7 +238,7 @@ export default function AdminInstitutionsPage() {
           />
         </div>
         <ModalFooter>
-          <Button type="button" variant="outline" onClick={closeForm}>
+          <Button type="button" variant="outline" onClick={closeCreate}>
             Cancel
           </Button>
           <Button
@@ -231,12 +246,51 @@ export default function AdminInstitutionsPage() {
             variant="primary"
             loading={submitting}
             disabled={submitting || !formDirty}
-            onClick={() => void handleSubmit()}
+            onClick={() => void handleCreate()}
           >
-            {editing ? 'Save changes' : 'Create institution'}
+            Create institution
           </Button>
         </ModalFooter>
       </Modal>
+
+      <Modal
+        isOpen={Boolean(statusConfirmTarget)}
+        onClose={() => {
+          if (!statusActionLoading) setStatusConfirmTarget(null);
+        }}
+        title={willEnableInstitution ? 'Enable institution?' : 'Disable institution?'}
+        size="sm"
+      >
+        <p className="text-sm text-neutral-700">
+          {willEnableInstitution
+            ? `${statusConfirmTarget?.name} will become available for registration and project setup again.`
+            : `${statusConfirmTarget?.name} will be hidden from students and coordinators. Existing data is preserved.`}
+        </p>
+        {statusActionError ? (
+          <p className="mt-3 text-sm text-error-700">{statusActionError}</p>
+        ) : null}
+        <ModalFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setStatusConfirmTarget(null)}
+            disabled={statusActionLoading}
+          >
+            {willEnableInstitution ? 'Keep inactive' : 'Keep active'}
+          </Button>
+          <Button
+            type="button"
+            variant={willEnableInstitution ? 'success' : 'error'}
+            onClick={() => void handleConfirmStatusChange()}
+            loading={statusActionLoading}
+            disabled={statusActionLoading}
+          >
+            {willEnableInstitution ? 'Enable institution' : 'Disable institution'}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      <UndoActionToastHost toast={statusUndoToast} onDismiss={dismissStatusUndoToast} />
     </DashboardLayout>
   );
 }
