@@ -4,6 +4,8 @@ declare class JitsiMeetExternalAPI {
   removeListener(event: string, listener: (...args: unknown[]) => void): void;
   dispose(): void;
   executeCommand(command: string, ...args: unknown[]): void;
+  getIFrame(): HTMLIFrameElement;
+  isParticipantsPaneOpen?(): Promise<boolean>;
 }
 
 interface Window {

@@ -4,13 +4,22 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FiAlertTriangle, FiExternalLink } from 'react-icons/fi';
 
 import { getJitsiBaseUrl } from '@/lib/meetings/jitsi';
+import type { JitsiMediaState, JitsiMeetApi } from '@/lib/meetings/jitsiApi';
+import {
+  archivumJitsiConfigOverwrite,
+  archivumJitsiInterfaceConfigOverwrite,
+} from '@/lib/meetings/jitsiTheme';
 import { loadJitsiExternalApiScript, parseJitsiJoinUrl } from '@/lib/meetings/jitsiExternalApi';
 
 interface JitsiMeetingFrameProps {
   joinUrl: string;
   title: string;
+  /** Shown to other participants; keep short — meeting details live in the Archivum header. */
+  displayName?: string;
   onConferenceJoined?: () => void;
   onConferenceLeft?: () => void;
+  onApiReady?: (api: JitsiMeetApi | null) => void;
+  onMediaStateChange?: (state: JitsiMediaState) => void;
 }
 
 const LOAD_TIMEOUT_MS = 12000;
@@ -18,16 +27,23 @@ const LOAD_TIMEOUT_MS = 12000;
 export default function JitsiMeetingFrame({
   joinUrl,
   title,
+  displayName,
   onConferenceJoined,
   onConferenceLeft,
+  onApiReady,
+  onMediaStateChange,
 }: JitsiMeetingFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const apiRef = useRef<JitsiMeetExternalAPI | null>(null);
+  const apiRef = useRef<JitsiMeetApi | null>(null);
   const joinedRef = useRef(false);
   const mountedKeyRef = useRef<string | null>(null);
   const onJoinedRef = useRef(onConferenceJoined);
   const onLeftRef = useRef(onConferenceLeft);
+  const onApiReadyRef = useRef(onApiReady);
+  const onMediaStateChangeRef = useRef(onMediaStateChange);
   const titleRef = useRef(title);
+  const displayNameRef = useRef(displayName);
+  const mediaStateRef = useRef<JitsiMediaState>({ audioMuted: false, videoMuted: false });
   const [showFallback, setShowFallback] = useState(false);
 
   const jitsiBaseUrl = getJitsiBaseUrl();
@@ -37,8 +53,11 @@ export default function JitsiMeetingFrame({
   useEffect(() => {
     onJoinedRef.current = onConferenceJoined;
     onLeftRef.current = onConferenceLeft;
+    onApiReadyRef.current = onApiReady;
+    onMediaStateChangeRef.current = onMediaStateChange;
     titleRef.current = title;
-  }, [onConferenceJoined, onConferenceLeft, title]);
+    displayNameRef.current = displayName;
+  }, [displayName, onApiReady, onConferenceJoined, onConferenceLeft, onMediaStateChange, title]);
 
   useEffect(() => {
     joinedRef.current = false;
@@ -59,7 +78,6 @@ export default function JitsiMeetingFrame({
     const resolvedRoom = room;
     const container = containerRef.current;
 
-    // Avoid remounting when React re-renders with the same room.
     if (mountedKeyRef.current === roomKey && apiRef.current) {
       return undefined;
     }
@@ -80,27 +98,21 @@ export default function JitsiMeetingFrame({
           width: '100%',
           height: '100%',
           userInfo: {
-            displayName: titleRef.current,
+            displayName: displayNameRef.current?.trim() || 'Participant',
           },
-          configOverwrite: {
-            prejoinPageEnabled: true,
-            startWithAudioMuted: false,
-            startWithVideoMuted: false,
-            disableDeepLinking: true,
-          },
-          interfaceConfigOverwrite: {
-            SHOW_JITSI_WATERMARK: false,
-            SHOW_WATERMARK_FOR_GUESTS: false,
-            MOBILE_APP_PROMO: false,
-          },
+          configOverwrite: archivumJitsiConfigOverwrite,
+          interfaceConfigOverwrite: archivumJitsiInterfaceConfigOverwrite,
         });
 
         apiRef.current = api;
         mountedKeyRef.current = roomKey;
+        onApiReadyRef.current?.(api);
 
         const handleJoined = () => {
           joinedRef.current = true;
           setShowFallback(false);
+          mediaStateRef.current = { audioMuted: false, videoMuted: false };
+          onMediaStateChangeRef.current?.(mediaStateRef.current);
           onJoinedRef.current?.();
         };
 
@@ -110,8 +122,26 @@ export default function JitsiMeetingFrame({
           onLeftRef.current?.();
         };
 
+        const handleAudioMute = (payload: unknown) => {
+          mediaStateRef.current = {
+            ...mediaStateRef.current,
+            audioMuted: Boolean((payload as { muted?: boolean })?.muted),
+          };
+          onMediaStateChangeRef.current?.(mediaStateRef.current);
+        };
+
+        const handleVideoMute = (payload: unknown) => {
+          mediaStateRef.current = {
+            ...mediaStateRef.current,
+            videoMuted: Boolean((payload as { muted?: boolean })?.muted),
+          };
+          onMediaStateChangeRef.current?.(mediaStateRef.current);
+        };
+
         api.addListener('videoConferenceJoined', handleJoined);
         api.addListener('videoConferenceLeft', handleLeft);
+        api.addListener('audioMuteStatusChanged', handleAudioMute);
+        api.addListener('videoMuteStatusChanged', handleVideoMute);
       } catch {
         if (!disposed) setShowFallback(true);
       }
@@ -124,12 +154,13 @@ export default function JitsiMeetingFrame({
       apiRef.current?.dispose();
       apiRef.current = null;
       mountedKeyRef.current = null;
+      onApiReadyRef.current?.(null);
       container.innerHTML = '';
     };
   }, [roomKey, jitsiBaseUrl, room]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="dashboard-ui relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" aria-label={title} />
 
       {showFallback ? (

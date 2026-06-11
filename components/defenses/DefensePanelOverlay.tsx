@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiChevronLeft, FiChevronRight, FiClipboard, FiSave } from 'react-icons/fi';
+import { FiChevronRight, FiSave } from 'react-icons/fi';
 import { toast } from 'sonner';
 
 import Button from '@/components/Button';
 import { saveDefensePanelEvaluations, type DefensePanelEvaluation } from '@/lib/api/defenses';
 import type { CoordinatorRubric } from '@/lib/api/coordinator';
+import { MEETING_CONTROL_BAR_HEIGHT } from '@/lib/meetings/jitsiTheme';
 
 type ScoreDraft = {
   score: string;
@@ -18,6 +19,8 @@ interface DefensePanelOverlayProps {
   rubric: CoordinatorRubric | null;
   evaluations: DefensePanelEvaluation[];
   initialNotes: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSaved?: (notes: string) => void;
 }
 
@@ -46,9 +49,10 @@ export default function DefensePanelOverlay({
   rubric,
   evaluations,
   initialNotes,
+  open,
+  onOpenChange,
   onSaved,
 }: DefensePanelOverlayProps) {
-  const [expanded, setExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<'rubric' | 'notes'>(rubric ? 'rubric' : 'notes');
   const [notes, setNotes] = useState(initialNotes);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>(() =>
@@ -92,25 +96,18 @@ export default function DefensePanelOverlay({
     onSaved?.(notes);
   }
 
-  if (!expanded) {
-    return (
-      <div className="pointer-events-auto absolute right-4 top-4 z-20">
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="flex items-center gap-2 rounded-lg border border-white/20 bg-neutral-900/85 px-3 py-2 text-sm font-medium text-white shadow-lg backdrop-blur-sm transition hover:bg-neutral-900"
-          aria-label="Open panel rubric and notes"
-        >
-          <FiClipboard aria-hidden />
-          Panel Tools
-          <FiChevronLeft aria-hidden />
-        </button>
-      </div>
-    );
+  if (!open) {
+    return null;
   }
 
   return (
-    <div className="pointer-events-auto absolute right-4 top-4 z-20 flex w-[min(24rem,calc(100vw-2rem))] max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-white/15 bg-neutral-900/90 text-white shadow-2xl backdrop-blur-md">
+    <div
+      className="pointer-events-auto fixed left-4 z-30 flex w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-md border border-white/15 bg-neutral-900/95 text-white shadow-2xl backdrop-blur-md"
+      style={{
+        top: `calc(${MEETING_CONTROL_BAR_HEIGHT} + 0.5rem)`,
+        maxHeight: `calc(100vh - ${MEETING_CONTROL_BAR_HEIGHT} - 1rem)`,
+      }}
+    >
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div>
           <p className="text-sm font-semibold">Panel Evaluation</p>
@@ -118,9 +115,9 @@ export default function DefensePanelOverlay({
         </div>
         <button
           type="button"
-          onClick={() => setExpanded(false)}
-          className="rounded-md p-1.5 text-neutral-300 transition hover:bg-white/10 hover:text-white"
-          aria-label="Collapse panel tools"
+          onClick={() => onOpenChange(false)}
+          className="rounded-sm p-1.5 text-neutral-300 transition hover:bg-white/10 hover:text-white"
+          aria-label="Close panel tools"
         >
           <FiChevronRight aria-hidden />
         </button>
@@ -134,7 +131,7 @@ export default function DefensePanelOverlay({
             onClick={() => setActiveTab(tab)}
             className={`flex-1 px-3 py-2 text-sm font-medium capitalize transition ${
               activeTab === tab
-                ? 'border-b-2 border-white text-white'
+                ? 'border-b-2 border-oxfordBlue text-white'
                 : 'text-neutral-400 hover:text-neutral-200'
             }`}
           >
@@ -155,7 +152,7 @@ export default function DefensePanelOverlay({
                 const maxScore = criterion.max_score ?? 5;
 
                 return (
-                  <div key={criterionId} className="rounded-lg border border-white/10 bg-black/20 p-3">
+                  <div key={criterionId} className="rounded-sm border border-white/10 bg-black/20 p-3">
                     <div className="mb-2 flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium">{criterion.criterion_name}</p>
@@ -184,7 +181,7 @@ export default function DefensePanelOverlay({
                             },
                           }));
                         }}
-                        className="mt-1 w-full rounded-md border border-white/15 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        className="mt-1 w-full rounded-sm border border-white/15 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
                       />
                     </label>
                     <label className="block text-xs text-neutral-300">
@@ -202,7 +199,7 @@ export default function DefensePanelOverlay({
                             },
                           }));
                         }}
-                        className="mt-1 w-full resize-y rounded-md border border-white/15 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                        className="mt-1 w-full resize-y rounded-sm border border-white/15 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
                         placeholder="Comments for this criterion"
                       />
                     </label>
@@ -218,7 +215,7 @@ export default function DefensePanelOverlay({
               rows={12}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="mt-2 w-full resize-y rounded-md border border-white/15 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+              className="mt-2 w-full resize-y rounded-sm border border-white/15 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
               placeholder="Capture questions, feedback, and follow-up items during the defense."
             />
           </label>
