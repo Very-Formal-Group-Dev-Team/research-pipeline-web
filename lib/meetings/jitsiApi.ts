@@ -103,3 +103,26 @@ export function sendJitsiReaction(api: JitsiMeetApi | null, reaction: JitsiReact
     getJitsiIframeTargetOrigin(api),
   );
 }
+
+/**
+ * Opens Jitsi's settings dialog. The External API has no settings command;
+ * body.html listens for this postMessage and triggers the native settings UI.
+ */
+export function openJitsiSettings(api: JitsiMeetApi | null) {
+  if (!api) return;
+
+  const iframeWindow = api.getIFrame()?.contentWindow;
+  if (!iframeWindow) return;
+
+  const message = {
+    source: ARCHIVUM_JITSI_MESSAGE_SOURCE,
+    command: 'open-settings',
+  } as const;
+
+  const targetOrigin = getJitsiIframeTargetOrigin(api);
+  iframeWindow.postMessage(message, targetOrigin);
+
+  // Retry while the iframe store finishes booting.
+  window.setTimeout(() => iframeWindow.postMessage(message, targetOrigin), 150);
+  window.setTimeout(() => iframeWindow.postMessage(message, targetOrigin), 400);
+}

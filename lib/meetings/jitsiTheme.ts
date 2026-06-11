@@ -20,7 +20,8 @@ export const archivumJitsiConfigOverwrite = {
   hideConferenceTimer: true,
   disableReactions: false,
   disableRaiseHand: false,
-  toolbarButtons: [],
+  /** Hidden native toolbar — Archivum control bar opens settings via a programmatic click. */
+  toolbarButtons: ['settings'],
   toolbarConfig: {
     alwaysVisible: false,
     initialTimeout: 0,
@@ -36,7 +37,7 @@ export const archivumJitsiInterfaceConfigOverwrite = {
   SHOW_JITSI_WATERMARK: false,
   SHOW_WATERMARK_FOR_GUESTS: false,
   MOBILE_APP_PROMO: false,
-  TOOLBAR_BUTTONS: [],
+  TOOLBAR_BUTTONS: ['settings'],
   TOOLBAR_ALWAYS_VISIBLE: false,
   INITIAL_TOOLBAR_TIMEOUT: 0,
   /** Native gauge at top-center — Archivum control bar has Performance instead. */
