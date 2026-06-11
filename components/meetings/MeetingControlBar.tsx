@@ -62,7 +62,7 @@ export default function MeetingControlBar({
   panelToolsTrigger,
 }: MeetingControlBarProps) {
   const elapsed = useMeetingElapsedTimer(hasJoined);
-  const { status, isRecording, canRecord, startRecording, stopRecording } = recording;
+  const { status, isRecording, canRecord, promptStartRecording, stopRecording } = recording;
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [raiseHandUp, setRaiseHandUp] = useState(false);
   const localParticipantIdRef = useRef<string | null>(null);
@@ -217,7 +217,7 @@ export default function MeetingControlBar({
                       void stopRecording();
                       return;
                     }
-                    void startRecording();
+                    promptStartRecording();
                   }}
                 />
               </>
