@@ -30,7 +30,7 @@ export interface MenuItem {
 }
 
 export interface SidebarProps {
-  role: 'student' | 'adviser' | 'coordinator';
+  role: 'student' | 'adviser' | 'coordinator' | 'admin';
 }
 
 const TRANSCRIPTIONS_HREF = defenseTranscriptionArchiveUrl();
@@ -53,6 +53,10 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Rubrics', href: '/adviser/rubrics', icon: <FiClipboard /> },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
   ],
+  admin: [
+    { label: 'Dashboard', href: '/admin', icon: <FiHome /> },
+    { label: 'Profile', href: '/admin/profile', icon: <FiUser /> },
+  ],
   coordinator: [
     { label: 'Dashboard', href: '/coordinator', icon: <FiHome /> },
     { label: 'Events', href: '/coordinator/events', icon: <FiCalendar />, tooltip: 'Institution events and defense schedules' },
@@ -69,7 +73,8 @@ export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const items = menuItems[role] || [];
   const { isOpen, setOpen } = useSidebar();
-  const usesPortalSidebar = role === 'coordinator' || role === 'student' || role === 'adviser';
+  const usesPortalSidebar =
+    role === 'coordinator' || role === 'student' || role === 'adviser' || role === 'admin';
 
   const closeSidebar = () => setOpen(false);
 
