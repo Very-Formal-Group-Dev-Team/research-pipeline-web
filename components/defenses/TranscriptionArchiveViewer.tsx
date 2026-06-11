@@ -21,7 +21,6 @@ import {
 } from '@/lib/api/recordings';
 import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
 import { recordingDisplayTitle } from '@/lib/recordings/display';
-import { applyMockTranscriptPreview } from '@/lib/recordings/mockTranscriptPreview';
 
 type TranscriptTab = 'original' | 'editor';
 
@@ -70,7 +69,7 @@ export default function TranscriptionArchiveViewer({
       setError(res.error || 'Failed to load recording');
       setDetail(null);
     } else {
-      setDetail(applyMockTranscriptPreview(res.data));
+      setDetail(res.data);
     }
     setLoading(false);
   }, [recordingId, scheduleId]);
@@ -185,6 +184,7 @@ export default function TranscriptionArchiveViewer({
   const listHref = backHref || defenseTranscriptionArchiveUrl();
   const transcriptionStatus = detail.recording.transcription_status;
   const isProcessing = transcriptionStatus === 'pending' || transcriptionStatus === 'processing';
+  const hasTranscript = detail.segments.length > 0;
 
   const isEditorTab = transcriptTab === 'editor';
   const collapsedTranscriptCardClass = isEditorTab
@@ -309,6 +309,7 @@ export default function TranscriptionArchiveViewer({
               variant="outline"
               size="sm"
               className="shrink-0 !px-2"
+              disabled={!hasTranscript}
               onClick={() => setTranscriptExpanded((prev) => !prev)}
               aria-pressed={transcriptExpanded}
               aria-label={transcriptExpanded ? 'Collapse transcript' : 'Expand transcript'}
