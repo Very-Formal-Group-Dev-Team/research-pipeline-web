@@ -9,6 +9,7 @@ import {
   FiMicOff,
   FiMonitor,
   FiPhoneOff,
+  FiSettings,
   FiUsers,
   FiVideo,
   FiVideoOff,
@@ -22,6 +23,7 @@ import type { useMeetingRecording } from '@/lib/hooks/useMeetingRecording';
 import type { JitsiMeetApi } from '@/lib/meetings/jitsiApi';
 import {
   hangUpJitsi,
+  openJitsiSettings,
   toggleJitsiAudio,
   toggleJitsiChat,
   toggleJitsiParticipantsPane,
@@ -166,6 +168,11 @@ export default function MeetingControlBar({
               }}
             />
             <MeetingPerformanceButton jitsiApi={jitsiApi} />
+            <MeetingControlButton
+              label="Settings"
+              icon={<FiSettings />}
+              onClick={() => openJitsiSettings(jitsiApi)}
+            />
             {panelToolsTrigger}
             <MeetingControlDivider />
             <MeetingControlButton
