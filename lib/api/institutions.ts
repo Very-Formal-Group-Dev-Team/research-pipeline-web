@@ -8,6 +8,18 @@ export interface RegisteredInstitution {
   id: string;
   name: string;
   code: string;
+  is_active?: number | boolean;
+}
+
+export interface InstitutionProgram {
+  id: string;
+  institution_id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  is_active?: number | boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface InstitutionCourse {
@@ -31,4 +43,9 @@ export function searchInstitutions(query = '') {
 /** List courses created by coordinators in the current user's institution. */
 export function getMyInstitutionCourses() {
   return get<InstitutionCourse[]>('/institutions/me/courses');
+}
+
+/** List active programs for the current user's institution. */
+export function getMyInstitutionPrograms() {
+  return get<InstitutionProgram[]>('/institutions/me/programs');
 }

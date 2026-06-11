@@ -1,7 +1,7 @@
 import { completeProfile as apiCompleteProfile, updateProfile } from './api/users';
 
-export type UserRole = 'student' | 'teacher' | 'coordinator';
-export type AppRole = 'student' | 'adviser' | 'coordinator';
+export type UserRole = 'student' | 'teacher' | 'coordinator' | 'admin';
+export type AppRole = 'student' | 'adviser' | 'coordinator' | 'admin';
 
 export interface CompleteProfileData {
   userId: string;
@@ -24,6 +24,7 @@ export interface CompleteProfileResult {
 function getRedirectPath(role: UserRole): string {
   if (role === 'student') return '/student';
   if (role === 'coordinator') return '/coordinator';
+  if (role === 'admin') return '/admin';
   return '/adviser';
 }
 
