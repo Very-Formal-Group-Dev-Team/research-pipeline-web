@@ -9,6 +9,7 @@ import DefensePanelOverlay from '@/components/defenses/DefensePanelOverlay';
 import JitsiMeetingFrame from '@/components/meetings/JitsiMeetingFrame';
 import MeetingControlBar from '@/components/meetings/MeetingControlBar';
 import MeetingControlButton from '@/components/meetings/MeetingControlButton';
+import MeetingRecordingDialogs from '@/components/meetings/MeetingRecordingDialogs';
 import {
   getDefenseMeetingSession,
   type DefenseMeetingSession,
@@ -167,6 +168,8 @@ export default function DefenseMeetingPage() {
           ) : null
         }
       />
+
+      <MeetingRecordingDialogs recording={meetingRecording} />
 
       <div className="relative min-h-0 flex-1">
         {joinUrl ? (

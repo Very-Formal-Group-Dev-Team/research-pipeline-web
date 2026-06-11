@@ -1,4 +1,16 @@
-export type ArduinoGateStatus = 'idle' | 'connecting' | 'connected' | 'needs_serial' | 'unsupported' | 'error';
+export type ArduinoGateStatus =
+  | 'idle'
+  | 'connecting'
+  | 'connected'
+  | 'bypassed'
+  | 'needs_serial'
+  | 'unsupported'
+  | 'error';
+
+export interface ArduinoGateResult {
+  cleanup: () => Promise<void>;
+  gateActive: boolean;
+}
 
 interface GatePayload {
   device?: string;
@@ -65,12 +77,14 @@ async function closeSerialPort(
 export interface ArduinoGateCallbacks {
   onStatus?: (status: ArduinoGateStatus, message?: string) => void;
   onSpeakingChange: (speaking: boolean) => void;
+  onGateLost?: () => void;
+  onDeviceKey?: (deviceKey: string) => void;
 }
 
 export async function startArduinoGate(
   callbacks: ArduinoGateCallbacks,
-  options: { requestPortIfNeeded?: boolean } = {},
-): Promise<() => Promise<void>> {
+  options: { requestPortIfNeeded?: boolean; optional?: boolean } = {},
+): Promise<ArduinoGateResult> {
   let stopped = false;
   let serialPort: SerialPort | null = null;
   let reader: ReadableStreamDefaultReader<string> | null = null;
@@ -83,21 +97,33 @@ export async function startArduinoGate(
     callbacks.onStatus?.('idle');
   };
 
+  const bypassGate = (message: string): ArduinoGateResult => {
+    callbacks.onStatus?.('bypassed', message);
+    callbacks.onSpeakingChange(true);
+    return { cleanup, gateActive: false };
+  };
+
   if (!('serial' in navigator)) {
+    if (options.optional) {
+      return bypassGate('Web Serial unavailable — recording all audio.');
+    }
     callbacks.onStatus?.('unsupported', 'Arduino gate requires Chrome or Edge with Web Serial.');
-    return cleanup;
+    return { cleanup, gateActive: false };
   }
 
   callbacks.onStatus?.('connecting');
 
   try {
     serialPort = await openSerialPort();
-    if (!serialPort && options.requestPortIfNeeded) {
+    if (!serialPort && options.requestPortIfNeeded && !options.optional) {
       serialPort = await navigator.serial.requestPort();
     }
     if (!serialPort) {
+      if (options.optional) {
+        return bypassGate('No Arduino connected — recording all audio.');
+      }
       callbacks.onStatus?.('needs_serial', 'Connect the Arduino USB port to gate voice recording.');
-      return cleanup;
+      return { cleanup, gateActive: false };
     }
 
     await ensureSerialPortOpen(serialPort);
@@ -106,25 +132,46 @@ export async function startArduinoGate(
       textDecoder as unknown as ReadableWritablePair<string, Uint8Array>,
     );
     if (!readable) {
+      if (options.optional) {
+        return bypassGate('Could not read Arduino — recording all audio.');
+      }
       callbacks.onStatus?.('error', 'Could not read from Arduino serial port.');
       await cleanup();
-      return cleanup;
+      return { cleanup, gateActive: false };
     }
 
     reader = readable.getReader();
     callbacks.onStatus?.('connected');
 
+    const notifyGateLost = () => {
+      if (stopped) return;
+      if (options.optional) {
+        callbacks.onStatus?.('bypassed', 'Arduino disconnected — recording all audio.');
+        callbacks.onSpeakingChange(true);
+        return;
+      }
+      callbacks.onStatus?.('error', 'Arduino serial connection lost.');
+      callbacks.onGateLost?.();
+    };
+
     const readSerial = async () => {
       let buffer = '';
       while (!stopped && reader) {
         const { value, done } = await reader.read();
-        if (done || stopped) break;
+        if (stopped) break;
+        if (done) {
+          notifyGateLost();
+          break;
+        }
         buffer += value;
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
         for (const line of lines) {
           const payload = parseGateLine(line);
           if (!payload) continue;
+          if (typeof payload.device === 'string' && payload.device.trim()) {
+            callbacks.onDeviceKey?.(payload.device.trim());
+          }
           callbacks.onSpeakingChange(isSpeakingValue(payload.speaking));
         }
       }
@@ -132,16 +179,24 @@ export async function startArduinoGate(
 
     void readSerial().catch(() => {
       if (!stopped) {
-        callbacks.onStatus?.('error', 'Arduino serial connection lost.');
+        notifyGateLost();
       }
     });
+
+    return { cleanup, gateActive: true };
   } catch (err) {
+    if (options.optional) {
+      return bypassGate(
+        err instanceof Error
+          ? `${err.message} — recording all audio.`
+          : 'Arduino unavailable — recording all audio.',
+      );
+    }
     callbacks.onStatus?.(
       'error',
       err instanceof Error ? err.message : 'Failed to connect Arduino gate',
     );
     await cleanup();
+    return { cleanup, gateActive: false };
   }
-
-  return cleanup;
 }

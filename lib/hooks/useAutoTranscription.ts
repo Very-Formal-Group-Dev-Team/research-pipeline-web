@@ -25,7 +25,13 @@ export interface AutoTranscriptionState {
   starting: boolean;
 }
 
-export function useAutoTranscription(scheduleId: string) {
+export interface AutoTranscriptionOptions {
+  /** When true, live transcription works without Arduino. */
+  optionalGate?: boolean;
+  meetingAudioStream?: MediaStream | null;
+}
+
+export function useAutoTranscription(scheduleId: string, options: AutoTranscriptionOptions = {}) {
   const [state, setState] = useState<AutoTranscriptionState>({
     listening: false,
     mode: 'none',
@@ -114,6 +120,10 @@ export function useAutoTranscription(scheduleId: string) {
       onSpeakingChange: (speaking) => {
         setState((prev) => ({ ...prev, speaking }));
       },
+    }, {
+      optionalGate: options.optionalGate,
+      meetingAudioStream: options.meetingAudioStream,
+      requestPortIfNeeded: true,
     });
 
     cleanupRef.current = cleanup;
@@ -126,7 +136,7 @@ export function useAutoTranscription(scheduleId: string) {
     }));
 
     return listening;
-  }, [scheduleId, state.listening, state.starting]);
+  }, [options.meetingAudioStream, options.optionalGate, scheduleId, state.listening, state.starting]);
 
   const connectSerial = useCallback(async () => {
     const granted = await requestBrowserSerialPort();
