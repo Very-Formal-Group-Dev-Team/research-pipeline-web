@@ -11,7 +11,12 @@ import { FiUpload, FiX, FiTrash2, FiArrowLeft, FiUserPlus, FiPlus } from 'react-
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { createProject, inviteToProject } from '@/lib/api/projects';
 import type { SearchUserResult } from '@/lib/api/users';
-import { getMyInstitutionCourses, type InstitutionCourse } from '@/lib/api/institutions';
+import {
+  getMyInstitutionCourses,
+  getMyInstitutionPrograms,
+  type InstitutionCourse,
+  type InstitutionProgram,
+} from '@/lib/api/institutions';
 import { toast } from 'sonner';
 
 type InviteMembershipRole = 'member' | 'adviser';
@@ -32,10 +37,12 @@ export default function CreateProjectPage() {
 
   // Form state
   const [title, setTitle] = useState('');
-  const [program, setProgram] = useState('');
+  const [programId, setProgramId] = useState('');
   const [courseId, setCourseId] = useState('');
   const [institutionCourses, setInstitutionCourses] = useState<InstitutionCourse[]>([]);
+  const [institutionPrograms, setInstitutionPrograms] = useState<InstitutionProgram[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
+  const [programsLoading, setProgramsLoading] = useState(true);
   const [section, setSection] = useState('');
   const [projectType, setProjectType] = useState('');
   const [researchType, setResearchType] = useState('');
@@ -61,17 +68,23 @@ export default function CreateProjectPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCourses() {
+    async function loadInstitutionCatalog() {
       setCoursesLoading(true);
-      const res = await getMyInstitutionCourses();
+      setProgramsLoading(true);
+      const [coursesRes, programsRes] = await Promise.all([
+        getMyInstitutionCourses(),
+        getMyInstitutionPrograms(),
+      ]);
       if (!cancelled) {
-        setInstitutionCourses(res.data || []);
+        setInstitutionCourses(coursesRes.data || []);
+        setInstitutionPrograms(programsRes.data || []);
         setCoursesLoading(false);
+        setProgramsLoading(false);
       }
     }
 
     if (!profileLoading) {
-      void loadCourses();
+      void loadInstitutionCatalog();
     }
 
     return () => {
@@ -84,7 +97,7 @@ export default function CreateProjectPage() {
       title ||
       researchType ||
       projectType ||
-      program ||
+      programId ||
       courseId ||
       section ||
       selectedFile ||
@@ -94,7 +107,7 @@ export default function CreateProjectPage() {
     } else {
       setIsDirty(false);
     }
-  }, [title, researchType, projectType, program, courseId, section, selectedFile, invitedMembers]);
+  }, [title, researchType, projectType, programId, courseId, section, selectedFile, invitedMembers]);
 
   const validateFile = (file: File): string | null => {
     // Validate file type
@@ -231,7 +244,7 @@ export default function CreateProjectPage() {
         title: title.trim(),
         researchType,
         projectType: projectType as 'thesis' | 'capstone',
-        program: program.trim() || undefined,
+        programId: programId || undefined,
         courseId: courseId || undefined,
         section: section.trim() || undefined,
         file: selectedFile,
@@ -327,11 +340,16 @@ export default function CreateProjectPage() {
                 required
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Input
+                <Select
                   label="Program"
-                  placeholder="Enter program name"
-                  value={program}
-                  onChange={(e) => setProgram(e.target.value)}
+                  placeholder={programsLoading ? 'Loading programs...' : 'Select program'}
+                  value={programId}
+                  onChange={(e) => setProgramId(e.target.value)}
+                  options={institutionPrograms.map((item) => ({
+                    value: item.id,
+                    label: `${item.name} (${item.code})`,
+                  }))}
+                  disabled={programsLoading}
                   responsiveText
                 />
                 <Select

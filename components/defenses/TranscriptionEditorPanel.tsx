@@ -19,6 +19,8 @@ import {
   FiX,
 } from 'react-icons/fi';
 
+import Button from '@/components/Button';
+import Card, { CardDescription, CardTitle } from '@/components/ui/Card';
 import {
   assignTranscriptionSpeaker,
   downloadEditedTranscription,
@@ -53,6 +55,8 @@ interface TranscriptionEditorPanelProps {
   canManage?: boolean;
   onSeek?: (startMs: number) => void;
   className?: string;
+  /** When true, the workspace grows with content instead of scrolling inside a fixed panel. */
+  expanded?: boolean;
 }
 
 function formatMs(ms?: number | null): string {
@@ -221,15 +225,20 @@ function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={`relative z-10 rounded-lg border border-neutral-200 bg-white p-3 shadow-sm ${className}`}>
-      <div className="mb-2">
-        <h4 className="text-sm font-semibold text-neutral-900">{title}</h4>
-        {description ? <p className="mt-0.5 text-xs text-neutral-500">{description}</p> : null}
-      </div>
-      <div className="relative z-10" onPointerDown={(event) => event.stopPropagation()}>
+    <Card padding="sm" hoverShadow={false} className={`relative z-10 ${className}`}>
+      <CardTitle className="!text-lg">{title}</CardTitle>
+      {description ? (
+        <CardDescription lines={2} className="!mt-1">
+          {description}
+        </CardDescription>
+      ) : null}
+      <div
+        className="relative z-10 mt-3"
+        onPointerDown={(event) => event.stopPropagation()}
+      >
         {children}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -266,7 +275,7 @@ function SpeakerNamesSection({
           {speakers.map((speaker) => (
             <li
               key={speaker.id}
-              className="flex items-center gap-2 rounded-md border border-neutral-100 bg-neutral-50 px-2 py-1.5"
+              className="flex items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-2 py-1.5"
             >
               {canEdit ? (
                 <>
@@ -276,7 +285,7 @@ function SpeakerNamesSection({
                     onFocus={() => onSpeakerNameFocus(speaker.id)}
                     onBlur={(event) => onSpeakerNameBlur(speaker.id, event.target.value)}
                     onChange={(event) => onSpeakerNameChange(speaker.id, event.target.value)}
-                    className="min-w-0 flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-sm"
+                    className="min-w-0 flex-1 rounded-md border border-neutral-400 bg-white px-2 py-1 text-sm"
                   />
                   <button
                     type="button"
@@ -310,12 +319,12 @@ function SpeakerNamesSection({
               }
             }}
             placeholder="New speaker name"
-            className="min-w-0 flex-1 rounded-md border border-neutral-200 px-2 py-1.5 text-sm"
+            className="min-w-0 flex-1 rounded-md border border-neutral-400 px-2 py-1.5 text-sm"
           />
           <button
             type="button"
             onClick={onAddSpeaker}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm hover:bg-neutral-100"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-neutral-400 bg-neutral-50 px-3 py-1.5 text-sm transition-all hover:border-neutral-400 hover:bg-neutral-100 hover:shadow-sm"
           >
             <FiPlus aria-hidden />
             Add
@@ -349,7 +358,7 @@ function SpeakerColorsSection({
           {speakers.map((speaker) => (
             <li
               key={speaker.id}
-              className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-100 bg-neutral-50 px-2 py-2"
+              className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-300 bg-neutral-50 px-2 py-2"
             >
               <span
                 className="inline-flex min-w-[5rem] items-center gap-2 rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
@@ -364,7 +373,7 @@ function SpeakerColorsSection({
                     value={speaker.color}
                     onChange={(event) => onSpeakerColorChange(speaker.id, event.target.value)}
                     onClick={(event) => event.stopPropagation()}
-                    className="relative z-10 h-9 w-9 shrink-0 cursor-pointer rounded border border-neutral-200 bg-white p-0.5"
+                    className="relative z-10 h-9 w-9 shrink-0 cursor-pointer rounded border border-neutral-400 bg-white p-0.5"
                     aria-label={`Pick color for ${speaker.name}`}
                   />
                   <div className="flex flex-wrap gap-1">
@@ -401,6 +410,7 @@ export default function TranscriptionEditorPanel({
   canManage = false,
   onSeek,
   className = '',
+  expanded = false,
 }: TranscriptionEditorPanelProps) {
   const seededContent = useMemo(
     () => segmentsToEditContent(initialSegments, initialFullText),
@@ -717,9 +727,9 @@ export default function TranscriptionEditorPanel({
 
   const getLineHighlight = (lineId: string) => {
     if (selectedLineIds.has(lineId)) {
-      return 'border-primary-400 bg-primary-50 ring-2 ring-primary-200';
+      return 'border-primary-400 bg-primary-50 shadow-sm ring-2 ring-primary-200';
     }
-    return 'border-neutral-200 bg-white hover:border-neutral-300';
+    return 'border-neutral-400 bg-white hover:border-neutral-400 hover:shadow-sm';
   };
 
   if (!content.lines.length) {
@@ -738,11 +748,11 @@ export default function TranscriptionEditorPanel({
   }
 
   return (
-    <div className={`flex min-h-0 flex-1 flex-col ${className}`}>
-      <div className="shrink-0 border-b border-neutral-200 px-4 py-3">
+    <div className={`flex flex-col ${expanded ? '' : 'min-h-0 flex-1'} ${className}`}>
+      <div className="shrink-0 border-b border-neutral-300 px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs text-neutral-500">
+            <p className="text-sm text-neutral-600">
               {canEdit
                 ? 'Select one or more statements, then assign a speaker or merge them.'
                 : 'View the annotated transcript.'}
@@ -751,47 +761,53 @@ export default function TranscriptionEditorPanel({
           <div className="flex flex-wrap items-center gap-2">
             {canEdit ? (
               <>
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={undo}
                   disabled={!canUndo}
                   title="Undo (Ctrl+Z)"
-                  className="inline-flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+                  leftIcon={<FiRotateCcw aria-hidden />}
                 >
-                  <FiRotateCcw aria-hidden />
                   Undo
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={redo}
                   disabled={!canRedo}
                   title="Redo (Ctrl+Y)"
-                  className="inline-flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+                  leftIcon={<FiRotateCw aria-hidden />}
                 >
-                  <FiRotateCw aria-hidden />
                   Redo
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="primary"
+                  size="sm"
                   onClick={() => void handleSave()}
                   disabled={saving}
-                  className="inline-flex items-center gap-1 rounded-md border border-primary-200 bg-primary-50 px-2 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-60"
+                  leftIcon={
+                    saving ? <FiLoader className="animate-spin" aria-hidden /> : <FiSave aria-hidden />
+                  }
                 >
-                  {saving ? <FiLoader className="animate-spin" aria-hidden /> : <FiSave aria-hidden />}
                   Save
-                </button>
+                </Button>
               </>
             ) : null}
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => void handleDownload()}
-              className="inline-flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+              leftIcon={<FiDownload aria-hidden />}
             >
-              <FiDownload aria-hidden />
               Export
-            </button>
+            </Button>
             {syncingSaved ? (
-              <span className="inline-flex items-center gap-1 text-xs text-neutral-400">
+              <span className="inline-flex items-center gap-1 text-sm text-neutral-500">
                 <FiLoader className="animate-spin" aria-hidden />
                 Syncing
               </span>
@@ -801,7 +817,11 @@ export default function TranscriptionEditorPanel({
       </div>
 
       <div
-        className="relative z-20 max-h-[42vh] shrink-0 space-y-3 overflow-y-auto overscroll-contain border-b border-neutral-200 bg-neutral-50 p-4 lg:max-h-none lg:p-5"
+        className={`relative z-20 space-y-3 border-b border-neutral-300 bg-neutral-50 p-4 sm:p-6 ${
+          expanded
+            ? ''
+            : 'max-h-[42vh] shrink-0 overflow-y-auto overscroll-contain lg:max-h-none'
+        }`}
         onPointerDown={(event) => event.stopPropagation()}
       >
         <div className="grid gap-3 sm:grid-cols-2">
@@ -863,7 +883,7 @@ export default function TranscriptionEditorPanel({
                   type="button"
                   disabled={actionLoading}
                   onClick={() => void handleClearSelectedSpeakers()}
-                  className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
+                  className="rounded-md border border-neutral-400 px-3 py-1.5 text-sm text-neutral-600 transition-all hover:border-neutral-400 hover:bg-neutral-50 hover:shadow-sm disabled:opacity-50"
                 >
                   Clear speaker assignment
                 </button>
@@ -871,7 +891,7 @@ export default function TranscriptionEditorPanel({
                   type="button"
                   disabled={actionLoading}
                   onClick={clearSelection}
-                  className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
+                  className="rounded-md border border-neutral-400 px-3 py-1.5 text-sm text-neutral-600 transition-all hover:border-neutral-400 hover:bg-neutral-50 hover:shadow-sm disabled:opacity-50"
                 >
                   Clear selection
                 </button>
@@ -881,13 +901,17 @@ export default function TranscriptionEditorPanel({
         ) : null}
 
         {error ? (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <div className="rounded-md border border-error-200 bg-error-50 px-3 py-2 text-sm text-error-700">
             {error}
           </div>
         ) : null}
       </div>
 
-      <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+      <div
+        className={`relative z-0 p-4 sm:p-6 ${
+          expanded ? '' : 'min-h-0 flex-1 overflow-y-auto overscroll-contain'
+        }`}
+      >
         <SectionCard
           title="Statements"
           description={canEdit ? 'Use the checkboxes to select statements for assigning or merging.' : undefined}
@@ -941,7 +965,7 @@ export default function TranscriptionEditorPanel({
                         onBlur={(event) => handleLineBlur(line.id, event.target.value)}
                         onChange={(event) => handleLineTextChange(line.id, event.target.value)}
                         rows={Math.min(6, Math.max(2, Math.ceil(line.text.length / 80)))}
-                        className="w-full resize-y rounded-md border border-neutral-200 px-2 py-1 text-sm leading-relaxed text-neutral-800"
+                        className="w-full resize-y rounded-md border border-neutral-400 px-2 py-1 text-sm leading-relaxed text-neutral-800"
                       />
                     ) : (
                       <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-800">{line.text}</p>

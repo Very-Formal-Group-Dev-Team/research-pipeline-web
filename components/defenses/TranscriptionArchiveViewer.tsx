@@ -1,19 +1,26 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiDownload, FiLoader, FiTrash2 } from 'react-icons/fi';
+import { FiArrowLeft, FiDownload, FiLoader, FiMaximize2, FiMinimize2 } from 'react-icons/fi';
 
+import Button from '@/components/Button';
+import RecordingControlPanel from '@/components/defenses/RecordingControlPanel';
 import TranscriptionEditorPanel from '@/components/defenses/TranscriptionEditorPanel';
+import Card, {
+  CARD_HEADER_SECTION_CLASS,
+  CARD_INSET_X_CLASS,
+  CardDescription,
+  CardTitle,
+} from '@/components/ui/Card';
 import {
-  deleteMeetingRecording,
   getRecordingDetail,
   recordingMediaUrl,
   type RecordingDetailResponse,
   type TranscriptionArchiveSegment,
 } from '@/lib/api/recordings';
 import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
+import { recordingDisplayTitle } from '@/lib/recordings/display';
 
 type TranscriptTab = 'original' | 'editor';
 
@@ -50,8 +57,9 @@ export default function TranscriptionArchiveViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [transcriptTab, setTranscriptTab] = useState<TranscriptTab>('original');
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false);
+  const [recordingSoftDeleted, setRecordingSoftDeleted] = useState(false);
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -69,6 +77,10 @@ export default function TranscriptionArchiveViewer({
   useEffect(() => {
     loadDetail();
   }, [loadDetail]);
+
+  useEffect(() => {
+    setTranscriptExpanded(false);
+  }, [recordingId]);
 
   useEffect(() => {
     if (!detail) return undefined;
@@ -136,21 +148,17 @@ export default function TranscriptionArchiveViewer({
     URL.revokeObjectURL(url);
   };
 
-  const handleDelete = async () => {
-    if (!detail?.recording.can_delete) return;
-    const confirmed = window.confirm('Delete this recording and its transcript? This cannot be undone.');
-    if (!confirmed) return;
-
-    setDeleting(true);
-    const res = await deleteMeetingRecording(scheduleId, recordingId);
-    setDeleting(false);
-
-    if (res.error) {
-      setError(res.error);
-      return;
-    }
-
-    router.push(backHref || defenseTranscriptionArchiveUrl());
+  const handleRecordingRenamed = (displayName: string) => {
+    setDetail((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        recording: {
+          ...current.recording,
+          display_name: displayName,
+        },
+      };
+    });
   };
 
   if (loading) {
@@ -164,7 +172,7 @@ export default function TranscriptionArchiveViewer({
 
   if (error || !detail) {
     return (
-      <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-md border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
         {error || 'Recording not found'}
       </div>
     );
@@ -172,95 +180,114 @@ export default function TranscriptionArchiveViewer({
 
   const videoUrl = recordingMediaUrl(detail.recording.file_url || '');
   const audioUrl = detail.recording.audio_url ? recordingMediaUrl(detail.recording.audio_url) : '';
-  const title = detail.recording.project_title || detail.recording.meeting_title || 'Meeting recording';
+  const title = recordingDisplayTitle(detail.recording);
   const listHref = backHref || defenseTranscriptionArchiveUrl();
   const transcriptionStatus = detail.recording.transcription_status;
   const isProcessing = transcriptionStatus === 'pending' || transcriptionStatus === 'processing';
+  const hasTranscript = detail.segments.length > 0;
 
   const isEditorTab = transcriptTab === 'editor';
-  const workspaceHeightClass = isEditorTab
-    ? 'min-h-[calc(100dvh-22rem)]'
-    : 'min-h-[calc(100dvh-24rem)]';
+  const collapsedTranscriptCardClass = isEditorTab
+    ? 'h-[calc(100dvh-22rem)] max-h-[calc(100dvh-22rem)]'
+    : 'h-[calc(100dvh-24rem)] max-h-[calc(100dvh-24rem)]';
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href={listHref}
-          className="inline-flex items-center gap-2 text-sm text-neutral-600 transition-colors hover:text-neutral-900"
+    <div className="space-y-6">
+      {recordingSoftDeleted ? (
+        <div className="rounded-md border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-800">
+          This recording was removed from your archive. Use Revert in the toast below to restore it.
+        </div>
+      ) : null}
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-serif text-2xl font-bold leading-tight text-primary-700 sm:text-3xl">{title}</h1>
+          <p className="mt-1 text-sm text-neutral-600">
+            {detail.recording.project_code}
+            {detail.recording.recorded_at ? ` · Recorded ${formatDate(detail.recording.recorded_at)}` : ''}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="shrink-0 self-start text-primary-700 hover:bg-primary-50 sm:self-center"
+          leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
+          onClick={() => router.push(listHref)}
         >
-          <FiArrowLeft aria-hidden />
           Back to recordings
-        </Link>
-
-        {detail.recording.can_delete ? (
-          <button
-            type="button"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
-            className="inline-flex items-center gap-2 rounded-md border border-red-200 px-3 py-1.5 text-sm text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-          >
-            {deleting ? <FiLoader className="animate-spin" aria-hidden /> : <FiTrash2 aria-hidden />}
-            Delete recording
-          </button>
-        ) : (
-          <span className="text-xs text-neutral-500">View only</span>
-        )}
+        </Button>
       </div>
 
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-neutral-900">{title}</h1>
-        <p className="text-sm text-neutral-500">
-          {detail.recording.project_code}
-          {detail.recording.recorded_at ? ` · Recorded ${formatDate(detail.recording.recorded_at)}` : ''}
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-4 lg:gap-6">
-        <div className="mx-auto w-full max-w-4xl shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-black">
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <Card
+          padding="none"
+          hoverShadow={false}
+          className="flex h-full min-h-0 flex-col overflow-hidden !border-neutral-400 !bg-black"
+        >
           {videoUrl ? (
             <>
               {audioUrl ? (
                 <audio ref={audioRef} src={audioUrl} preload="metadata" className="hidden" />
               ) : null}
-              <video
-                ref={videoRef}
-                src={videoUrl}
-                controls
-                className="aspect-video w-full bg-black"
-                preload="metadata"
-                onPlay={audioUrl ? handleVideoPlay : undefined}
-                onPause={audioUrl ? handleVideoPause : undefined}
-                onSeeked={audioUrl ? handleVideoSeeked : undefined}
-                onTimeUpdate={audioUrl ? syncAudioToVideo : undefined}
-              />
+              <div className="flex min-h-0 flex-1 items-center justify-center">
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  controls
+                  className="aspect-video w-full bg-black"
+                  preload="metadata"
+                  onPlay={audioUrl ? handleVideoPlay : undefined}
+                  onPause={audioUrl ? handleVideoPause : undefined}
+                  onSeeked={audioUrl ? handleVideoSeeked : undefined}
+                  onTimeUpdate={audioUrl ? syncAudioToVideo : undefined}
+                />
+              </div>
               {audioUrl ? (
-                <p className="bg-neutral-900 px-3 py-2 text-xs text-neutral-400">
+                <p className="shrink-0 bg-neutral-900 px-4 py-2 text-xs text-neutral-400 sm:px-6">
                   Audio is synced from the gated voice track recorded separately from the screen capture.
                 </p>
               ) : null}
             </>
           ) : (
-            <div className="flex aspect-video items-center justify-center text-sm text-neutral-400">
+            <div className="flex min-h-[12rem] flex-1 items-center justify-center text-sm text-neutral-400">
               Recording file unavailable
             </div>
           )}
-        </div>
+        </Card>
 
-        <div
-          className={`flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm ${workspaceHeightClass} ${
-            isEditorTab ? 'ring-1 ring-primary-100' : ''
-          }`}
-        >
-          <div className="shrink-0 border-b border-neutral-200 px-4 py-3 lg:px-5 lg:py-4">
-            <div className="mb-3 flex gap-1 rounded-lg bg-neutral-100 p-1">
+        <RecordingControlPanel
+          scheduleId={scheduleId}
+          recordingId={recordingId}
+          recording={detail.recording}
+          videoUrl={videoUrl}
+          onRenamed={handleRecordingRenamed}
+          onSoftDeleted={() => setRecordingSoftDeleted(true)}
+          onRestored={() => {
+            setRecordingSoftDeleted(false);
+            void loadDetail();
+          }}
+          onPermanentlyDeleted={() => router.push(listHref)}
+        />
+      </div>
+
+      <Card
+        padding="none"
+        hoverShadow={false}
+        className={`flex min-h-0 flex-col ${
+          transcriptExpanded ? '' : `${collapsedTranscriptCardClass} overflow-hidden`
+        }`}
+      >
+        <div className={`shrink-0 ${CARD_HEADER_SECTION_CLASS}`}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-neutral-300 pb-3">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setTranscriptTab('original')}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   transcriptTab === 'original'
-                    ? 'bg-white text-neutral-900 shadow-sm'
-                    : 'text-neutral-600 hover:text-neutral-900'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-neutral-600 hover:bg-neutral-100'
                 }`}
               >
                 Original
@@ -268,53 +295,79 @@ export default function TranscriptionArchiveViewer({
               <button
                 type="button"
                 onClick={() => setTranscriptTab('editor')}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   transcriptTab === 'editor'
-                    ? 'bg-white text-neutral-900 shadow-sm'
-                    : 'text-neutral-600 hover:text-neutral-900'
+                    ? 'bg-primary-600 text-white'
+                    : 'text-neutral-600 hover:bg-neutral-100'
                 }`}
               >
                 Editor workspace
               </button>
             </div>
-
-            {transcriptTab === 'original' ? (
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold text-neutral-900">Transcript</h2>
-                  <p className="text-xs text-neutral-500">
-                    {isProcessing
-                      ? 'Transcription is processing in the background.'
-                      : detail.segments.length
-                        ? 'Click any line to jump to that moment in the video.'
-                        : 'No transcript for this recording yet.'}
-                  </p>
-                </div>
-                {detail.transcription ? (
-                  <button
-                    type="button"
-                    onClick={handleDownloadTranscript}
-                    className="inline-flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
-                  >
-                    <FiDownload aria-hidden />
-                    Download
-                  </button>
-                ) : null}
-              </div>
-            ) : (
-              <div>
-                <h2 className="text-base font-semibold text-neutral-900">Transcript editor workspace</h2>
-                <p className="text-sm text-neutral-500">
-                  Select statements to assign names or merge. Save to persist speaker list changes.
-                </p>
-              </div>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 !px-2"
+              disabled={!hasTranscript}
+              onClick={() => setTranscriptExpanded((prev) => !prev)}
+              aria-pressed={transcriptExpanded}
+              aria-label={transcriptExpanded ? 'Collapse transcript' : 'Expand transcript'}
+            >
+              {transcriptExpanded ? (
+                <FiMinimize2 className="h-4 w-4" aria-hidden />
+              ) : (
+                <FiMaximize2 className="h-4 w-4" aria-hidden />
+              )}
+            </Button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden">
+          {transcriptTab === 'original' ? (
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle>Transcript</CardTitle>
+                <CardDescription lines={2} className="!mt-1">
+                  {isProcessing
+                    ? 'Transcription is processing in the background.'
+                    : detail.segments.length
+                      ? 'Click any line to jump to that moment in the video.'
+                      : 'No transcript for this recording yet.'}
+                </CardDescription>
+              </div>
+              {detail.transcription ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<FiDownload aria-hidden />}
+                  onClick={handleDownloadTranscript}
+                  className="shrink-0"
+                >
+                  Download
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div>
+              <CardTitle>Transcript editor workspace</CardTitle>
+              <CardDescription lines={2} className="!mt-1">
+                Select statements to assign names or merge. Save to persist speaker list changes.
+              </CardDescription>
+            </div>
+          )}
+        </div>
+
+        <div
+          className={
+            transcriptExpanded
+              ? ''
+              : 'flex min-h-0 flex-1 flex-col overflow-hidden'
+          }
+        >
           {transcriptTab === 'editor' ? (
             <TranscriptionEditorPanel
-              className="h-full min-h-0"
+              className={transcriptExpanded ? '' : 'min-h-0 flex-1'}
+              expanded={transcriptExpanded}
               scheduleId={scheduleId}
               recordingId={recordingId}
               projectCode={detail.recording.project_code}
@@ -325,42 +378,47 @@ export default function TranscriptionArchiveViewer({
               onSeek={seekToMs}
             />
           ) : (
-          <div className="h-full min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
-            {isProcessing ? (
-              <div className="flex items-center gap-2 py-8 text-sm text-neutral-500">
-                <FiLoader className="animate-spin" aria-hidden />
-                Transcribing gated voice audio...
-              </div>
-            ) : detail.segments.length ? (
-              <div className="space-y-2">
-                {detail.segments.map((segment) => (
-                  <button
-                    key={segment.id}
-                    type="button"
-                    onClick={() => seekToSegment(segment)}
-                    className={`w-full rounded-md border px-3 py-2 text-left transition ${
-                      activeSegmentId === segment.id
-                        ? 'border-primary-300 bg-primary-50'
-                        : 'border-neutral-200 hover:border-primary-200 hover:bg-neutral-50'
-                    }`}
-                  >
-                    <p className="mb-1 text-xs font-medium text-primary-700">{formatMs(segment.start_ms)}</p>
-                    <p className="text-sm leading-relaxed text-neutral-800">{segment.text}</p>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="py-8 text-center text-sm text-neutral-500">
-                {transcriptionStatus === 'failed'
-                  ? detail.recording.transcription_error || 'Transcription failed for this recording.'
-                  : 'This recording has no transcript.'}
-              </p>
-            )}
-          </div>
+            <div
+              className={
+                transcriptExpanded
+                  ? `py-3 ${CARD_INSET_X_CLASS}`
+                  : `min-h-0 flex-1 overflow-y-auto overscroll-contain py-3 ${CARD_INSET_X_CLASS}`
+              }
+            >
+              {isProcessing ? (
+                <div className="flex items-center gap-2 py-8 text-sm text-neutral-500">
+                  <FiLoader className="animate-spin" aria-hidden />
+                  Transcribing gated voice audio...
+                </div>
+              ) : detail.segments.length ? (
+                <div className="space-y-2">
+                  {detail.segments.map((segment) => (
+                    <button
+                      key={segment.id}
+                      type="button"
+                      onClick={() => seekToSegment(segment)}
+                      className={`w-full rounded-md border border-solid px-3 py-2 text-left transition-all ${
+                        activeSegmentId === segment.id
+                          ? 'border-primary-400 bg-primary-50 shadow-sm'
+                          : 'border-neutral-400 bg-white hover:border-neutral-400 hover:shadow-sm'
+                      }`}
+                    >
+                      <p className="mb-1 text-xs font-medium text-primary-700">{formatMs(segment.start_ms)}</p>
+                      <p className="text-sm leading-relaxed text-neutral-800">{segment.text}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-8 text-center text-sm text-neutral-500">
+                  {transcriptionStatus === 'failed'
+                    ? detail.recording.transcription_error || 'Transcription failed for this recording.'
+                    : 'This recording has no transcript.'}
+                </p>
+              )}
+            </div>
           )}
-          </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

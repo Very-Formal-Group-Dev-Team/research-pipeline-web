@@ -31,7 +31,7 @@ export default function TranscriptionArchivePage() {
             type="button"
             variant="ghost"
             size="sm"
-            className="shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:text-md"
+            className="shrink-0 self-center text-primary-700 hover:bg-primary-50"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
             onClick={() => router.push(backHref)}
             disabled={isLoading || !role}

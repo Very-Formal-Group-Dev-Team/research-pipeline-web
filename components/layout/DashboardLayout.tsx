@@ -8,7 +8,7 @@ import { SidebarProvider } from './SidebarContext';
 
 export interface DashboardLayoutProps {
   children: React.ReactNode;
-  role: 'student' | 'adviser' | 'coordinator';
+  role: 'student' | 'adviser' | 'coordinator' | 'admin';
   user?: {
     name: string;
     email: string;
@@ -19,7 +19,8 @@ export interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, role, user, onLogout }: DashboardLayoutProps) {
-  const usesPortalChrome = role === 'coordinator' || role === 'student' || role === 'adviser';
+  const usesPortalChrome =
+    role === 'coordinator' || role === 'student' || role === 'adviser' || role === 'admin';
 
   return (
     <SidebarProvider>

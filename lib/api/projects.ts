@@ -21,6 +21,7 @@ export interface Project {
   created_at: string;
   updated_at: string;
   program?: string;
+  program_id?: string | null;
   course?: string;
   course_id?: string | null;
   section?: string;
@@ -57,6 +58,7 @@ export interface CreateProjectPayload {
   abstract?: string;
   keywords?: string[];
   program?: string;
+  programId?: string;
   course?: string;
   courseId?: string;
   section?: string;
@@ -177,6 +179,7 @@ export async function createProject(payload: CreateProjectPayload) {
   formData.append('researchType', payload.researchType);
   formData.append('projectType', payload.projectType);
   if (payload.program) formData.append('program', payload.program);
+  if (payload.programId) formData.append('programId', payload.programId);
   if (payload.courseId) formData.append('courseId', payload.courseId);
   if (payload.section) formData.append('section', payload.section);
   if (payload.file) formData.append('file', payload.file);
@@ -335,6 +338,7 @@ export interface UpdateProjectDetailsPayload {
   projectType: string;
   paperStandard: string;
   program?: string;
+  programId?: string;
   course?: string;
   courseId?: string;
   section?: string;

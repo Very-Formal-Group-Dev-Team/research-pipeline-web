@@ -19,7 +19,7 @@ export default function MeetingRecordingControls({ recording }: MeetingRecording
     speaking,
     gateStatus,
     gateMessage,
-    startRecording,
+    promptStartRecording,
     stopRecording,
   } = recording;
 
@@ -48,7 +48,7 @@ export default function MeetingRecordingControls({ recording }: MeetingRecording
         </span>
         <button
           type="button"
-          onClick={() => void startRecording()}
+          onClick={promptStartRecording}
           className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-neutral-900/80 px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800"
         >
           <FiMic aria-hidden />
@@ -64,9 +64,11 @@ export default function MeetingRecordingControls({ recording }: MeetingRecording
         <span className="hidden text-xs text-neutral-300 sm:inline">
           {gateStatus === 'connected'
             ? speaking
-              ? 'Voice gate: speaking'
-              : 'Voice gate: waiting'
-            : gateMessage || 'Connect Arduino to gate voice capture'}
+              ? 'Voice gate: your mic active'
+              : 'Voice gate: meeting audio only'
+            : gateStatus === 'bypassed'
+              ? gateMessage || 'Meeting audio + full microphone'
+              : gateMessage || 'Voice gate unavailable'}
         </span>
         <button
           type="button"
@@ -84,7 +86,7 @@ export default function MeetingRecordingControls({ recording }: MeetingRecording
   return (
     <button
       type="button"
-      onClick={() => void startRecording()}
+      onClick={promptStartRecording}
       disabled={status === 'starting'}
       className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-neutral-900/80 px-3 py-2 text-xs font-medium text-white transition hover:bg-neutral-800 disabled:opacity-60"
     >
