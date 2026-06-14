@@ -26,6 +26,7 @@ function captureStatusLabel(capture?: CaptureState): string {
   if (!capture?.listening && capture?.status === 'needs_serial') {
     return 'Arduino not connected';
   }
+  if (capture?.status === 'bypassed') return 'Live transcription (no voice gate)';
   if (capture?.starting || capture?.status === 'starting') return 'Starting voice listening...';
   if (!capture?.listening) return 'Voice listening off';
   if (capture.mode === 'agent') return 'Voice listening (room agent)';

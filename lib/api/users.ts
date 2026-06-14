@@ -17,7 +17,7 @@ export interface UserProfile {
 
 export interface CompleteProfilePayload {
   displayName: string;
-  role: 'student' | 'teacher' | 'coordinator';
+  role: 'student' | 'teacher' | 'coordinator' | 'admin';
   email: string;
   avatarFile?: File | null;
   googlePhotoUrl?: string | null;

@@ -6,7 +6,7 @@ import {
   isRoleProtectedPath,
 } from '@/lib/auth/roleAccess';
 
-const AUTH_REQUIRED_PREFIXES = ['/student', '/adviser', '/coordinator', '/onboarding', '/defenses'];
+const AUTH_REQUIRED_PREFIXES = ['/student', '/adviser', '/coordinator', '/admin', '/onboarding', '/defenses'];
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/+$/, '');
 

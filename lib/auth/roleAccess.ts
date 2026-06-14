@@ -1,9 +1,10 @@
-export type DashboardRole = 'student' | 'adviser' | 'coordinator';
+export type DashboardRole = 'student' | 'adviser' | 'coordinator' | 'admin';
 
 const ROLE_PREFIXES: Record<DashboardRole, string> = {
   student: '/student',
   adviser: '/adviser',
   coordinator: '/coordinator',
+  admin: '/admin',
 };
 
 /** Map stored user_roles values to a dashboard role. */
@@ -14,6 +15,7 @@ export function normalizeUserRole(role: string | null | undefined): DashboardRol
   if (normalized === 'student') return 'student';
   if (normalized === 'adviser' || normalized === 'teacher') return 'adviser';
   if (normalized === 'coordinator') return 'coordinator';
+  if (normalized === 'admin') return 'admin';
 
   return null;
 }

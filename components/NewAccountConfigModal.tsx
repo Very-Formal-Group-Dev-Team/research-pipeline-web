@@ -8,6 +8,7 @@ import Select from './ui/Select';
 import Avatar from './ui/Avatar';
 import { useRouter } from 'next/navigation';
 import { completeProfile } from '@/lib/api/users';
+import { getRoleHomePath } from '@/lib/auth/roleAccess';
 import InstitutionSearchField from '@/components/InstitutionSearchField';
 import type { RegisteredInstitution } from '@/lib/api/institutions';
 
@@ -20,7 +21,7 @@ export interface NewAccountConfigModalProps {
   googlePhotoUrl?: string | null;
 }
 
-type UserRole = 'student' | 'teacher' | 'coordinator';
+type UserRole = 'student' | 'teacher' | 'coordinator' | 'admin';
 
 interface FormData {
   role: UserRole | '';
@@ -147,7 +148,7 @@ export default function NewAccountConfigModal({
 
     const result = await completeProfile({
       displayName: formData.displayName,
-      role: formData.role as 'student' | 'teacher' | 'coordinator',
+      role: formData.role as 'student' | 'teacher' | 'coordinator' | 'admin',
       email: userEmail,
       avatarFile,
       googlePhotoUrl,
@@ -160,13 +161,7 @@ export default function NewAccountConfigModal({
       return;
     }
 
-    const redirectPath =
-      result.redirectPath ||
-      (formData.role === 'student'
-        ? '/student'
-        : formData.role === 'coordinator'
-          ? '/coordinator'
-          : '/adviser');
+    const redirectPath = result.redirectPath || getRoleHomePath(formData.role);
     onClose();
     router.push(redirectPath);
   };
@@ -175,6 +170,7 @@ export default function NewAccountConfigModal({
     { value: 'student', label: 'Student' },
     { value: 'teacher', label: 'Teacher / Adviser' },
     { value: 'coordinator', label: 'Coordinator' },
+    { value: 'admin', label: 'Admin' },
   ];
 
   return (

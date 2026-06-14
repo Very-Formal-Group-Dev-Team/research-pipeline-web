@@ -13,6 +13,16 @@ interface JoinGroupCardProps {
   onJoined?: () => void;
 }
 
+const PROJECT_NOT_FOUND_MESSAGE =
+  'No project found with that code. Double-check the code with your team leader and try again.';
+
+function normalizeJoinError(error: string): string {
+  if (error === 'No project found with that code' || error === 'Project not found') {
+    return PROJECT_NOT_FOUND_MESSAGE;
+  }
+  return error;
+}
+
 export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
   const [groupCode, setGroupCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +42,7 @@ export default function JoinGroupCard({ onJoined }: JoinGroupCardProps) {
     try {
       const res = await joinProject({ projectCode: groupCode.trim() });
       if (res.error) {
-        setError(res.error);
+        setError(normalizeJoinError(res.error));
       } else if (res.data) {
         setSuccess(
           res.data.message ||
