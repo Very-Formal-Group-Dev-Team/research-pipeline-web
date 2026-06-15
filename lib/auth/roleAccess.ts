@@ -38,15 +38,17 @@ function isDefenseMeetingPath(pathname: string): boolean {
   return /^\/defenses\/[^/]+\/meeting\/?$/.test(pathname);
 }
 
-function isDefenseTranscriptionPath(pathname: string): boolean {
+function isDefenseRecordingsPath(pathname: string): boolean {
   return (
-    /^\/defenses\/transcription\/?$/.test(pathname)
+    /^\/defenses\/recordings\/?$/.test(pathname)
+    || /^\/defenses\/[^/]+\/recordings(\/[^/]+)?\/?$/.test(pathname)
+    || /^\/defenses\/transcription\/?$/.test(pathname)
     || /^\/defenses\/[^/]+\/transcription(\/[^/]+)?\/?$/.test(pathname)
   );
 }
 
 function getRequiredRoleForPath(pathname: string): DashboardRole | null {
-  if (isDefenseMeetingPath(pathname) || isDefenseTranscriptionPath(pathname)) {
+  if (isDefenseMeetingPath(pathname) || isDefenseRecordingsPath(pathname)) {
     return null;
   }
 

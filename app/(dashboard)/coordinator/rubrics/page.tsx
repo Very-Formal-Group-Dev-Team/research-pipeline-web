@@ -78,15 +78,20 @@ export default function CoordinatorRubricPage() {
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">Rubrics</h1>
             <p className="text-neutral-600 mt-1">
               Define defense rubrics with weighted criteria (total must equal 100%)
             </p>
           </div>
-          <Button variant="primary" onClick={openCreate}>
-            <FiPlus className="mr-2" /> New Rubric
+          <Button
+            variant="primary"
+            size="sm"
+            className="shrink-0 px-4 py-2 text-base hover:bg-primary-600 hover:shadow-none active:bg-primary-700 active:shadow-none"
+            onClick={openCreate}
+          >
+            <FiPlus className="mr-1" /> New Rubric
           </Button>
         </div>
 

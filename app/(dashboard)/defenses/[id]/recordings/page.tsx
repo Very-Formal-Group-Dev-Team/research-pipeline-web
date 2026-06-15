@@ -7,7 +7,7 @@ import { FiLoader } from 'react-icons/fi';
 import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
 
 /** Legacy per-schedule URL — redirect to the global recordings archive. */
-export default function DefenseTranscriptionRedirectPage() {
+export default function DefenseRecordingsRedirectPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
 
