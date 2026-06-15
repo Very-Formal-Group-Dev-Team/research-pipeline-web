@@ -1,0 +1,22 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [live]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy frontend to DigitalOcean
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 178.128.60.46
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/archivum-web
+            git pull
+            npm ci
+            npm run build
+            pm2 restart srp-frontend
