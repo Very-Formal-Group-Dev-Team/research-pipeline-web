@@ -320,17 +320,18 @@ export default function StudentProjectsPage() {
       <DashboardLayout role="student" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary-700">My Projects</h1>
             <p className="text-neutral-600 mt-1">Manage your research projects</p>
           </div>
           <Button
             variant="primary"
-            leftIcon={<FiPlus />}
+            size="sm"
+            className="shrink-0 px-4 py-2 text-base hover:bg-primary-600 hover:shadow-none active:bg-primary-700 active:shadow-none"
             onClick={() => router.push('/student/projects/create')}
           >
-            New Project
+            <FiPlus className="mr-1" /> New Project
           </Button>
         </div>
 

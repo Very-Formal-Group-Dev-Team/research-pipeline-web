@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { FiCalendar, FiFileText, FiLoader, FiTrash2, FiVideo } from 'react-icons/fi';
 
@@ -13,13 +13,18 @@ import Card, {
   CardDescription,
   CardTitle,
 } from '@/components/ui/Card';
+import Modal, { ModalFooter } from '@/components/ui/Modal';
+import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
 import {
   deleteMeetingRecording,
   getMyMeetingRecordings,
+  purgeMeetingRecording,
+  restoreMeetingRecording,
   type MeetingRecordingSummary,
   type TranscriptionStatus,
 } from '@/lib/api/recordings';
 import { defenseRecordingTranscriptionUrl } from '@/lib/meetings/navigation';
+import { recordingDeleteUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import { recordingDisplayTitle } from '@/lib/recordings/display';
 
 interface ScheduleGroup {
@@ -71,7 +76,16 @@ export default function TranscriptionRecordingList() {
   const [recordings, setRecordings] = useState<MeetingRecordingSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [rowPendingDelete, setRowPendingDelete] = useState<MeetingRecordingSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const { toast: deleteUndoToast, showUndoToast: showDeleteUndoToast, dismissUndoToast: dismissDeleteUndoToast } =
+    useUndoActionToast();
+  const deleteUndoUsedRef = useRef(false);
+  const pendingPurgeRef = useRef(false);
+  const pendingDeleteRowRef = useRef<MeetingRecordingSummary | null>(null);
 
   const loadRecordings = useCallback(async () => {
     setLoading(true);
@@ -118,21 +132,64 @@ export default function TranscriptionRecordingList() {
     }));
   }, [recordings]);
 
-  const handleDelete = async (row: MeetingRecordingSummary) => {
+  const openDeleteModal = (row: MeetingRecordingSummary) => {
     if (!row.can_delete) return;
-    const confirmed = window.confirm('Delete this recording and its transcript? This cannot be undone.');
-    if (!confirmed) return;
+    setDeleteError(null);
+    setActionError(null);
+    setRowPendingDelete(row);
+    setDeleteModalOpen(true);
+  };
 
-    setDeletingId(row.id);
+  const handleConfirmDelete = async () => {
+    if (!rowPendingDelete?.can_delete) return;
+
+    const row = rowPendingDelete;
+    setDeleting(true);
+    setDeleteError(null);
+    dismissDeleteUndoToast();
+    deleteUndoUsedRef.current = false;
+    pendingPurgeRef.current = true;
+    pendingDeleteRowRef.current = row;
+
     const res = await deleteMeetingRecording(row.schedule_id, row.id);
-    setDeletingId(null);
+    setDeleting(false);
 
     if (res.error) {
-      setError(res.error);
+      pendingPurgeRef.current = false;
+      pendingDeleteRowRef.current = null;
+      setDeleteError(res.error);
       return;
     }
 
-    await loadRecordings();
+    setDeleteModalOpen(false);
+    setRowPendingDelete(null);
+    setRecordings((prev) => prev.filter((recording) => recording.id !== row.id));
+
+    showDeleteUndoToast({
+      message: recordingDeleteUndoToastMessage(),
+      onUndo: async () => {
+        deleteUndoUsedRef.current = true;
+        pendingPurgeRef.current = false;
+        const restoreRes = await restoreMeetingRecording(row.schedule_id, row.id);
+        if (restoreRes.error) {
+          setActionError(restoreRes.error);
+          return;
+        }
+        pendingDeleteRowRef.current = null;
+        await loadRecordings();
+      },
+    });
+  };
+
+  const handleDeleteToastDismiss = () => {
+    const row = pendingDeleteRowRef.current;
+    if (!deleteUndoUsedRef.current && pendingPurgeRef.current && row) {
+      void purgeMeetingRecording(row.schedule_id, row.id);
+    }
+    pendingPurgeRef.current = false;
+    deleteUndoUsedRef.current = false;
+    pendingDeleteRowRef.current = null;
+    dismissDeleteUndoToast();
   };
 
   if (loading) {
@@ -163,7 +220,15 @@ export default function TranscriptionRecordingList() {
     );
   }
 
+  const pendingDeleteTitle = rowPendingDelete ? recordingDisplayTitle(rowPendingDelete) : 'this recording';
+
   return (
+    <>
+    {actionError ? (
+      <div className="mb-3 rounded-md border border-error-200 bg-error-50 px-4 py-3 text-sm text-error-700">
+        {actionError}
+      </div>
+    ) : null}
     <div className="space-y-3">
       {groups.map((group) => (
         <Card key={group.schedule_id} padding="none" className="overflow-hidden">
@@ -220,15 +285,12 @@ export default function TranscriptionRecordingList() {
                         variant="outline"
                         size="sm"
                         className="relative z-10 !border-error-200 !text-error-700 hover:!bg-error-50"
-                        leftIcon={
-                          deletingId === row.id ? (
-                            <FiLoader className="animate-spin" aria-hidden />
-                          ) : (
-                            <FiTrash2 aria-hidden />
-                          )
-                        }
-                        onClick={() => void handleDelete(row)}
-                        disabled={deletingId === row.id}
+                        leftIcon={<FiTrash2 aria-hidden />}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          openDeleteModal(row);
+                        }}
                       >
                         Delete
                       </Button>
@@ -241,5 +303,52 @@ export default function TranscriptionRecordingList() {
         </Card>
       ))}
     </div>
+
+    <Modal
+      isOpen={deleteModalOpen}
+      onClose={() => {
+        if (!deleting) {
+          setDeleteModalOpen(false);
+          setRowPendingDelete(null);
+        }
+      }}
+      title="Delete recording?"
+      size="sm"
+      dense
+    >
+      <p className="text-sm text-neutral-700">
+        This removes{' '}
+        <span className="font-semibold text-neutral-900">{pendingDeleteTitle}</span> and its transcript from
+        your archive. You can revert this for a few seconds after confirming.
+      </p>
+      {deleteError ? <p className="mt-3 text-sm text-archivumRed">{deleteError}</p> : null}
+      <ModalFooter className="!mt-4 !pt-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setDeleteModalOpen(false);
+            setRowPendingDelete(null);
+          }}
+          disabled={deleting}
+        >
+          Keep recording
+        </Button>
+        <Button
+          type="button"
+          variant="error"
+          size="sm"
+          onClick={() => void handleConfirmDelete()}
+          disabled={deleting}
+          leftIcon={deleting ? <FiLoader className="animate-spin" aria-hidden /> : <FiTrash2 aria-hidden />}
+        >
+          Delete recording
+        </Button>
+      </ModalFooter>
+    </Modal>
+
+    <UndoActionToastHost toast={deleteUndoToast} onDismiss={handleDeleteToastDismiss} />
+    </>
   );
 }
