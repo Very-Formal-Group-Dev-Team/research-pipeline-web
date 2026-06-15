@@ -10,13 +10,13 @@ export function defenseMeetingUrl(defenseId: string): string {
 }
 
 export function defenseTranscriptionUrl(defenseId: string): string {
-  return `/defenses/${encodeURIComponent(defenseId)}/transcription`;
+  return `/defenses/${encodeURIComponent(defenseId)}/recordings`;
 }
 
 export function defenseRecordingTranscriptionUrl(scheduleId: string, recordingId: string): string {
-  return `/defenses/${encodeURIComponent(scheduleId)}/transcription/${encodeURIComponent(recordingId)}`;
+  return `/defenses/${encodeURIComponent(scheduleId)}/recordings/${encodeURIComponent(recordingId)}`;
 }
 
 export function defenseTranscriptionArchiveUrl(): string {
-  return '/defenses/transcription';
+  return '/defenses/recordings';
 }

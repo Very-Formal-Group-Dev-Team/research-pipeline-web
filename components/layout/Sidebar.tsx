@@ -13,7 +13,7 @@ import {
   FiX,
   FiBookOpen,
   FiBell,
-  FiFileText,
+  FiVideo,
 } from 'react-icons/fi';
 import { useSidebar } from './SidebarContext';
 import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
@@ -33,7 +33,7 @@ export interface SidebarProps {
   role: 'student' | 'adviser' | 'coordinator' | 'admin';
 }
 
-const TRANSCRIPTIONS_HREF = defenseTranscriptionArchiveUrl();
+const RECORDINGS_HREF = defenseTranscriptionArchiveUrl();
 
 const menuItems: Record<string, MenuItem[]> = {
   student: [
@@ -41,7 +41,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'My Projects', href: '/student/projects', icon: <FiFolder /> },
     { label: 'Notifications', href: '/student/notifications', icon: <FiBell /> },
     { label: 'Events', href: '/student/events', icon: <FiCalendar />, tooltip: 'Defenses, meetings, and institution events' },
-    { label: 'Transcriptions', href: TRANSCRIPTIONS_HREF, icon: <FiFileText />, tooltip: 'Recorded meetings and transcripts' },
+    { label: 'Recordings', href: RECORDINGS_HREF, icon: <FiVideo />, tooltip: 'Recorded meetings and transcripts' },
     { label: 'Profile', href: '/student/profile', icon: <FiUser /> },
   ],
   adviser: [
@@ -49,7 +49,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'My Advisees', href: '/adviser/advisees', icon: <FiUsers /> },
     { label: 'Notifications', href: '/adviser/notifications', icon: <FiBell />, tooltip: 'Your recent notifications and alerts' },
     { label: 'Events', href: '/adviser/events', icon: <FiCalendar />, tooltip: 'Institution events, meetings, and defense schedules' },
-    { label: 'Transcriptions', href: TRANSCRIPTIONS_HREF, icon: <FiFileText />, tooltip: 'Recorded meetings and transcripts' },
+    { label: 'Recordings', href: RECORDINGS_HREF, icon: <FiVideo />, tooltip: 'Recorded meetings and transcripts' },
     { label: 'Rubrics', href: '/adviser/rubrics', icon: <FiClipboard /> },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
   ],
@@ -62,7 +62,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Dashboard', href: '/coordinator', icon: <FiHome /> },
     { label: 'Events', href: '/coordinator/events', icon: <FiCalendar />, tooltip: 'Institution events and defense schedules' },
     { label: 'Notifications', href: '/coordinator/notifications', icon: <FiBell />, tooltip: 'Defense and schedule notifications' },
-    { label: 'Transcriptions', href: TRANSCRIPTIONS_HREF, icon: <FiFileText />, tooltip: 'Recorded meetings and transcripts' },
+    { label: 'Recordings', href: RECORDINGS_HREF, icon: <FiVideo />, tooltip: 'Recorded meetings and transcripts' },
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
     { label: 'Rubrics', href: '/coordinator/rubrics', icon: <FiClipboard /> },
@@ -124,7 +124,7 @@ export default function Sidebar({ role }: SidebarProps) {
             <ul className="space-y-2">
               {items.map((item) => {
                 const isActive = pathname === item.href
-                  || (item.href === TRANSCRIPTIONS_HREF && pathname.includes('/transcription'));
+                  || (item.href === RECORDINGS_HREF && (pathname.includes('/recordings') || pathname.includes('/transcription')));
                 return (
                   <li key={item.href} className={item.mobileOnly ? 'lg:hidden' : undefined}>
                     <Link
