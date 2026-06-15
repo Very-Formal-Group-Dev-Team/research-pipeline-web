@@ -137,6 +137,7 @@ export interface RelatedStudiesResult {
 }
 
 export interface CrossReferenceStudy {
+  id?: string;
   display_name: string;
   authorships?: Array<{ author?: { display_name?: string } }>;
   publication_date?: string;
@@ -147,9 +148,25 @@ export interface CrossReferenceStudy {
   doi?: string;
 }
 
+export type CrossReferenceSort =
+  | 'publication_date:desc'
+  | 'publication_date:asc'
+  | 'relevance_score:desc';
+
+export interface CrossReferenceParams {
+  page?: number;
+  perPage?: number;
+  sort?: CrossReferenceSort;
+  fromYear?: string;
+  toYear?: string;
+}
+
 export interface CrossReferenceResult {
   query: string;
   total: number;
+  page: number;
+  perPage: number;
+  hasMore: boolean;
   studies: CrossReferenceStudy[];
 }
 
@@ -350,8 +367,16 @@ export function updateProjectDetails(projectId: string, payload: UpdateProjectDe
 }
 
 /** Query OpenAlex for cross-referenced studies using project keywords. */
-export function crossReferenceStudies(projectId: string) {
-  return get<CrossReferenceResult>(`/projects/${projectId}/cross-reference`);
+export function crossReferenceStudies(projectId: string, params: CrossReferenceParams = {}) {
+  const search = new URLSearchParams();
+  if (params.page) search.set('page', String(params.page));
+  if (params.perPage) search.set('perPage', String(params.perPage));
+  if (params.sort) search.set('sort', params.sort);
+  if (params.fromYear) search.set('fromYear', params.fromYear);
+  if (params.toYear) search.set('toYear', params.toYear);
+  const query = search.toString();
+  const path = `/projects/${projectId}/cross-reference${query ? `?${query}` : ''}`;
+  return get<CrossReferenceResult>(path);
 }
 
 /** Update a project's status (adviser only). */

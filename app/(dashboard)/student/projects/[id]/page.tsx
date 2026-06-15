@@ -21,7 +21,6 @@ import {
   getProjectInvitations,
   inviteToProject,
   findRelatedStudies,
-  crossReferenceStudies,
   updateProjectKeywords,
   updateProjectAbstract,
   updateProjectDetails,
@@ -29,7 +28,6 @@ import {
   type Project,
   type ProjectMember,
   type RelatedStudiesResult,
-  type CrossReferenceResult,
 } from '@/lib/api/projects';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
@@ -64,6 +62,7 @@ import {
 } from '@/lib/utils/projectDisplay';
 import { formatProjectStageLabel, isProjectLocked } from '@/lib/utils/projectStage';
 import LeaveProjectModal, { type LeaveProjectRole } from '@/components/projects/LeaveProjectModal';
+import CrossReferenceStudiesPanel from '@/components/projects/CrossReferenceStudiesPanel';
 import {
   Tooltip,
   TooltipContent,
@@ -140,9 +139,6 @@ export default function ProjectDetailPage() {
   const [abstractInput, setAbstractInput] = useState('');
   const [savingAbstract, setSavingAbstract] = useState(false);
   const [abstractError, setAbstractError] = useState<string | null>(null);
-  const [crossRefLoading, setCrossRefLoading] = useState(false);
-  const [crossRefError, setCrossRefError] = useState<string | null>(null);
-  const [crossRefResult, setCrossRefResult] = useState<CrossReferenceResult | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTitleInput, setDeleteTitleInput] = useState('');
   const [deletingProject, setDeletingProject] = useState(false);
@@ -556,22 +552,6 @@ export default function ProjectDetailPage() {
     });
     setSavingAbstract(false);
     toast.success('Changes saved');
-  };
-
-  const handleCrossReference = async () => {
-    if (!project) return;
-    setCrossRefLoading(true);
-    setCrossRefError(null);
-
-    const res = await crossReferenceStudies(project.id);
-    if (res.error || !res.data) {
-      setCrossRefError(res.error || 'Failed to fetch cross-referenced studies');
-      setCrossRefLoading(false);
-      return;
-    }
-
-    setCrossRefResult(res.data);
-    setCrossRefLoading(false);
   };
 
   if (loading) {
@@ -1066,72 +1046,7 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
-          <div className="mt-6 border-t border-neutral-300 pt-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-serif text-lg font-semibold text-eerieBlack">Cross-referencing</h3>
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={handleCrossReference}
-                disabled={crossRefLoading}
-              >
-                {crossRefLoading ? 'Searching...' : 'Cross-reference 20 Studies'}
-              </Button>
-            </div>
-
-            {crossRefError && (
-              <p className="mt-2 text-sm text-archivumRed">{crossRefError}</p>
-            )}
-
-            {crossRefResult && (
-              <div className="mt-3 space-y-3">
-                <p className="text-sm text-neutral-600">
-                  Query: <span className="font-medium">{crossRefResult.query}</span> ·
-                  Results: {crossRefResult.total}
-                </p>
-                {crossRefResult.studies.length > 0 ? (
-                  <div
-                    className="h-96 overflow-y-auto overscroll-contain rounded-md border border-neutral-200 bg-neutral-50/50 p-2 space-y-2"
-                    aria-label="Cross-referenced studies"
-                  >
-                    {crossRefResult.studies.map((study, index) => {
-                      const authorNames = (study.authorships || [])
-                        .map((a) => a?.author?.display_name)
-                        .filter(Boolean)
-                        .slice(0, 3)
-                        .join(', ');
-                      const doiUrl = study.doi
-                        ? (study.doi.startsWith('http') ? study.doi : `https://doi.org/${study.doi.replace(/^https?:\/\/doi.org\//, '')}`)
-                        : null;
-
-                      return (
-                        <div key={`${study.display_name}-${index}`} className="rounded-lg border border-neutral-300 bg-white p-3">
-                          <p className="font-medium text-sm text-neutral-900">{study.display_name}</p>
-                          <p className="text-xs text-neutral-600 mt-1">
-                            {authorNames || 'Unknown authors'}
-                            {study.publication_date ? ` · ${study.publication_date}` : ''}
-                            {study.primary_location?.source?.display_name ? ` · ${study.primary_location.source.display_name}` : ''}
-                          </p>
-                          {doiUrl && (
-                            <a
-                              href={doiUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary-600 underline mt-1 inline-block break-all"
-                            >
-                              {doiUrl}
-                            </a>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-neutral-500">No studies found for current keywords.</p>
-                )}
-              </div>
-            )}
-          </div>
+          <CrossReferenceStudiesPanel projectId={project.id} />
         </Card>
 
         {/* Document Reference */}
