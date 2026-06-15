@@ -86,9 +86,8 @@ async function request<T>(
     }
 
     return { data: body as T, error: null, status: res.status };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Network error';
-    return { data: null, error: message, status: 0 };
+  } catch {
+    return { data: null, error: "We couldn't reach the server. Check your connection and try again.", status: 0 };
   }
 }
 
