@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useAuth from '@/lib/hooks/useAuth';
 import { getRoleHomePath } from '@/lib/auth/roleAccess';
+import { isDebriefPending } from '@/lib/onboarding/debriefSession';
 
 function AuthContinueContent() {
   const router = useRouter();
@@ -35,6 +36,11 @@ function AuthContinueContent() {
     const needsOnboarding = !user.full_name || !user.role;
     if (needsOnboarding) {
       router.replace('/onboarding');
+      return;
+    }
+
+    if (isDebriefPending()) {
+      router.replace('/onboarding/welcome');
       return;
     }
 
