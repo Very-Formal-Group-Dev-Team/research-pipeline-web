@@ -25,6 +25,12 @@ export function getNotificationTypeLabel(type: string): string {
       return 'Stage';
     case 'join_request':
       return 'Join request';
+    case 'paper_version_committed':
+      return 'Document';
+    case 'review_requested':
+      return 'Review';
+    case 'review_completed':
+      return 'Reviewed';
     default:
       return formatStatusLabel(type.replace(/_/g, ' '));
   }
@@ -46,6 +52,12 @@ export function getNotificationVariant(type: string): NotificationBadgeVariant {
       return 'primary';
     case 'join_request':
       return 'warning';
+    case 'paper_version_committed':
+      return 'primary';
+    case 'review_requested':
+      return 'warning';
+    case 'review_completed':
+      return 'success';
     default:
       return 'default';
   }

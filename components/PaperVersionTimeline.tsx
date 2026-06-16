@@ -13,9 +13,11 @@ import {
   FiChevronDown,
   FiPlus,
   FiMinus,
+  FiSend,
+  FiCheckCircle,
 } from 'react-icons/fi';
 import { Sparkles } from 'lucide-react';
-import Modal from '@/components/ui/Modal';
+import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
@@ -27,6 +29,14 @@ import {
   type PaperVersion,
   type DiffResult,
 } from '@/lib/api/paperVersions';
+import {
+  requestPaperReview,
+  withdrawPaperReviewRequest,
+  completePaperReviewRequest,
+  type PaperReviewRequest,
+} from '@/lib/api/paperReviews';
+import { formatPaperStandard } from '@/lib/utils/projectDisplay';
+import { toast } from 'sonner';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -163,23 +173,46 @@ function VersionCard({
   version,
   isLatest,
   isFirst,
+  isLatestRealUpload,
   projectId,
   isOpen,
   onToggle,
+  activeReviewRequest,
+  canRequestReview,
+  canCompleteReview,
+  reviewRequestsDisabled,
+  onReviewChange,
 }: {
   version: PaperVersion;
   isLatest: boolean;
   isFirst: boolean;
+  isLatestRealUpload: boolean;
   projectId: string;
   isOpen: boolean;
   onToggle: () => void;
+  activeReviewRequest?: PaperReviewRequest | null;
+  canRequestReview?: boolean;
+  canCompleteReview?: boolean;
+  reviewRequestsDisabled?: boolean;
+  onReviewChange?: () => void;
 }) {
   const [downloading, setDownloading] = useState(false);
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
   const [renderSide, setRenderSide] = useState<'current' | 'previous'>('current');
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [reviewActionLoading, setReviewActionLoading] = useState(false);
   const hasFetchedRef = useRef(false);
+
+  const isReviewTarget = activeReviewRequest?.paper_version_id === version.id;
+  const hasPendingReview = Boolean(activeReviewRequest);
+  const showStudentReviewActions =
+    canRequestReview && isLatestRealUpload && version.is_generated === 0 && !reviewRequestsDisabled;
+  const showRequestButton = showStudentReviewActions && (!hasPendingReview || !isReviewTarget);
+  const showWithdrawButton = showStudentReviewActions && hasPendingReview && isReviewTarget;
+  const showAdviserComplete = canCompleteReview && hasPendingReview && isReviewTarget;
 
   useEffect(() => {
     if (!isOpen || hasFetchedRef.current) return;
@@ -230,6 +263,37 @@ function VersionCard({
     }
   };
 
+  const openWithdrawModal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setWithdrawModalOpen(true);
+  };
+
+  const handleWithdrawReview = async () => {
+    setReviewActionLoading(true);
+    const res = await withdrawPaperReviewRequest(projectId);
+    setReviewActionLoading(false);
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+    setWithdrawModalOpen(false);
+    toast.success('Review request withdrawn');
+    onReviewChange?.();
+  };
+
+  const handleCompleteReview = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReviewActionLoading(true);
+    const res = await completePaperReviewRequest(projectId);
+    setReviewActionLoading(false);
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success('Marked as reviewed');
+    onReviewChange?.();
+  };
+
   return (
     <div className="flex gap-3 sm:gap-4">
       <div className="flex flex-col items-center">
@@ -249,7 +313,9 @@ function VersionCard({
         <div
           onClick={onToggle}
           className={`rounded-xl border p-4 transition-all cursor-pointer hover:shadow-sm ${
-            isLatest
+            isReviewTarget
+              ? 'border-warning-300 bg-warning-50/50 ring-1 ring-warning-200'
+              : isLatest
               ? 'border-primary-200 bg-primary-50/40'
               : 'border-neutral-200 bg-white'
           } ${isOpen ? 'ring-1 ring-primary-200 shadow-sm' : ''}`}
@@ -264,6 +330,9 @@ function VersionCard({
                 </span>
 
                 {isLatest && <Badge variant="primary" size="sm">latest</Badge>}
+                {isReviewTarget && (
+                  <Badge variant="warning" size="sm">review requested</Badge>
+                )}
                 {version.is_generated === 1 && (
                   <Badge variant="default" size="sm">
                     <FiZap className="inline w-3 h-3 mr-1" />
@@ -301,7 +370,43 @@ function VersionCard({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+              {showRequestButton ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRequestModalOpen(true);
+                  }}
+                  disabled={reviewActionLoading}
+                >
+                  <FiSend className="w-3.5 h-3.5 mr-1" />
+                  Request Review
+                </Button>
+              ) : null}
+              {showWithdrawButton ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openWithdrawModal}
+                  disabled={reviewActionLoading}
+                >
+                  Withdraw
+                </Button>
+              ) : null}
+              {showAdviserComplete ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCompleteReview}
+                  disabled={reviewActionLoading}
+                  loading={reviewActionLoading}
+                >
+                  <FiCheckCircle className="w-3.5 h-3.5 mr-1" />
+                  Mark reviewed
+                </Button>
+              ) : null}
               <button
                 onClick={handleDownload}
                 disabled={downloading}
@@ -411,7 +516,168 @@ function VersionCard({
           )}
         </div>
       </div>
+
+      <RequestReviewModal
+        isOpen={requestModalOpen}
+        onClose={() => setRequestModalOpen(false)}
+        projectId={projectId}
+        versionId={version.id}
+        onSuccess={() => {
+          setRequestModalOpen(false);
+          onReviewChange?.();
+        }}
+      />
+
+      <WithdrawReviewModal
+        isOpen={withdrawModalOpen}
+        onClose={() => {
+          if (reviewActionLoading) return;
+          setWithdrawModalOpen(false);
+        }}
+        onConfirm={handleWithdrawReview}
+        loading={reviewActionLoading}
+        versionNumber={version.version_number}
+      />
     </div>
+  );
+}
+
+function WithdrawReviewModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  loading,
+  versionNumber,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  loading: boolean;
+  versionNumber: number;
+}) {
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Withdraw review request?"
+      size="sm"
+      closeOnOverlayClick={!loading}
+    >
+      <p className="text-sm text-neutral-600">
+        This will cancel the pending review request for version {versionNumber}. Your adviser will
+        no longer see it in their pending reviews.
+      </p>
+      <ModalFooter>
+        <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>
+          Keep request
+        </Button>
+        <Button
+          variant="error"
+          size="sm"
+          onClick={() => void onConfirm()}
+          loading={loading}
+          disabled={loading}
+        >
+          Withdraw request
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+const REVIEW_FOCUS_NOTE_MIN_LENGTH = 20;
+
+function RequestReviewModal({
+  isOpen,
+  onClose,
+  projectId,
+  versionId,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId: string;
+  versionId: string;
+  onSuccess: () => void;
+}) {
+  const [note, setNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const trimmedNote = note.trim();
+  const noteTooShort = trimmedNote.length > 0 && trimmedNote.length < REVIEW_FOCUS_NOTE_MIN_LENGTH;
+
+  const handleClose = () => {
+    if (submitting) return;
+    setNote('');
+    setError(null);
+    onClose();
+  };
+
+  const handleSubmit = async () => {
+    if (trimmedNote.length < REVIEW_FOCUS_NOTE_MIN_LENGTH) {
+      setError(`Please add a focus note of at least ${REVIEW_FOCUS_NOTE_MIN_LENGTH} characters so your adviser knows what to review.`);
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    const res = await requestPaperReview(projectId, versionId, trimmedNote);
+    setSubmitting(false);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    toast.success('Review request sent to your adviser');
+    setNote('');
+    onSuccess();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Request adviser review" size="md">
+      <div className="space-y-4">
+        <p className="text-sm text-neutral-600">
+          Your adviser and co-advisers will be notified to review this version.
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+            Focus note <span className="text-error-600 font-normal">*</span>
+          </label>
+          <textarea
+            value={note}
+            onChange={(e) => {
+              setNote(e.target.value);
+              if (error) setError(null);
+            }}
+            placeholder="e.g. Please review the methodology section and whether I addressed your comments on Chapter 3."
+            rows={3}
+            maxLength={500}
+            required
+            className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 placeholder:text-neutral-400 text-sm resize-none"
+          />
+          <p className={`mt-1.5 text-xs ${noteTooShort ? 'text-error-600' : 'text-neutral-500'}`}>
+            {noteTooShort
+              ? `${REVIEW_FOCUS_NOTE_MIN_LENGTH - trimmedNote.length} more character${REVIEW_FOCUS_NOTE_MIN_LENGTH - trimmedNote.length === 1 ? '' : 's'} needed`
+              : `Briefly describe what you want feedback on (at least ${REVIEW_FOCUS_NOTE_MIN_LENGTH} characters).`}
+          </p>
+        </div>
+        {error ? (
+          <p className="text-sm text-error-600 bg-error-50 px-3 py-2 rounded-lg">{error}</p>
+        ) : null}
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={handleClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={submitting || trimmedNote.length < REVIEW_FOCUS_NOTE_MIN_LENGTH}
+            loading={submitting}
+          >
+            Send request
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -450,8 +716,8 @@ function UploadVersionModal({
   const handleFile = (selected: File | null) => {
     if (!selected) return;
     const ext = selected.name.split('.').pop()?.toLowerCase();
-    if (!['docx', 'doc', 'pdf'].includes(ext || '')) {
-      setError('Only .docx, .doc, or .pdf files are allowed.');
+    if (!['docx', 'doc'].includes(ext || '')) {
+      setError('Only .docx or .doc files are allowed.');
       return;
     }
     if (selected.size > 10 * 1024 * 1024) {
@@ -509,7 +775,7 @@ function UploadVersionModal({
             ref={fileInputRef}
             type="file"
             className="hidden"
-            accept=".docx,.doc,.pdf"
+            accept=".docx,.doc"
             onChange={(e) => handleFile(e.target.files?.[0] || null)}
           />
           {file ? (
@@ -524,7 +790,7 @@ function UploadVersionModal({
               <p className="text-neutral-600 font-medium">
                 Drop your paper here, or click to browse
               </p>
-              <p className="text-sm text-neutral-400">.docx, .doc, .pdf — max 10 MB</p>
+              <p className="text-sm text-neutral-400">.docx, .doc — max 10 MB</p>
             </div>
           )}
         </div>
@@ -577,6 +843,11 @@ export interface PaperVersionTimelineProps {
   onRefresh: () => void;
   /** When false, hides upload/generate actions (e.g. adviser read-only view). */
   allowUpload?: boolean;
+  activeReviewRequest?: PaperReviewRequest | null;
+  canRequestReview?: boolean;
+  canCompleteReview?: boolean;
+  reviewRequestsDisabled?: boolean;
+  onReviewChange?: () => void;
 }
 
 export default function PaperVersionTimeline({
@@ -586,6 +857,11 @@ export default function PaperVersionTimeline({
   loading,
   onRefresh,
   allowUpload = true,
+  activeReviewRequest = null,
+  canRequestReview = false,
+  canCompleteReview = false,
+  reviewRequestsDisabled = false,
+  onReviewChange,
 }: PaperVersionTimelineProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -604,6 +880,13 @@ export default function PaperVersionTimeline({
     setGenerating(false);
   };
 
+  const latestRealUploadId = versions.find((v) => v.is_generated === 0)?.id ?? null;
+
+  const handleReviewChange = () => {
+    onReviewChange?.();
+    onRefresh();
+  };
+
   return (
     <div>
       {/* Header */}
@@ -618,7 +901,7 @@ export default function PaperVersionTimeline({
               ? allowUpload
                 ? 'No versions yet — upload your draft or generate a template to get started.'
                 : 'No versions uploaded yet.'
-              : `${versions.length} version${versions.length !== 1 ? 's' : ''} · ${paperStandard.toUpperCase()} format`}
+              : `${versions.length} version${versions.length !== 1 ? 's' : ''} · ${formatPaperStandard(paperStandard)} format`}
           </p>
         </div>
 
@@ -638,7 +921,7 @@ export default function PaperVersionTimeline({
                 ) : (
                   <span className="flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                    Generate {paperStandard.toUpperCase()} Template
+                    Generate {formatPaperStandard(paperStandard)} Template
                   </span>
                 )}
               </Button>
@@ -654,6 +937,26 @@ export default function PaperVersionTimeline({
       {genError && (
         <p className="text-sm text-error-600 bg-error-50 px-3 py-2 rounded-lg mb-4">{genError}</p>
       )}
+
+      {activeReviewRequest && canRequestReview ? (
+        <div className="mb-4 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-900">
+          Waiting for adviser review on{' '}
+          <span className="font-semibold">version {activeReviewRequest.version_number}</span>
+          {activeReviewRequest.note ? (
+            <span className="block mt-1 text-warning-800">{activeReviewRequest.note}</span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {activeReviewRequest && canCompleteReview ? (
+        <div className="mb-4 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-900">
+          <span className="font-semibold">{activeReviewRequest.requester_name}</span> requested
+          review on version {activeReviewRequest.version_number}.
+          {activeReviewRequest.note ? (
+            <span className="block mt-1 text-warning-800">{activeReviewRequest.note}</span>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Timeline */}
       {loading ? (
@@ -674,9 +977,15 @@ export default function PaperVersionTimeline({
               version={v}
               isLatest={idx === 0}
               isFirst={idx === versions.length - 1}
+              isLatestRealUpload={v.id === latestRealUploadId}
               projectId={projectId}
               isOpen={openVersionId === v.id}
               onToggle={() => setOpenVersionId((prev) => (prev === v.id ? null : v.id))}
+              activeReviewRequest={activeReviewRequest}
+              canRequestReview={canRequestReview}
+              canCompleteReview={canCompleteReview}
+              reviewRequestsDisabled={reviewRequestsDisabled}
+              onReviewChange={handleReviewChange}
             />
           ))}
           {/* End of timeline dot */}

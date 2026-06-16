@@ -112,13 +112,12 @@ export default function CreateProjectPage() {
   const validateFile = (file: File): string | null => {
     // Validate file type
     const allowedTypes = [
-      'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
     
     if (!allowedTypes.includes(file.type)) {
-      return 'Only PDF, DOC, and DOCX files are allowed';
+      return 'Only DOC and DOCX files are allowed';
     }
 
     // Validate file size (10MB limit)
@@ -495,7 +494,7 @@ export default function CreateProjectPage() {
             <CardHeader>
               <CardTitle>Document attachment</CardTitle>
               <CardDescription>
-                Choose a paper standard, then optionally upload your initial document (PDF, DOC, or DOCX, max 10MB)
+                Choose a paper standard, then optionally upload your initial document (DOC or DOCX, max 10MB)
               </CardDescription>
             </CardHeader>
             <div className="mt-4 space-y-4">
@@ -548,7 +547,7 @@ export default function CreateProjectPage() {
                     <input
                       type="file"
                       className="hidden"
-                      accept=".pdf,.doc,.docx"
+                      accept=".doc,.docx"
                       onChange={handleFileChange}
                     />
                   </label>

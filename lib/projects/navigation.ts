@@ -15,3 +15,10 @@ export function getProjectDetailsPath(role: string, projectId: string): string {
 export function getProjectTeamMembersPath(role: string, projectId: string): string {
   return `${getProjectDetailsPath(role, projectId)}${projectTeamMembersFocusQuery()}`;
 }
+
+/** DOM id for the paper version history block on adviser project detail. */
+export const PROJECT_PAPER_VERSIONS_SECTION_ID = 'project-paper-versions';
+
+export function adviserProjectPaperVersionsUrl(projectId: string): string {
+  return `/adviser/advisees/${projectId}#${PROJECT_PAPER_VERSIONS_SECTION_ID}`;
+}

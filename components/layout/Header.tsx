@@ -19,6 +19,7 @@ import {
   FiCalendar,
   FiArrowRight,
   FiUserPlus,
+  FiFileText,
 } from 'react-icons/fi';
 import { useSidebar } from './SidebarContext';
 import {
@@ -31,7 +32,7 @@ import {
   getRoleNotificationsPath,
   notificationFocusQuery,
 } from '@/lib/notifications/navigation';
-import { getProjectTeamMembersPath } from '@/lib/projects/navigation';
+import { getProjectTeamMembersPath, getProjectDetailsPath, adviserProjectPaperVersionsUrl } from '@/lib/projects/navigation';
 import { getRoleHomePath, getRoleProfilePath } from '@/lib/auth/roleAccess';
 import {
   getMyInvitations,
@@ -130,6 +131,21 @@ export default function Header({ user, onLogout }: HeaderProps) {
 
     if (notification.type === 'join_request' && projectId && notification.title === 'Join request') {
       router.push(getProjectTeamMembersPath(user?.role || 'student', projectId));
+      return;
+    }
+
+    if (notification.type === 'paper_version_committed' && projectId) {
+      router.push(getProjectDetailsPath(user?.role || 'student', projectId));
+      return;
+    }
+
+    if (notification.type === 'review_requested' && projectId) {
+      router.push(adviserProjectPaperVersionsUrl(projectId));
+      return;
+    }
+
+    if (notification.type === 'review_completed' && projectId) {
+      router.push(getProjectDetailsPath(user?.role || 'student', projectId));
       return;
     }
 
@@ -293,6 +309,9 @@ export default function Header({ user, onLogout }: HeaderProps) {
                     <FiArrowRight className="text-primary-500" />
                   )}
                   {n.type === 'join_request' && <FiUserPlus className="text-warning-600" />}
+                  {n.type === 'paper_version_committed' && <FiFileText className="text-primary-500" />}
+                  {n.type === 'review_requested' && <FiFileText className="text-warning-600" />}
+                  {n.type === 'review_completed' && <FiCheckCircle className="text-success-600" />}
                   {n.type !== 'defense_approved' &&
                     n.type !== 'defense_rejected' &&
                     n.type !== 'defense_moved' &&
@@ -300,7 +319,10 @@ export default function Header({ user, onLogout }: HeaderProps) {
                     n.type !== 'schedule' &&
                     n.type !== 'event' &&
                     n.type !== 'project_stage_updated' &&
-                    n.type !== 'join_request' && <FiBell className="text-primary-500" />}
+                    n.type !== 'join_request' &&
+                    n.type !== 'paper_version_committed' &&
+                    n.type !== 'review_requested' &&
+                    n.type !== 'review_completed' && <FiBell className="text-primary-500" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-neutral-800 truncate">{n.title}</p>

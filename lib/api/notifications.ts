@@ -12,7 +12,12 @@ export type NotificationType =
   | 'defense_moved'
   | 'event'
   | 'project_stage_updated'
-  | 'join_request';
+  | 'join_request'
+  | 'member_left'
+  | 'ownership_transferred'
+  | 'paper_version_committed'
+  | 'review_requested'
+  | 'review_completed';
 
 export interface NotificationItem {
   id: string;

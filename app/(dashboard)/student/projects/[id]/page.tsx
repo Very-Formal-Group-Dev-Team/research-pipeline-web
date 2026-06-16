@@ -32,6 +32,7 @@ import {
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
+import { getProjectReviewRequest, type PaperReviewRequest } from '@/lib/api/paperReviews';
 import UserSearchModal from '@/components/UserSearchModal';
 import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
@@ -128,6 +129,7 @@ export default function ProjectDetailPage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [paperVersions, setPaperVersions] = useState<PaperVersion[]>([]);
+  const [activeReviewRequest, setActiveReviewRequest] = useState<PaperReviewRequest | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [findingRelated, setFindingRelated] = useState(false);
   const [relatedStudiesError, setRelatedStudiesError] = useState<string | null>(null);
@@ -182,9 +184,15 @@ export default function ProjectDetailPage() {
     if (res.data) setProject(res.data);
   }, [params.id]);
 
+  const loadReviewRequest = useCallback(async () => {
+    if (!params.id) return;
+    const res = await getProjectReviewRequest(params.id as string);
+    setActiveReviewRequest(res.data ?? null);
+  }, [params.id]);
+
   const refreshPaperTimeline = useCallback(async () => {
-    await Promise.all([loadPaperVersions(), reloadProject()]);
-  }, [loadPaperVersions, reloadProject]);
+    await Promise.all([loadPaperVersions(), reloadProject(), loadReviewRequest()]);
+  }, [loadPaperVersions, reloadProject, loadReviewRequest]);
 
   const resolveCourseId = useCallback(
     (projectData: Project, courses: InstitutionCourse[]) => {
@@ -281,9 +289,10 @@ export default function ProjectDetailPage() {
     }
     load();
     loadPaperVersions();
+    loadReviewRequest();
     const interval = setInterval(loadMembers, 10000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCatalog, resolveCourseId, resolveProgramId]);
+  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCatalog, resolveCourseId, resolveProgramId, loadReviewRequest]);
 
   useEffect(() => {
     setEditableKeywords(project?.keywords || []);
@@ -1095,6 +1104,10 @@ export default function ProjectDetailPage() {
             versions={paperVersions}
             loading={versionsLoading}
             onRefresh={refreshPaperTimeline}
+            activeReviewRequest={activeReviewRequest}
+            canRequestReview={Boolean(currentMembership)}
+            reviewRequestsDisabled={projectIsLocked}
+            onReviewChange={loadReviewRequest}
           />
         </Card>
 
