@@ -15,6 +15,7 @@ import {
   FiArrowRight,
   FiX,
   FiUserPlus,
+  FiFileText,
 } from 'react-icons/fi';
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -35,7 +36,7 @@ import {
 } from '@/lib/notifications/display';
 import { useNotificationFocusScroll } from '@/lib/hooks/useNotificationFocusScroll';
 import { notificationDomId } from '@/lib/notifications/navigation';
-import { getProjectTeamMembersPath } from '@/lib/projects/navigation';
+import { getProjectTeamMembersPath, getProjectDetailsPath } from '@/lib/projects/navigation';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
@@ -62,6 +63,12 @@ function notificationIcon(type: string) {
       return <FiArrowRight className="text-2xl text-primary-600" />;
     case 'join_request':
       return <FiUserPlus className="text-2xl text-warning-600" />;
+    case 'paper_version_committed':
+      return <FiFileText className="text-2xl text-primary-600" />;
+    case 'review_requested':
+      return <FiFileText className="text-2xl text-warning-600" />;
+    case 'review_completed':
+      return <FiCheckCircle className="text-2xl text-success-600" />;
     default:
       return <FiBell className="text-2xl text-accent-600" />;
   }
@@ -117,6 +124,16 @@ export default function StudentNotificationsPage() {
 
     if (notification.type === 'join_request' && projectId && notification.title === 'Join request') {
       router.push(getProjectTeamMembersPath('student', projectId));
+      return;
+    }
+
+    if (notification.type === 'paper_version_committed' && projectId) {
+      router.push(getProjectDetailsPath('student', projectId));
+      return;
+    }
+
+    if (notification.type === 'review_completed' && projectId) {
+      router.push(getProjectDetailsPath('student', projectId));
     }
   }
 
@@ -224,15 +241,31 @@ export default function StudentNotificationsPage() {
                     notification.type === 'join_request' &&
                     notification.title === 'Join request' &&
                     typeof notification.metadata?.projectId === 'string';
+                  const isPaperCommitNotification =
+                    notification.type === 'paper_version_committed' &&
+                    typeof notification.metadata?.projectId === 'string';
+                  const isReviewCompletedNotification =
+                    notification.type === 'review_completed' &&
+                    typeof notification.metadata?.projectId === 'string';
 
                   return (
                     <Card
                       key={notification.id}
                       id={notificationDomId(notification.id)}
                       className={`${!notification.is_read ? 'border-l-4 border-l-primary-500' : ''} ${
-                        isJoinRequestForLeader ? 'cursor-pointer transition-colors hover:bg-neutral-50' : ''
+                        isJoinRequestForLeader ||
+                        isPaperCommitNotification ||
+                        isReviewCompletedNotification
+                          ? 'cursor-pointer transition-colors hover:bg-neutral-50'
+                          : ''
                       }`}
-                      onClick={isJoinRequestForLeader ? () => handleNotificationClick(notification) : undefined}
+                      onClick={
+                        isJoinRequestForLeader ||
+                        isPaperCommitNotification ||
+                        isReviewCompletedNotification
+                          ? () => handleNotificationClick(notification)
+                          : undefined
+                      }
                     >
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0 w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center">
