@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -12,6 +13,7 @@ import {
   FiCheckCircle,
   FiXCircle,
   FiArrowRight,
+  FiFileText,
 } from 'react-icons/fi';
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -27,16 +29,8 @@ import {
 } from '@/lib/api/notifications';
 import { useNotificationFocusScroll } from '@/lib/hooks/useNotificationFocusScroll';
 import { notificationDomId } from '@/lib/notifications/navigation';
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+import { adviserProjectPaperVersionsUrl } from '@/lib/projects/navigation';
+import { formatDateTime } from '@/lib/utils/formatDateTime';
 
 function notificationIcon(type: string) {
   switch (type) {
@@ -51,12 +45,15 @@ function notificationIcon(type: string) {
       return <FiCalendar className="text-2xl text-primary-600" />;
     case 'project_stage_updated':
       return <FiArrowRight className="text-2xl text-primary-600" />;
+    case 'review_requested':
+      return <FiFileText className="text-2xl text-warning-600" />;
     default:
       return <FiBell className="text-2xl text-accent-600" />;
   }
 }
 
 export default function AdviserNotificationsPage() {
+  const router = useRouter();
   const { user, handleLogout } = useDashboardUser('Adviser');
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -89,6 +86,24 @@ export default function AdviserNotificationsPage() {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }
 
+  async function handleNotificationClick(notification: NotificationItem) {
+    if (!notification.is_read) {
+      await markNotificationRead(notification.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)),
+      );
+    }
+
+    const projectId =
+      typeof notification.metadata?.projectId === 'string'
+        ? notification.metadata.projectId
+        : null;
+
+    if (notification.type === 'review_requested' && projectId) {
+      router.push(adviserProjectPaperVersionsUrl(projectId));
+    }
+  }
+
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   useNotificationFocusScroll(loading, notifications.length);
@@ -116,11 +131,19 @@ export default function AdviserNotificationsPage() {
           </div>
         ) : notifications.length > 0 ? (
           <div className="space-y-3">
-            {notifications.map((notification) => (
+            {notifications.map((notification) => {
+              const isReviewRequest =
+                notification.type === 'review_requested' &&
+                typeof notification.metadata?.projectId === 'string';
+
+              return (
               <Card
                 key={notification.id}
                 id={notificationDomId(notification.id)}
-                className={!notification.is_read ? 'border-l-4 border-l-primary-500' : ''}
+                className={`${!notification.is_read ? 'border-l-4 border-l-primary-500' : ''} ${
+                  isReviewRequest ? 'cursor-pointer transition-colors hover:bg-neutral-50' : ''
+                }`}
+                onClick={isReviewRequest ? () => handleNotificationClick(notification) : undefined}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center">
@@ -137,9 +160,9 @@ export default function AdviserNotificationsPage() {
                           {notification.title}
                         </h3>
                         <p className="text-xs text-neutral-500">
-                          {formatDate(notification.created_at)}
+                          {formatDateTime(notification.created_at)}
                           {notification.is_read && notification.read_at
-                            ? ` · Read ${formatDate(notification.read_at)}`
+                            ? ` · Read ${formatDateTime(notification.read_at)}`
                             : ''}
                         </p>
                       </div>
@@ -151,7 +174,10 @@ export default function AdviserNotificationsPage() {
                     {!notification.is_read && (
                       <button
                         type="button"
-                        onClick={() => handleMarkRead(notification.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleMarkRead(notification.id);
+                        }}
                         className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
                       >
                         Mark as read
@@ -160,7 +186,8 @@ export default function AdviserNotificationsPage() {
                   </div>
                 </div>
               </Card>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <Card>

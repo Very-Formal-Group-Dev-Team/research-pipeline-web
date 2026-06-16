@@ -32,6 +32,7 @@ import {
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
+import { getProjectReviewRequest, type PaperReviewRequest } from '@/lib/api/paperReviews';
 import UserSearchModal from '@/components/UserSearchModal';
 import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
@@ -128,6 +129,7 @@ export default function ProjectDetailPage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [paperVersions, setPaperVersions] = useState<PaperVersion[]>([]);
+  const [activeReviewRequest, setActiveReviewRequest] = useState<PaperReviewRequest | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [findingRelated, setFindingRelated] = useState(false);
   const [relatedStudiesError, setRelatedStudiesError] = useState<string | null>(null);
@@ -160,6 +162,7 @@ export default function ProjectDetailPage() {
   const [detailsSection, setDetailsSection] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [leaveConfirmModalOpen, setLeaveConfirmModalOpen] = useState(false);
 
   useSectionFocusScroll(
     PROJECT_TEAM_MEMBERS_SECTION_PARAM,
@@ -181,9 +184,15 @@ export default function ProjectDetailPage() {
     if (res.data) setProject(res.data);
   }, [params.id]);
 
+  const loadReviewRequest = useCallback(async () => {
+    if (!params.id) return;
+    const res = await getProjectReviewRequest(params.id as string);
+    setActiveReviewRequest(res.data ?? null);
+  }, [params.id]);
+
   const refreshPaperTimeline = useCallback(async () => {
-    await Promise.all([loadPaperVersions(), reloadProject()]);
-  }, [loadPaperVersions, reloadProject]);
+    await Promise.all([loadPaperVersions(), reloadProject(), loadReviewRequest()]);
+  }, [loadPaperVersions, reloadProject, loadReviewRequest]);
 
   const resolveCourseId = useCallback(
     (projectData: Project, courses: InstitutionCourse[]) => {
@@ -280,9 +289,10 @@ export default function ProjectDetailPage() {
     }
     load();
     loadPaperVersions();
+    loadReviewRequest();
     const interval = setInterval(loadMembers, 10000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCatalog, resolveCourseId, resolveProgramId]);
+  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCatalog, resolveCourseId, resolveProgramId, loadReviewRequest]);
 
   useEffect(() => {
     setEditableKeywords(project?.keywords || []);
@@ -360,6 +370,25 @@ export default function ProjectDetailPage() {
     if (savedKeywords.length !== editableKeywords.length) return true;
     return savedKeywords.some((keyword, index) => keyword !== editableKeywords[index]);
   }, [project, editableKeywords]);
+
+  const titleDirty = useMemo(() => {
+    if (!project || !isEditingTitle) return false;
+    return titleInput.trim() !== project.title;
+  }, [project, isEditingTitle, titleInput]);
+
+  const hasUnsavedChanges = detailsDirty || abstractDirty || keywordsDirty || titleDirty;
+
+  const navigateToProjects = () => {
+    router.push('/student/projects');
+  };
+
+  const handleBackToProjects = () => {
+    if (hasUnsavedChanges) {
+      setLeaveConfirmModalOpen(true);
+      return;
+    }
+    navigateToProjects();
+  };
 
   const existingUserIds = [
     ...members.map((m) => m.user_id),
@@ -700,7 +729,7 @@ export default function ProjectDetailPage() {
                 size="sm"
                 className="shrink-0 text-sm text-primary-700 hover:bg-primary-50"
                 leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
-                onClick={() => router.push('/student/projects')}
+                onClick={handleBackToProjects}
               >
                 Back to Projects
               </Button>
@@ -753,7 +782,7 @@ export default function ProjectDetailPage() {
             size="sm"
             className="hidden shrink-0 self-center text-sm text-primary-700 hover:bg-primary-50 sm:inline-flex sm:text-md"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
-            onClick={() => router.push('/student/projects')}
+            onClick={handleBackToProjects}
           >
             Back to Projects
           </Button>
@@ -828,7 +857,7 @@ export default function ProjectDetailPage() {
                     </option>
                     {institutionPrograms.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.name} ({item.code})
+                        {item.name}
                       </option>
                     ))}
                   </select>
@@ -1075,6 +1104,10 @@ export default function ProjectDetailPage() {
             versions={paperVersions}
             loading={versionsLoading}
             onRefresh={refreshPaperTimeline}
+            activeReviewRequest={activeReviewRequest}
+            canRequestReview={Boolean(currentMembership)}
+            reviewRequestsDisabled={projectIsLocked}
+            onReviewChange={loadReviewRequest}
           />
         </Card>
 
@@ -1136,6 +1169,38 @@ export default function ProjectDetailPage() {
           onLeft={(result) => void handleLeaveCompleted(result)}
         />
       ) : null}
+
+      <Modal
+        isOpen={leaveConfirmModalOpen}
+        onClose={() => setLeaveConfirmModalOpen(false)}
+        title="Discard changes?"
+        size="sm"
+      >
+        <p className="text-sm text-neutral-600">
+          You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+        </p>
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setLeaveConfirmModalOpen(false)}
+          >
+            Continue Editing
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setLeaveConfirmModalOpen(false);
+              navigateToProjects();
+            }}
+          >
+            Discard Changes
+          </Button>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={deleteModalOpen}

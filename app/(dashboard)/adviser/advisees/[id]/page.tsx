@@ -23,6 +23,7 @@ import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard
 import type { SearchUserResult } from '@/lib/api/users';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
 import { getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
+import { getProjectReviewRequest, type PaperReviewRequest } from '@/lib/api/paperReviews';
 import {
   cancelMeeting,
   completeMeeting,
@@ -37,6 +38,7 @@ import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
 import { meetingUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import { PROJECT_MEETINGS_SECTION_ID } from '@/lib/meetings/navigation';
+import { PROJECT_PAPER_VERSIONS_SECTION_ID } from '@/lib/projects/navigation';
 import {
   MEETING_STATUS_FILTER_OPTIONS,
   MEETINGS_FILTER_CONTROL_CLASS,
@@ -117,6 +119,7 @@ export default function AdviserProjectDetailPage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [paperVersions, setPaperVersions] = useState<PaperVersion[]>([]);
+  const [activeReviewRequest, setActiveReviewRequest] = useState<PaperReviewRequest | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [meetings, setMeetings] = useState<Defense[]>([]);
   const [meetingsLoading, setMeetingsLoading] = useState(true);
@@ -254,6 +257,20 @@ export default function AdviserProjectDetailPage() {
     return () => window.clearTimeout(timer);
   }, [meetingsLoading]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash !== `#${PROJECT_PAPER_VERSIONS_SECTION_ID}`) return;
+
+    const scrollToPaperVersions = () => {
+      document
+        .getElementById(PROJECT_PAPER_VERSIONS_SECTION_ID)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const timer = window.setTimeout(scrollToPaperVersions, 100);
+    return () => window.clearTimeout(timer);
+  }, [versionsLoading]);
+
   const existingUserIds = [
     ...members.map((m) => m.user_id),
     ...pendingInvites.map((m) => m.user_id),
@@ -299,15 +316,21 @@ export default function AdviserProjectDetailPage() {
     if (res.data) setProject(res.data);
   }, [projectId]);
 
+  const loadReviewRequest = useCallback(async () => {
+    const res = await getProjectReviewRequest(projectId);
+    setActiveReviewRequest(res.data ?? null);
+  }, [projectId]);
+
   const refreshPaperTimeline = useCallback(async () => {
-    await Promise.all([loadPaperVersions(), reloadProject()]);
-  }, [loadPaperVersions, reloadProject]);
+    await Promise.all([loadPaperVersions(), reloadProject(), loadReviewRequest()]);
+  }, [loadPaperVersions, reloadProject, loadReviewRequest]);
 
   useEffect(() => {
     if (projectId) {
       void loadPaperVersions();
+      void loadReviewRequest();
     }
-  }, [projectId, loadPaperVersions]);
+  }, [projectId, loadPaperVersions, loadReviewRequest]);
 
   const handleBookMeeting = () => {
     if (!project) return;
@@ -697,7 +720,7 @@ export default function AdviserProjectDetailPage() {
         </Modal>
 
         {/* Paper versions — timeline includes its own section header */}
-        <Card>
+        <Card id={PROJECT_PAPER_VERSIONS_SECTION_ID} className="scroll-mt-24">
           <PaperVersionTimeline
             projectId={project.id}
             paperStandard={project.paper_standard}
@@ -705,6 +728,9 @@ export default function AdviserProjectDetailPage() {
             loading={versionsLoading}
             onRefresh={refreshPaperTimeline}
             allowUpload={false}
+            activeReviewRequest={activeReviewRequest}
+            canCompleteReview={Boolean(activeReviewRequest)}
+            onReviewChange={loadReviewRequest}
           />
         </Card>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { performLogout } from '@/lib/auth/logout';
 import { useUserProfile, type UserProfileView } from './useUserProfile';
 
 export interface DashboardUser {
@@ -36,8 +37,8 @@ export function useDashboardUser(fallbackRole: string = 'Student'): UseDashboard
     ? { name: profile.name, email: profile.email, role: profile.role, avatar: profile.avatar }
     : { name: '', email: '', role: fallbackRole, avatar: undefined };
 
-  const handleLogout = () => {
-    document.cookie = 'session_token=; path=/; max-age=0';
+  const handleLogout = async () => {
+    await performLogout();
     router.push('/login');
   };
 

@@ -8,7 +8,8 @@ import Select from './ui/Select';
 import Avatar from './ui/Avatar';
 import { useRouter } from 'next/navigation';
 import { completeProfile } from '@/lib/api/users';
-import { getRoleHomePath } from '@/lib/auth/roleAccess';
+import useAuth from '@/lib/hooks/useAuth';
+import { markDebriefPending } from '@/lib/onboarding/debriefSession';
 import InstitutionSearchField from '@/components/InstitutionSearchField';
 import type { RegisteredInstitution } from '@/lib/api/institutions';
 
@@ -42,6 +43,7 @@ export default function NewAccountConfigModal({
   googlePhotoUrl,
 }: NewAccountConfigModalProps) {
   const router = useRouter();
+  const { refresh } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<FormData>({
@@ -161,9 +163,10 @@ export default function NewAccountConfigModal({
       return;
     }
 
-    const redirectPath = result.redirectPath || getRoleHomePath(formData.role);
+    markDebriefPending();
+    await refresh();
     onClose();
-    router.push(redirectPath);
+    router.push('/onboarding/welcome');
   };
 
   const roleOptions = [

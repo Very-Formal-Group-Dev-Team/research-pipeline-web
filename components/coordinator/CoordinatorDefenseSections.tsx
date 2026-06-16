@@ -40,19 +40,10 @@ import {
 import { saveDefenseBatchSession } from '@/lib/coordinator/defenseBatchSession';
 import DefenseCardExpandContent from '@/components/defenses/DefenseCardExpandContent';
 import DefenseSortControls from '@/components/defenses/DefenseSortControls';
+import { formatWallClockDateTime } from '@/lib/utils/formatDateTime';
 
 function formatDateTime(iso?: string | null) {
-  if (!iso) return '-';
-  const localWallClock = new Date(iso.replace(/Z$/i, ''));
-  if (Number.isNaN(localWallClock.getTime())) return '-';
-  return localWallClock.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  return formatWallClockDateTime(iso);
 }
 
 function normalizeDefenseTimes(defense: Defense): Defense {
