@@ -25,6 +25,7 @@ import { adviserProjectMeetingsUrl } from '@/lib/meetings/navigation';
 import { getMeeting } from '@/lib/api/defenses';
 import { createPortal } from 'react-dom';
 import { toast as sonnerToast } from 'sonner';
+import { formatWallClockDateTime } from '@/lib/utils/formatDateTime';
 
 interface ScheduledDefense {
   id: string;
@@ -63,21 +64,12 @@ interface OverlapConflictResponse {
 
 function parseNaiveDate(iso?: string | null) {
   if (!iso) return null;
-  // The API stores wall-clock datetimes without timezone info but
-  // JSON serialisation may add a trailing "Z".  Strip it so the
-  // browser interprets the value as local time, not UTC.
   const parsed = new Date(iso.replace(/Z$/i, ''));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function formatDateTime(iso?: string | null) {
-  const parsed = parseNaiveDate(iso);
-  if (!parsed) return '-';
-  return parsed.toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit',
-    hour12: true,
-  });
+  return formatWallClockDateTime(iso);
 }
 
 function computeTotalTime(start?: string | null, end?: string | null) {

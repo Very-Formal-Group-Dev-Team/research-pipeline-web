@@ -26,7 +26,9 @@ export default function DashboardLayout({ children, role, user, onLogout }: Dash
     <SidebarProvider>
       <div
         className={`dashboard-ui min-h-screen overflow-x-hidden ${
-          usesPortalChrome ? 'coordinator-theme coordinator-main-bg' : 'bg-neutral-50'
+          usesPortalChrome
+            ? 'coordinator-theme coordinator-main-bg'
+            : 'bg-neutral-50 dark:bg-neutral-900'
         }`}
       >
         <Header user={user} onLogout={onLogout} />

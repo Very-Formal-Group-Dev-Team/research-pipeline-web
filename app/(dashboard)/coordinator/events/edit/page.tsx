@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft } from 'react-icons/fi';
 
@@ -8,6 +8,10 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/Button';
 import DefenseBatchPlanner from '@/components/coordinator/DefenseBatchPlanner';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
+import {
+  confirmUnsavedLeave,
+  useUnsavedChangesWarning,
+} from '@/lib/hooks/useUnsavedChangesWarning';
 import {
   bookDefenseSchedule,
   getCoordinatorRubrics,
@@ -52,6 +56,24 @@ export default function CoordinatorDefenseEditPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [plannerDirty, setPlannerDirty] = useState(false);
+
+  const eventsListPath = '/coordinator/events?tab=approved';
+
+  const isDraftDirty = useMemo(() => {
+    if (!session || !draft) return false;
+    return JSON.stringify(draft) !== JSON.stringify(session.draft);
+  }, [draft, session]);
+
+  const isDirty = isDraftDirty || plannerDirty;
+
+  useUnsavedChangesWarning(isDirty);
+
+  const handleLeave = useCallback(() => {
+    if (!isDirty || confirmUnsavedLeave()) {
+      router.push(eventsListPath);
+    }
+  }, [isDirty, router, eventsListPath]);
 
   useEffect(() => {
     const stored = loadDefenseBatchSession();
@@ -151,7 +173,7 @@ export default function CoordinatorDefenseEditPage() {
 
     setSubmitting(false);
     clearDefenseBatchSession();
-    router.push('/coordinator/events?tab=approved');
+    router.push(eventsListPath);
   }
 
   if (!ready || !session || !draft) {
@@ -186,7 +208,7 @@ export default function CoordinatorDefenseEditPage() {
             size="sm"
             className="shrink-0 self-start sm:self-center text-primary-700 hover:bg-primary-50"
             leftIcon={<FiArrowLeft className="h-4 w-4" aria-hidden />}
-            onClick={() => router.push('/coordinator/events?tab=approved')}
+            onClick={handleLeave}
           >
             Back to Events
           </Button>
@@ -203,7 +225,8 @@ export default function CoordinatorDefenseEditPage() {
           loadingAvailableGroups={courseGroupsLoading}
           submitting={submitting}
           error={error}
-          onBack={() => router.push('/coordinator/events?tab=approved')}
+          onDirtyChange={setPlannerDirty}
+          onBack={handleLeave}
           onSave={handleSaveBatchAssignments}
         />
       </div>

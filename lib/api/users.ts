@@ -13,6 +13,10 @@ export interface UserProfile {
   avatar_url?: string;
   role?: string;
   status_text?: string;
+  auth_provider?: 'email' | 'google';
+  email_verified?: boolean | number;
+  institution_id?: string;
+  institution_name?: string;
 }
 
 export interface CompleteProfilePayload {
@@ -119,4 +123,36 @@ export function searchUsers(email: string, role?: 'student' | 'adviser', limit =
 /** Get user role. */
 export function getUserRole() {
   return get<{ role: string }>('/users/me/role');
+}
+
+export interface NotificationPreference {
+  type: string;
+  enabled: boolean;
+}
+
+/** Fetch in-app notification preferences. */
+export function getNotificationPreferences() {
+  return get<{ preferences: NotificationPreference[] }>('/user/notification-preferences');
+}
+
+/** Update in-app notification preferences. */
+export function updateNotificationPreferences(preferences: NotificationPreference[]) {
+  return patch<{ preferences: NotificationPreference[] }>('/user/notification-preferences', {
+    preferences,
+  });
+}
+
+export interface DisplayPreferences {
+  theme: 'light' | 'dark' | 'system' | null;
+  timezone: string | null;
+}
+
+/** Fetch theme and timezone preferences from the server. */
+export function getDisplayPreferences() {
+  return get<DisplayPreferences>('/user/display-preferences');
+}
+
+/** Update theme and/or timezone on the server. */
+export function updateDisplayPreferences(payload: Partial<DisplayPreferences>) {
+  return patch<DisplayPreferences>('/user/display-preferences', payload);
 }

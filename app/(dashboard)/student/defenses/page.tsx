@@ -10,22 +10,7 @@ import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import { getMyProjectDefenses, type Defense } from '@/lib/api/defenses';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { isOnlineModality } from '@/lib/meetings/jitsi';
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+import { formatWallClockDateLong, formatWallClockTime } from '@/lib/utils/formatDateTime';
 
 const typeVariant: Record<string, 'primary' | 'warning' | 'success'> = {
   proposal: 'primary',
@@ -89,13 +74,13 @@ export default function StudentDefensesPage() {
                 <div className="space-y-3 text-neutral-700">
                   <div className="flex items-center gap-3">
                     <FiCalendar className="text-accent-500 flex-shrink-0" />
-                    <span>{formatDate(defense.start_time)}</span>
+                    <span>{formatWallClockDateLong(defense.start_time)}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <FiClock className="text-accent-500 flex-shrink-0" />
                     <span>
-                      {formatTime(defense.start_time)}
-                      {defense.end_time ? ` - ${formatTime(defense.end_time)}` : ''}
+                      {formatWallClockTime(defense.start_time)}
+                      {defense.end_time ? ` - ${formatWallClockTime(defense.end_time)}` : ''}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">

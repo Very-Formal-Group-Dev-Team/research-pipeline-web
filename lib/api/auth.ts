@@ -73,3 +73,26 @@ export function verifyEmail(token: string) {
 export function resendVerification(email: string) {
   return post<{ message: string }>('/auth/resend-verification', { email });
 }
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
+/** Change password for email sign-in accounts. */
+export function changePassword(payload: ChangePasswordPayload) {
+  return post<{ success: boolean; message: string }>('/auth/change-password', payload);
+}
+
+/** Request a password reset email. */
+export function requestPasswordReset(email: string) {
+  return post<{ success: boolean; message: string }>('/auth/forgot-password', { email });
+}
+
+/** Reset password using a token from email. */
+export function resetPasswordWithToken(token: string, new_password: string) {
+  return post<{ success: boolean; message: string }>('/auth/reset-password', {
+    token,
+    new_password,
+  });
+}

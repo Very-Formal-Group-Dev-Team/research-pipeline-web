@@ -213,6 +213,37 @@ export function createEmptyLanes(templates: Omit<BatchLane, 'groupIds'>[]): Batc
   return templates.map((lane) => ({ ...lane, groupIds: [] }));
 }
 
+/** Rebuild lane time slots from templates while keeping group-to-batch assignments. */
+export function rebuildLanesPreservingAssignments(
+  templates: Omit<BatchLane, 'groupIds'>[],
+  currentLanes: BatchLane[],
+  eventGroups: CourseGroup[],
+): { lanes: BatchLane[]; unassignedIds: string[] } {
+  const lanes = createEmptyLanes(templates);
+
+  if (!currentLanes.length) {
+    return {
+      lanes,
+      unassignedIds: eventGroups.map((group) => group.id),
+    };
+  }
+
+  currentLanes.forEach((oldLane, index) => {
+    const targetIndex = Math.min(index, lanes.length - 1);
+    const targetLane = lanes[targetIndex];
+    oldLane.groupIds.forEach((groupId) => {
+      if (!targetLane.groupIds.includes(groupId)) {
+        targetLane.groupIds.push(groupId);
+      }
+    });
+  });
+
+  return {
+    lanes,
+    unassignedIds: collectUnassignedGroupIds(eventGroups, lanes),
+  };
+}
+
 export function summarizeDivision({
   method,
   groupCount,
@@ -313,4 +344,44 @@ export function moveGroupBetweenContainers({
   }
 
   return { lanes: nextLanes, unassignedIds: nextUnassigned };
+}
+
+export interface PlannerDirtyState {
+  eventGroupIds: string[];
+  lanes: Array<{
+    id: string;
+    batchNumber: number;
+    startTime: string;
+    endTime: string;
+    groupIds: string[];
+  }>;
+  divisionMethod: DivisionMethod;
+  batchCount: number;
+  durationMinutes: number;
+}
+
+export function buildPlannerDirtyState(
+  eventGroups: CourseGroup[],
+  lanes: BatchLane[],
+  divisionMethod: DivisionMethod,
+  batchCount: number,
+  durationMinutes: number,
+): PlannerDirtyState {
+  return {
+    eventGroupIds: eventGroups.map((group) => group.id),
+    lanes: lanes.map((lane) => ({
+      id: lane.id,
+      batchNumber: lane.batchNumber,
+      startTime: lane.startTime,
+      endTime: lane.endTime,
+      groupIds: [...lane.groupIds],
+    })),
+    divisionMethod,
+    batchCount,
+    durationMinutes,
+  };
+}
+
+export function serializePlannerDirtyState(state: PlannerDirtyState): string {
+  return JSON.stringify(state);
 }

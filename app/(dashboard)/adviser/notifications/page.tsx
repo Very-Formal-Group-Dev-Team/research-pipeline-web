@@ -30,16 +30,7 @@ import {
 import { useNotificationFocusScroll } from '@/lib/hooks/useNotificationFocusScroll';
 import { notificationDomId } from '@/lib/notifications/navigation';
 import { adviserProjectPaperVersionsUrl } from '@/lib/projects/navigation';
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+import { formatDateTime } from '@/lib/utils/formatDateTime';
 
 function notificationIcon(type: string) {
   switch (type) {
@@ -169,9 +160,9 @@ export default function AdviserNotificationsPage() {
                           {notification.title}
                         </h3>
                         <p className="text-xs text-neutral-500">
-                          {formatDate(notification.created_at)}
+                          {formatDateTime(notification.created_at)}
                           {notification.is_read && notification.read_at
-                            ? ` · Read ${formatDate(notification.read_at)}`
+                            ? ` · Read ${formatDateTime(notification.read_at)}`
                             : ''}
                         </p>
                       </div>

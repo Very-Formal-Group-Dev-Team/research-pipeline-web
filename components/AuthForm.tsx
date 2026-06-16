@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { getUser, login, register, oAuthSignIn, resendVerification } from "@/lib/api/auth";
@@ -501,7 +502,7 @@ function AuthForm({ mode }: { mode: Mode }) {
                   />
                   <span>Remember me</span>
                 </label>
-                <a href="#" className="text-eerieBlack/80 hover:text-eerieBlack transition-colors sm:text-right">Forgot Password?</a>
+                <Link href="/forgot-password" className="text-eerieBlack/80 hover:text-eerieBlack transition-colors sm:text-right">Forgot Password?</Link>
               </div>
             )}
           </div>

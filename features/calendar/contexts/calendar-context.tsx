@@ -2,9 +2,14 @@
 
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
-import { useLocalStorage } from "@/features/calendar/hooks";
 import type { IEvent, IUser } from "@/features/calendar/interfaces";
 import type { TCalendarView, TEventColor } from "@/features/calendar/types";
+import {
+  DEFAULT_CALENDAR_SETTINGS,
+  readCalendarSettings,
+  writeCalendarSettings,
+  type CalendarSettings,
+} from "@/lib/preferences/displaySettings";
 
 interface ICalendarContext {
   selectedDate: Date;
@@ -33,7 +38,7 @@ interface ICalendarContext {
   readOnly: boolean;
 }
 
-interface CalendarSettings {
+interface CalendarSettingsState {
   badgeVariant: "dot" | "colored";
   view: TCalendarView;
   use24HourFormat: boolean;
@@ -42,17 +47,7 @@ interface CalendarSettings {
 }
 
 export const MIN_SCROLL_HOUR = 0;
-// With a fixed calendar height, having 16h on top
-// of the frame allows to see the rest of the day
 export const MAX_SCROLL_HOUR = 16;
-
-const DEFAULT_SETTINGS: CalendarSettings = {
-  badgeVariant: "colored",
-  view: "day",
-  use24HourFormat: true,
-  startOfDayHour: 8,
-  agendaModeGroupBy: "date",
-};
 
 const CalendarContext = createContext({} as ICalendarContext);
 
@@ -72,14 +67,12 @@ export function CalendarProvider({
   readOnly?: boolean;
 }) {
 
-  const [rawSettings, setSettings] = useLocalStorage<Partial<CalendarSettings>>("calendar-settings", {});
-
-  const settings: CalendarSettings = {
-    ...DEFAULT_SETTINGS,
+  const [settings, setSettingsState] = useState<CalendarSettings>(() => ({
+    ...DEFAULT_CALENDAR_SETTINGS,
     badgeVariant: badge,
-    view: view,
-    ...rawSettings,
-  };
+    view,
+    ...readCalendarSettings(),
+  }));
 
   const [badgeVariant, setBadgeVariantState] = useState<"dot" | "colored">(
     settings.badgeVariant,
@@ -96,6 +89,20 @@ export function CalendarProvider({
   const [agendaModeGroupBy, setAgendaModeGroupByState] = useState<
     "date" | "color"
   >(settings.agendaModeGroupBy);
+
+  useEffect(() => {
+    const syncFromStorage = () => {
+      const next = readCalendarSettings();
+      setSettingsState(next);
+      setBadgeVariantState(next.badgeVariant);
+      setCurrentViewState(next.view);
+      setUse24HourFormatState(next.use24HourFormat);
+      setStartOfDayHourState(next.startOfDayHour);
+      setAgendaModeGroupByState(next.agendaModeGroupBy);
+    };
+    window.addEventListener('calendar-settings-changed', syncFromStorage);
+    return () => window.removeEventListener('calendar-settings-changed', syncFromStorage);
+  }, []);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedUserId, setSelectedUserId] = useState<IUser["id"] | "all">(
@@ -114,11 +121,9 @@ export function CalendarProvider({
     setSelectedUserId("all");
   }, [events]);
 
-  const updateSettings = (newPartialSettings: Partial<CalendarSettings>) => {
-    setSettings((prev) => ({
-      ...prev,
-      ...newPartialSettings,
-    }));
+  const updateSettings = (newPartialSettings: Partial<CalendarSettingsState>) => {
+    const next = writeCalendarSettings(newPartialSettings);
+    setSettingsState(next);
   };
 
   const setBadgeVariant = (variant: "dot" | "colored") => {
