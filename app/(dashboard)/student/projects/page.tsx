@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -23,6 +23,15 @@ import {
   type ProjectMember,
 } from '@/lib/api/projects';
 import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
+import ProjectListToolbar from '@/components/projects/ProjectListToolbar';
+import {
+  DEFAULT_PROJECT_LIST_FILTERS,
+  filterAndSortProjects,
+  getProjectCourseOptions,
+  getProjectProgramOptions,
+  isProjectListFiltersDirty,
+  type ProjectListFilterState,
+} from '@/lib/projects/listFilters';
 import { formatProjectCardDate, formatProjectCardMeta } from '@/lib/utils/projectDisplay';
 
 const ABSTRACT_PREVIEW_MAX_CHARS = 92;
@@ -65,15 +74,12 @@ export default function StudentProjectsPage() {
   const [expandedMembers, setExpandedMembers] = useState<ProjectMember[]>([]);
   const [expandedMembersLoading, setExpandedMembersLoading] = useState(false);
   const [expandedMembersError, setExpandedMembersError] = useState<string | null>(null);
+  const [listFilters, setListFilters] = useState<ProjectListFilterState>(DEFAULT_PROJECT_LIST_FILTERS);
   const expandedMembersRequestRef = useRef<string | null>(null);
 
   const refreshProjects = async () => {
     const [projRes, invRes] = await Promise.all([getMyProjects(), getMyInvitations()]);
-    setProjects(
-      (projRes.data || []).sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
-    );
+    setProjects(projRes.data || []);
     setInvitations(invRes.data || []);
   };
 
@@ -90,11 +96,7 @@ export default function StudentProjectsPage() {
       setLoading(true);
       const [projRes, invRes] = await Promise.all([getMyProjects(), getMyInvitations()]);
       if (!cancelled) {
-        setProjects(
-          (projRes.data || []).sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          )
-        );
+        setProjects(projRes.data || []);
         setInvitations(invRes.data || []);
         setLoading(false);
       }
@@ -163,6 +165,14 @@ export default function StudentProjectsPage() {
   };
 
   const isLoading = profileLoading || loading;
+
+  const courseOptions = useMemo(() => getProjectCourseOptions(projects), [projects]);
+  const programOptions = useMemo(() => getProjectProgramOptions(projects), [projects]);
+  const filteredProjects = useMemo(
+    () => filterAndSortProjects(projects, listFilters),
+    [projects, listFilters],
+  );
+  const filtersActive = isProjectListFiltersDirty(listFilters);
 
   const modalTransition = prefersReducedMotion
     ? { duration: 0 }
@@ -319,20 +329,31 @@ export default function StudentProjectsPage() {
     <>
       <DashboardLayout role="student" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-primary-700">My Projects</h1>
-            <p className="text-neutral-600 mt-1">Manage your research projects</p>
+        <div className="space-y-4">
+          {/* Page Header */}
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-primary-700">My Projects</h1>
+              <p className="text-neutral-600 mt-1">Manage your research projects</p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              className="shrink-0 px-4 py-2 text-base hover:bg-primary-600 hover:shadow-none active:bg-primary-700 active:shadow-none"
+              onClick={() => router.push('/student/projects/create')}
+            >
+              <FiPlus className="mr-1" /> New Project
+            </Button>
           </div>
-          <Button
-            variant="primary"
-            size="sm"
-            className="shrink-0 px-4 py-2 text-base hover:bg-primary-600 hover:shadow-none active:bg-primary-700 active:shadow-none"
-            onClick={() => router.push('/student/projects/create')}
-          >
-            <FiPlus className="mr-1" /> New Project
-          </Button>
+
+          {!isLoading && projects.length > 0 && (
+            <ProjectListToolbar
+              filters={listFilters}
+              courseOptions={courseOptions}
+              programOptions={programOptions}
+              onFiltersChange={setListFilters}
+            />
+          )}
         </div>
 
         {/* Pending Invitations */}
@@ -389,9 +410,29 @@ export default function StudentProjectsPage() {
           <div className="flex items-center justify-center h-64">
             <p className="text-neutral-500">Loading projects...</p>
           </div>
+        ) : projects.length > 0 && filteredProjects.length === 0 ? (
+          <Card>
+            <EmptyState
+              icon={<FiFolder />}
+              title="No matching projects"
+              description={
+                filtersActive
+                  ? 'Try adjusting your search, course, or program filters.'
+                  : 'No projects match the current sort and filter settings.'
+              }
+              action={
+                filtersActive
+                  ? {
+                      label: 'Reset filters',
+                      onClick: () => setListFilters(DEFAULT_PROJECT_LIST_FILTERS),
+                    }
+                  : undefined
+              }
+            />
+          </Card>
         ) : projects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {projects.map((project) => {
+            {filteredProjects.map((project) => {
               const abstractText = projectAbstract(project);
               return (
                 <div key={project.id} className="h-full">

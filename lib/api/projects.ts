@@ -24,6 +24,7 @@ export interface Project {
   program_id?: string | null;
   course?: string;
   course_id?: string | null;
+  course_code?: string | null;
   section?: string;
   member_role?: string;
 }

@@ -347,7 +347,7 @@ export default function CreateProjectPage() {
                   onChange={(e) => setProgramId(e.target.value)}
                   options={institutionPrograms.map((item) => ({
                     value: item.id,
-                    label: `${item.name} (${item.code})`,
+                    label: item.name,
                   }))}
                   disabled={programsLoading}
                   responsiveText

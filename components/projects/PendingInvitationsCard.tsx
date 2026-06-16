@@ -31,11 +31,14 @@ function formatInvitationRole(role: string, contributorRole?: string | null) {
 export interface PendingInvitationsCardProps {
   onInvitationResponded?: (detail: ProjectInvitationRespondedDetail) => void;
   emptyMessage?: string;
+  /** When true, renders nothing unless there is at least one pending invitation. */
+  hideWhenEmpty?: boolean;
 }
 
 export default function PendingInvitationsCard({
   onInvitationResponded,
   emptyMessage = 'You have no pending project invitations.',
+  hideWhenEmpty = false,
 }: PendingInvitationsCardProps) {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,6 +98,10 @@ export default function PendingInvitationsCard({
     );
     await loadInvitations();
     setRespondingId(null);
+  }
+
+  if (hideWhenEmpty && (loading || invitations.length === 0)) {
+    return null;
   }
 
   return (
