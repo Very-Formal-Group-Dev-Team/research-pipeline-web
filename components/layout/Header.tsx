@@ -33,7 +33,7 @@ import {
   notificationFocusQuery,
 } from '@/lib/notifications/navigation';
 import { getProjectTeamMembersPath, getProjectDetailsPath, adviserProjectPaperVersionsUrl } from '@/lib/projects/navigation';
-import { getRoleHomePath, getRoleProfilePath } from '@/lib/auth/roleAccess';
+import { getRoleHomePath, getRoleProfilePath, getRoleSettingsPath } from '@/lib/auth/roleAccess';
 import {
   getMyInvitations,
   respondToInvitation,
@@ -195,7 +195,15 @@ export default function Header({ user, onLogout }: HeaderProps) {
       label: 'Settings',
       value: 'settings',
       icon: <FiSettings />,
-      onClick: () => console.log('Navigate to settings'),
+      onClick: () => {
+        if (user) {
+          const url = getRoleSettingsPath(user.role);
+          if (pathname === url) {
+            return;
+          }
+          router.replace(url);
+        }
+      },
     },
     {
       label: '',

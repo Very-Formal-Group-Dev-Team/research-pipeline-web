@@ -26,8 +26,30 @@
     --ring: 203 52% 35%;
   }
 
+  .dark {
+    --background: 220 20% 10%;
+    --foreground: 40 20% 96%;
+    --card: 220 18% 14%;
+    --card-foreground: 40 20% 96%;
+    --popover: 220 18% 14%;
+    --popover-foreground: 40 20% 96%;
+    --primary: 203 40% 70%;
+    --primary-foreground: 220 20% 10%;
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 40 20% 96%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 65%;
+    --accent: 220 15% 22%;
+    --accent-foreground: 40 20% 96%;
+    --destructive: 358 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 12% 28%;
+    --input: 220 12% 28%;
+    --ring: 203 40% 55%;
+  }
+
   body {
-    @apply bg-snow text-eerieBlack;
+    @apply bg-snow text-eerieBlack dark:bg-neutral-900 dark:text-neutral-100;
   }
 
   /* Headings only — section/page/card titles */
@@ -316,6 +338,28 @@
 
 .coordinator-theme .coordinator-spinner {
   border-color: #9b4455;
+}
+
+.dark .coordinator-theme .coordinator-main-bg,
+.dark .coordinator-theme.bg-neutral-50 {
+  background-color: #141820 !important;
+}
+
+.dark .coordinator-theme {
+  color: #e8e6e6;
+}
+
+.dark .coordinator-theme .coordinator-heading,
+.dark .coordinator-theme h1.text-primary-700,
+.dark .coordinator-theme h2.text-primary-700,
+.dark .coordinator-theme h3.text-primary-700,
+.dark .coordinator-theme h1.dark\:text-primary-200 {
+  color: #f0ecec !important;
+}
+
+.dark .coordinator-theme .coordinator-text-muted,
+.dark .coordinator-theme .text-neutral-600 {
+  color: #a8a4a5;
 }
 
 /* Project detail read-only abstract: wrap long unbroken strings within the card */

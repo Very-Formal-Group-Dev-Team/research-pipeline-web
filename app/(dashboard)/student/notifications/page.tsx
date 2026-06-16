@@ -37,16 +37,7 @@ import {
 import { useNotificationFocusScroll } from '@/lib/hooks/useNotificationFocusScroll';
 import { notificationDomId } from '@/lib/notifications/navigation';
 import { getProjectTeamMembersPath, getProjectDetailsPath } from '@/lib/projects/navigation';
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+import { formatDateTime } from '@/lib/utils/formatDateTime';
 
 function notificationIcon(type: string) {
   switch (type) {
@@ -201,7 +192,7 @@ export default function StudentNotificationsPage() {
                           <Badge variant="default">{inv.role}</Badge>
                         </div>
                         <p className="text-sm text-neutral-600 mt-1">
-                          Invited on {formatDate(inv.invited_at)}
+                          Invited on {formatDateTime(inv.invited_at)}
                         </p>
                         <div className="flex gap-2 mt-3">
                           <Button
@@ -278,7 +269,7 @@ export default function StudentNotificationsPage() {
                                 {notification.title}
                               </h3>
                               <p className="text-xs text-neutral-500">
-                                {formatDate(notification.created_at)}
+                                {formatDateTime(notification.created_at)}
                               </p>
                             </div>
                             <Badge variant={getNotificationVariant(notification.type)}>

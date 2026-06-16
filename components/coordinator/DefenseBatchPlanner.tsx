@@ -13,11 +13,13 @@ import type { DefenseBatchPlannerDraft } from '@/lib/coordinator/defenseBatchSes
 import {
   buildLaneTemplates,
   collectUnassignedGroupIds,
-  createEmptyLanes,
   formatTimeRange,
   getGroupsById,
   getTimeframeMinutes,
   moveGroupBetweenContainers,
+  rebuildLanesPreservingAssignments,
+  serializePlannerDirtyState,
+  buildPlannerDirtyState,
   summarizeDivision,
   type BatchLane,
   type DivisionMethod,
@@ -38,6 +40,7 @@ interface DefenseBatchPlannerProps {
   error?: string | null;
   onBack: () => void;
   onSave: (lanes: BatchLane[]) => void | Promise<void>;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const DIVISION_OPTIONS: { value: DivisionMethod; label: string }[] = [
@@ -245,6 +248,7 @@ export default function DefenseBatchPlanner({
   error = null,
   onBack,
   onSave,
+  onDirtyChange,
 }: DefenseBatchPlannerProps) {
   const [eventGroups, setEventGroups] = useState<CourseGroup[]>(initialGroups);
   const [divisionMethod, setDivisionMethod] = useState<DivisionMethod>('by_batches');
@@ -257,11 +261,36 @@ export default function DefenseBatchPlanner({
   const [groupSearch, setGroupSearch] = useState('');
   const [selectedAddGroupIds, setSelectedAddGroupIds] = useState<string[]>([]);
   const [openBatchIds, setOpenBatchIds] = useState<Set<string>>(() => new Set());
-  const initialLanesApplied = useRef(false);
-  const lastEventWindowKey = useRef(`${draft.date}|${draft.startTime}|${draft.endTime}`);
+  const initialLanesHydratedRef = useRef(false);
+  const plannerBaselineRef = useRef<string | null>(null);
+
+  const plannerDirtySnapshot = useMemo(
+    () =>
+      serializePlannerDirtyState(
+        buildPlannerDirtyState(
+          eventGroups,
+          lanes,
+          divisionMethod,
+          batchCount,
+          durationMinutes,
+        ),
+      ),
+    [eventGroups, lanes, divisionMethod, batchCount, durationMinutes],
+  );
+
+  useEffect(() => {
+    if (lanes.length === 0) return;
+
+    if (plannerBaselineRef.current === null) {
+      plannerBaselineRef.current = plannerDirtySnapshot;
+      onDirtyChange?.(false);
+      return;
+    }
+
+    onDirtyChange?.(plannerDirtySnapshot !== plannerBaselineRef.current);
+  }, [lanes.length, plannerDirtySnapshot, onDirtyChange]);
 
   const groupMap = useMemo(() => getGroupsById(eventGroups), [eventGroups]);
-  const eventWindowKey = `${draft.date}|${draft.startTime}|${draft.endTime}`;
   const timeframeMinutes = useMemo(
     () => Math.max(1, getTimeframeMinutes(draft.startTime, draft.endTime)),
     [draft.startTime, draft.endTime],
@@ -287,23 +316,20 @@ export default function DefenseBatchPlanner({
   );
 
   useEffect(() => {
-    if (lastEventWindowKey.current !== eventWindowKey) {
-      lastEventWindowKey.current = eventWindowKey;
-      initialLanesApplied.current = false;
-    }
-
-    if (initialLaneAssignments?.length && !initialLanesApplied.current) {
-      initialLanesApplied.current = true;
+    if (initialLaneAssignments?.length && !initialLanesHydratedRef.current) {
+      initialLanesHydratedRef.current = true;
       setLanes(initialLaneAssignments);
       setUnassignedIds(collectUnassignedGroupIds(eventGroups, initialLaneAssignments));
       setBatchCount(Math.max(1, initialLaneAssignments.length));
       return;
     }
 
-    setLanes(createEmptyLanes(laneTemplates));
-    setUnassignedIds(eventGroups.map((group) => group.id));
-    // Reset only when lane structure changes (division method/inputs), not when groups are added.
-  }, [laneTemplateKey, laneTemplates, initialLaneAssignments, eventWindowKey, eventGroups]);
+    setLanes((currentLanes) => {
+      const rebuilt = rebuildLanesPreservingAssignments(laneTemplates, currentLanes, eventGroups);
+      setUnassignedIds(rebuilt.unassignedIds);
+      return rebuilt.lanes;
+    });
+  }, [laneTemplateKey, laneTemplates, initialLaneAssignments, eventGroups]);
 
   useEffect(() => {
     setBatchCount((current) => clampDivisionValue(current, 1, maxBatchCount));

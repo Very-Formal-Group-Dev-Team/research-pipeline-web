@@ -8,6 +8,7 @@ import {
   FiFolder,
   FiCalendar,
   FiUser,
+  FiSettings,
   FiUsers,
   FiClipboard,
   FiX,
@@ -43,6 +44,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Events', href: '/student/events', icon: <FiCalendar />, tooltip: 'Defenses, meetings, and institution events' },
     { label: 'Recordings', href: RECORDINGS_HREF, icon: <FiVideo />, tooltip: 'Recorded meetings and transcripts' },
     { label: 'Profile', href: '/student/profile', icon: <FiUser /> },
+    { label: 'Settings', href: '/student/settings', icon: <FiSettings /> },
   ],
   adviser: [
     { label: 'Dashboard', href: '/adviser', icon: <FiHome /> },
@@ -52,11 +54,13 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Recordings', href: RECORDINGS_HREF, icon: <FiVideo />, tooltip: 'Recorded meetings and transcripts' },
     { label: 'Rubrics', href: '/adviser/rubrics', icon: <FiClipboard /> },
     { label: 'Profile', href: '/adviser/profile', icon: <FiUser /> },
+    { label: 'Settings', href: '/adviser/settings', icon: <FiSettings /> },
   ],
   admin: [
     { label: 'Dashboard', href: '/admin', icon: <FiHome /> },
     { label: 'Institutions', href: '/admin/institutions', icon: <FiBookOpen /> },
     { label: 'Profile', href: '/admin/profile', icon: <FiUser /> },
+    { label: 'Settings', href: '/admin/settings', icon: <FiSettings /> },
   ],
   coordinator: [
     { label: 'Dashboard', href: '/coordinator', icon: <FiHome /> },
@@ -67,6 +71,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
     { label: 'Rubrics', href: '/coordinator/rubrics', icon: <FiClipboard /> },
     { label: 'Profile', href: '/coordinator/profile', icon: <FiUser /> },
+    { label: 'Settings', href: '/coordinator/settings', icon: <FiSettings /> },
   ],
 };
 

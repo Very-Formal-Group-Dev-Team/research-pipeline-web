@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, DM_Serif_Text } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -35,12 +36,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${dmSans.className} ${dmSans.variable} ${dmSerifText.variable} bg-coordinator-cream text-coordinator-ink antialiased`}
+        className={`${dmSans.className} ${dmSans.variable} ${dmSerifText.variable} bg-coordinator-cream text-coordinator-ink antialiased dark:bg-neutral-900 dark:text-neutral-100`}
       >
-        {children}
-        <Toaster position="top-right" richColors />
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-right" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

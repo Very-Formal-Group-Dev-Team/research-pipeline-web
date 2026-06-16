@@ -15,6 +15,9 @@ export interface UserProfileView {
   role: string;
   avatar?: string;
   statusText?: string;
+  authProvider?: 'email' | 'google';
+  emailVerified?: boolean;
+  institutionName?: string;
 }
 
 export function useUserProfile() {
@@ -39,6 +42,9 @@ export function useUserProfile() {
           role: p.role ? p.role.charAt(0).toUpperCase() + p.role.slice(1) : 'Student',
           avatar: resolveAvatarUrl(p.avatar_url),
           statusText: p.status_text || undefined,
+          authProvider: p.auth_provider,
+          emailVerified: Boolean(p.email_verified),
+          institutionName: p.institution_name || undefined,
         });
       }
     } catch (e) {

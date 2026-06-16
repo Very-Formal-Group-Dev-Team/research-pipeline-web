@@ -55,9 +55,10 @@ export default function Card({
       id={id}
       className={`
         bg-white border-[1px] border-solid border-neutral-400 rounded-md
+        dark:bg-neutral-800 dark:border-neutral-600
         ${paddingStyles[padding]}
         ${shadowStyles[shadow]}
-        ${elevateOnHover ? 'transition-all hover:shadow-lg hover:border-neutral-400' : ''}
+        ${elevateOnHover ? 'transition-all hover:shadow-lg hover:border-neutral-400 dark:hover:border-neutral-500' : ''}
         ${hover || onClick ? 'cursor-pointer' : ''}
         ${className}
       `}
@@ -79,7 +80,7 @@ export function CardHeader({ children, className = '' }: { children: React.React
 
 export function CardTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <h3 className={`font-serif text-xl font-semibold text-eerieBlack ${className}`}>
+    <h3 className={`font-serif text-xl font-semibold text-eerieBlack dark:text-neutral-100 ${className}`}>
       {children}
     </h3>
   );
@@ -111,7 +112,7 @@ export function CardDescription({
 
   return (
     <p
-      className={`w-full min-w-0 overflow-hidden font-sans text-sm text-neutral-600 mt-1 ${clampClass} ${heightClass} ${className}`}
+      className={`w-full min-w-0 overflow-hidden font-sans text-sm text-neutral-600 dark:text-neutral-400 mt-1 ${clampClass} ${heightClass} ${className}`}
     >
       {children}
     </p>

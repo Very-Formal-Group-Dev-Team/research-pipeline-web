@@ -30,6 +30,10 @@ export function getRoleProfilePath(role: string | null | undefined): string {
   return `${getRoleHomePath(role)}/profile`;
 }
 
+export function getRoleSettingsPath(role: string | null | undefined): string {
+  return `${getRoleHomePath(role)}/settings`;
+}
+
 export function getRoleNotificationsPath(role: string | null | undefined): string {
   return `${getRoleHomePath(role)}/notifications`;
 }
