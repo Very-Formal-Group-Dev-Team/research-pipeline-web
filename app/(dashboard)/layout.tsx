@@ -8,6 +8,7 @@ import {
   getRoleHomePath,
   isRoleProtectedPath,
 } from '@/lib/auth/roleAccess';
+import { isDebriefPending } from '@/lib/onboarding/debriefSession';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -24,6 +25,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     if (!user.role && isRoleProtectedPath(pathname)) {
       router.replace('/onboarding');
+      return;
+    }
+
+    if (user.role && isDebriefPending()) {
+      router.replace('/onboarding/welcome');
       return;
     }
 
@@ -45,12 +51,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const lacksRoleForDashboard = !user.role && isRoleProtectedPath(pathname);
+  const pendingDebrief = Boolean(user.role) && isDebriefPending();
   const wrongRoleDashboard =
     Boolean(user.role) &&
     isRoleProtectedPath(pathname) &&
     !canAccessPath(user.role, pathname);
 
-  if (lacksRoleForDashboard || wrongRoleDashboard) {
+  if (lacksRoleForDashboard || pendingDebrief || wrongRoleDashboard) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-archivumRed" />

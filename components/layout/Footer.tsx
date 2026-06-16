@@ -9,7 +9,7 @@ export interface FooterProps {
 const footerLinks = [
   { href: '#', label: 'Privacy Policy' },
   { href: '#', label: 'Terms of Service' },
-  { href: '#', label: 'Help Center' },
+  { href: '/help', label: 'Help Center' },
 ] as const;
 
 function FooterLinks({ className = '' }: { className?: string }) {
