@@ -56,12 +56,12 @@ export function formatProjectCardDate(iso: string) {
 
 type ProjectCardMetaSource = {
   program?: string | null;
-  course?: string | null;
+  course_code?: string | null;
 };
 
-/** Program and course only — for project list card footers. */
+/** Program and course code only — for project list card footers. */
 export function buildProjectCardMetaParts(project: ProjectCardMetaSource): string[] {
-  return [project.program?.trim() || '', project.course?.trim() || ''].filter(Boolean);
+  return [project.program?.trim() || '', project.course_code?.trim() || ''].filter(Boolean);
 }
 
 export function formatProjectCardMeta(project: ProjectCardMetaSource): string {
