@@ -14,6 +14,7 @@ import {
   FiXCircle,
   FiArrowRight,
   FiFileText,
+  FiEdit,
 } from 'react-icons/fi';
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -29,7 +30,7 @@ import {
 } from '@/lib/api/notifications';
 import { useNotificationFocusScroll } from '@/lib/hooks/useNotificationFocusScroll';
 import { notificationDomId } from '@/lib/notifications/navigation';
-import { adviserProjectPaperVersionsUrl } from '@/lib/projects/navigation';
+import { adviserProjectPaperVersionsUrl, getProjectDetailsPath, getProjectTeamMembersPath } from '@/lib/projects/navigation';
 import { formatDateTime } from '@/lib/utils/formatDateTime';
 
 function notificationIcon(type: string) {
@@ -47,6 +48,8 @@ function notificationIcon(type: string) {
       return <FiArrowRight className="text-2xl text-primary-600" />;
     case 'review_requested':
       return <FiFileText className="text-2xl text-warning-600" />;
+    case 'project_updated':
+      return <FiEdit className="text-2xl text-primary-600" />;
     default:
       return <FiBell className="text-2xl text-accent-600" />;
   }
@@ -101,6 +104,19 @@ export default function AdviserNotificationsPage() {
 
     if (notification.type === 'review_requested' && projectId) {
       router.push(adviserProjectPaperVersionsUrl(projectId));
+      return;
+    }
+
+    if (notification.type === 'project_updated' && projectId) {
+      const changeType =
+        typeof notification.metadata?.changeType === 'string'
+          ? notification.metadata.changeType
+          : null;
+      if (changeType === 'team') {
+        router.push(getProjectTeamMembersPath('adviser', projectId));
+      } else {
+        router.push(getProjectDetailsPath('adviser', projectId));
+      }
     }
   }
 
@@ -135,15 +151,19 @@ export default function AdviserNotificationsPage() {
               const isReviewRequest =
                 notification.type === 'review_requested' &&
                 typeof notification.metadata?.projectId === 'string';
+              const isProjectUpdate =
+                notification.type === 'project_updated' &&
+                typeof notification.metadata?.projectId === 'string';
+              const isClickable = isReviewRequest || isProjectUpdate;
 
               return (
               <Card
                 key={notification.id}
                 id={notificationDomId(notification.id)}
                 className={`${!notification.is_read ? 'border-l-4 border-l-primary-500' : ''} ${
-                  isReviewRequest ? 'cursor-pointer transition-colors hover:bg-neutral-50' : ''
+                  isClickable ? 'cursor-pointer transition-colors hover:bg-neutral-50' : ''
                 }`}
-                onClick={isReviewRequest ? () => handleNotificationClick(notification) : undefined}
+                onClick={isClickable ? () => handleNotificationClick(notification) : undefined}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center">

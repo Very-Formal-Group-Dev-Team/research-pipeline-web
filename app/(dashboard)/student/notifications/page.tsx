@@ -16,6 +16,7 @@ import {
   FiX,
   FiUserPlus,
   FiFileText,
+  FiEdit,
 } from 'react-icons/fi';
 import EmptyState from '@/components/layout/EmptyState';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -56,6 +57,8 @@ function notificationIcon(type: string) {
       return <FiUserPlus className="text-2xl text-warning-600" />;
     case 'paper_version_committed':
       return <FiFileText className="text-2xl text-primary-600" />;
+    case 'project_updated':
+      return <FiEdit className="text-2xl text-primary-600" />;
     case 'review_requested':
       return <FiFileText className="text-2xl text-warning-600" />;
     case 'review_completed':
@@ -120,6 +123,19 @@ export default function StudentNotificationsPage() {
 
     if (notification.type === 'paper_version_committed' && projectId) {
       router.push(getProjectDetailsPath('student', projectId));
+      return;
+    }
+
+    if (notification.type === 'project_updated' && projectId) {
+      const changeType =
+        typeof notification.metadata?.changeType === 'string'
+          ? notification.metadata.changeType
+          : null;
+      if (changeType === 'team') {
+        router.push(getProjectTeamMembersPath('student', projectId));
+      } else {
+        router.push(getProjectDetailsPath('student', projectId));
+      }
       return;
     }
 
@@ -235,25 +251,29 @@ export default function StudentNotificationsPage() {
                   const isPaperCommitNotification =
                     notification.type === 'paper_version_committed' &&
                     typeof notification.metadata?.projectId === 'string';
+                  const isProjectUpdateNotification =
+                    notification.type === 'project_updated' &&
+                    typeof notification.metadata?.projectId === 'string';
                   const isReviewCompletedNotification =
                     notification.type === 'review_completed' &&
                     typeof notification.metadata?.projectId === 'string';
+                  const isClickableNotification =
+                    isJoinRequestForLeader ||
+                    isPaperCommitNotification ||
+                    isProjectUpdateNotification ||
+                    isReviewCompletedNotification;
 
                   return (
                     <Card
                       key={notification.id}
                       id={notificationDomId(notification.id)}
                       className={`${!notification.is_read ? 'border-l-4 border-l-primary-500' : ''} ${
-                        isJoinRequestForLeader ||
-                        isPaperCommitNotification ||
-                        isReviewCompletedNotification
+                        isClickableNotification
                           ? 'cursor-pointer transition-colors hover:bg-neutral-50'
                           : ''
                       }`}
                       onClick={
-                        isJoinRequestForLeader ||
-                        isPaperCommitNotification ||
-                        isReviewCompletedNotification
+                        isClickableNotification
                           ? () => handleNotificationClick(notification)
                           : undefined
                       }

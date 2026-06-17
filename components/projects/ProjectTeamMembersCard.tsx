@@ -68,7 +68,7 @@ export interface ProjectTeamMembersCardProps {
   pendingInvites: ProjectMember[];
   currentUserId?: string;
   isProjectLeader?: boolean;
-  viewerContext?: 'student' | 'adviser';
+  viewerContext?: 'student' | 'adviser' | 'coordinator';
   onMembersChange: () => void;
   onInviteClick: () => void;
   inviteSuccess?: string | null;
@@ -128,6 +128,18 @@ export default function ProjectTeamMembersCard({
       Boolean(currentUserId) &&
       members.some(
         (member) => member.user_id === currentUserId && member.status === 'accepted',
+      ),
+    [currentUserId, members],
+  );
+
+  const isCurrentAdviser = useMemo(
+    () =>
+      Boolean(currentUserId) &&
+      members.some(
+        (member) =>
+          member.user_id === currentUserId &&
+          member.role === 'adviser' &&
+          member.status === 'accepted',
       ),
     [currentUserId, members],
   );
@@ -282,6 +294,7 @@ export default function ProjectTeamMembersCard({
                 {pendingInvites.length > 0 ? ` · ${pendingInvites.length} pending` : ''}
               </CardDescription>
             </div>
+            {viewerContext !== 'coordinator' ? (
             <Button
               variant="primary"
               size="sm"
@@ -291,6 +304,7 @@ export default function ProjectTeamMembersCard({
             >
               Invite Members
             </Button>
+            ) : null}
           </div>
         </CardHeader>
 
@@ -310,7 +324,7 @@ export default function ProjectTeamMembersCard({
           <div className="space-y-3">
             {members.map((member) => {
               const showRemove =
-                canManageTeam && member.role !== 'leader' && member.status === 'accepted';
+                isCurrentAdviser && member.role === 'member' && member.status === 'accepted';
               const showMakeLeader =
                 viewerContext === 'student' &&
                 isProjectLeader &&

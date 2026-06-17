@@ -74,6 +74,15 @@ export default function CoordinatorCoursesPage() {
     );
   }, [editingCourse, formData]);
 
+  const duplicateCourseName = useMemo(() => {
+    const name = formData.courseName.trim().toLowerCase();
+    if (!name) return false;
+    return courses.some(
+      (c) =>
+        c.course_name.trim().toLowerCase() === name && c.id !== editingCourse?.id,
+    );
+  }, [formData.courseName, courses, editingCourse]);
+
   async function loadCourses() {
     setLoading(true);
     const res = await getCourses();
@@ -123,6 +132,10 @@ export default function CoordinatorCoursesPage() {
   async function handleSubmit() {
     if (!formData.courseName.trim() || !formData.code.trim()) {
       setFormError('Course name and code are required.');
+      return;
+    }
+    if (duplicateCourseName) {
+      setFormError('A course with this name already exists.');
       return;
     }
     if (editingCourse && !courseFormDirty) return;
@@ -361,8 +374,10 @@ export default function CoordinatorCoursesPage() {
         dense
       >
         <div className="space-y-3">
-          {formError && (
-            <div className="rounded-lg bg-error-50 p-2.5 text-sm text-error-700">{formError}</div>
+          {(formError || duplicateCourseName) && (
+            <div className="rounded-lg bg-error-50 p-2.5 text-sm text-error-700">
+              {formError || 'A course with this name already exists.'}
+            </div>
           )}
           <Input
             label="Course Name"
@@ -401,7 +416,11 @@ export default function CoordinatorCoursesPage() {
             variant="primary"
             size="sm"
             onClick={handleSubmit}
-            disabled={submitting || (Boolean(editingCourse) && !courseFormDirty)}
+            disabled={
+              submitting ||
+              duplicateCourseName ||
+              (Boolean(editingCourse) && !courseFormDirty)
+            }
             loading={submitting}
           >
             {submitting ? 'Saving...' : editingCourse ? 'Update' : 'Create'}
@@ -409,21 +428,25 @@ export default function CoordinatorCoursesPage() {
         </ModalFooter>
       </Modal>
 
-      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Course">
-        <div className="p-6 space-y-4">
-          <p className="text-sm text-neutral-600">
-            Are you sure you want to delete <strong>{deleteTarget?.course_name}</strong> (
-            {deleteTarget?.code})? This action cannot be undone.
-          </p>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              Cancel
-            </Button>
-            <Button variant="error" onClick={handleDelete} disabled={deleting}>
-              {deleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </div>
-        </div>
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Course"
+        size="sm"
+        dense
+      >
+        <p className="text-sm text-neutral-600">
+          Are you sure you want to delete <strong>{deleteTarget?.course_name}</strong> (
+          {deleteTarget?.code})? This action cannot be undone.
+        </p>
+        <ModalFooter className="!mt-4 !pt-3">
+          <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>
+            Cancel
+          </Button>
+          <Button variant="error" size="sm" onClick={handleDelete} disabled={deleting}>
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </ModalFooter>
       </Modal>
 
       <Modal

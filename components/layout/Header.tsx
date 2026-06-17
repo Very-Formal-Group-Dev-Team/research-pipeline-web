@@ -20,6 +20,7 @@ import {
   FiArrowRight,
   FiUserPlus,
   FiFileText,
+  FiEdit,
 } from 'react-icons/fi';
 import { useSidebar } from './SidebarContext';
 import {
@@ -136,6 +137,19 @@ export default function Header({ user, onLogout }: HeaderProps) {
 
     if (notification.type === 'paper_version_committed' && projectId) {
       router.push(getProjectDetailsPath(user?.role || 'student', projectId));
+      return;
+    }
+
+    if (notification.type === 'project_updated' && projectId) {
+      const changeType =
+        typeof notification.metadata?.changeType === 'string'
+          ? notification.metadata.changeType
+          : null;
+      if (changeType === 'team') {
+        router.push(getProjectTeamMembersPath(user?.role || 'student', projectId));
+      } else {
+        router.push(getProjectDetailsPath(user?.role || 'student', projectId));
+      }
       return;
     }
 
@@ -318,6 +332,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
                   )}
                   {n.type === 'join_request' && <FiUserPlus className="text-warning-600" />}
                   {n.type === 'paper_version_committed' && <FiFileText className="text-primary-500" />}
+                  {n.type === 'project_updated' && <FiEdit className="text-primary-500" />}
                   {n.type === 'review_requested' && <FiFileText className="text-warning-600" />}
                   {n.type === 'review_completed' && <FiCheckCircle className="text-success-600" />}
                   {n.type !== 'defense_approved' &&
@@ -329,6 +344,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
                     n.type !== 'project_stage_updated' &&
                     n.type !== 'join_request' &&
                     n.type !== 'paper_version_committed' &&
+                    n.type !== 'project_updated' &&
                     n.type !== 'review_requested' &&
                     n.type !== 'review_completed' && <FiBell className="text-primary-500" />}
                 </div>
@@ -336,7 +352,11 @@ export default function Header({ user, onLogout }: HeaderProps) {
                   <p className="text-sm font-medium text-neutral-800 truncate">{n.title}</p>
                   <p className="text-xs text-neutral-500 line-clamp-2 mt-0.5">{n.message}</p>
                   <p className="text-xs text-neutral-400 mt-1">
-                    {new Date(n.created_at).toLocaleDateString()}
+                    {new Date(n.created_at).toLocaleDateString()} ·{' '}
+                    {new Date(n.created_at).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </p>
                 </div>
                 {!n.is_read && (

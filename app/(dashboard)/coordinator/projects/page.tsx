@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -45,6 +46,7 @@ function formatProjectCourse(project: InstitutionProject): string {
 }
 
 export default function CoordinatorProjectsPage() {
+  const router = useRouter();
   const { user, handleLogout } = useDashboardUser('Coordinator');
   const [tab, setTab] = useState<'by-adviser' | 'all'>('by-adviser');
   const [advisers, setAdvisers] = useState<AdviserWithProjects[]>([]);
@@ -159,7 +161,20 @@ export default function CoordinatorProjectsPage() {
                             {adviser.projects.map((proj) => {
                               const badge = projectStatusBadge(proj.status);
                               return (
-                                <div key={proj.id} className="px-4 py-3 sm:px-6 pl-14 flex items-center gap-3">
+                                <div
+                                  key={proj.id}
+                                  role="link"
+                                  tabIndex={0}
+                                  aria-label={`View project ${proj.title}`}
+                                  className="px-4 py-3 sm:px-6 pl-14 flex items-center gap-3 cursor-pointer hover:bg-neutral-50 transition-colors"
+                                  onClick={() => router.push(`/coordinator/projects/${proj.id}`)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                      event.preventDefault();
+                                      router.push(`/coordinator/projects/${proj.id}`);
+                                    }
+                                  }}
+                                >
                                   <FiFolder className="text-neutral-300 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-neutral-800 truncate">{proj.title}</p>
@@ -212,7 +227,20 @@ export default function CoordinatorProjectsPage() {
                   {allProjects.map((project) => {
                     const badge = projectStatusBadge(project.status);
                     return (
-                      <tr key={project.id} className="bg-white hover:bg-neutral-50">
+                      <tr
+                        key={project.id}
+                        className="bg-white hover:bg-neutral-50 cursor-pointer"
+                        onClick={() => router.push(`/coordinator/projects/${project.id}`)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            router.push(`/coordinator/projects/${project.id}`);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="link"
+                        aria-label={`View project ${project.title}`}
+                      >
                         <td className="min-w-[10rem] max-w-xs px-4 py-3 sm:px-6 font-medium text-neutral-800">
                           <span className="line-clamp-2">{project.title}</span>
                         </td>

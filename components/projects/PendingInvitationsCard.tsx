@@ -125,7 +125,7 @@ export default function PendingInvitationsCard({
         ) : invitations.length === 0 ? (
           <p className="font-sans text-sm text-neutral-500 py-4">{emptyMessage}</p>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto space-y-3 pr-1 -mr-1">
+          <div className="min-h-0 flex-1 overflow-y-auto space-y-3 pt-4 pr-1 -mr-1">
             {invitations.map((invitation) => (
             <div
               key={invitation.id}
