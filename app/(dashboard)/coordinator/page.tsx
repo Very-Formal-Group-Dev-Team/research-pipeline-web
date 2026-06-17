@@ -112,7 +112,7 @@ export default function CoordinatorDashboardPage() {
               ))}
             </div>
 
-            <Card hover onClick={() => router.push('/coordinator/events?tab=pending')}>
+            {/* <Card hover onClick={() => router.push('/coordinator/events?tab=pending')}>
               <CardIconHeader
                 title="Defense Verification"
                 description="Review and approve defense schedules proposed by advisers"
@@ -130,7 +130,7 @@ export default function CoordinatorDashboardPage() {
                   Review defenses →
                 </span>
               </div>
-            </Card>
+            </Card> */}
 
             <Card padding="none" className="overflow-hidden">
               <div className={CARD_HEADER_SECTION_CLASS}>

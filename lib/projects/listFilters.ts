@@ -1,11 +1,18 @@
-import type { Project } from '@/lib/api/projects';
 import {
   getProjectStageStepIndex,
   normalizeProjectStage,
   PROJECT_STAGE_STEPPER_ORDER,
 } from '@/lib/utils/projectStage';
 
-export type ProjectSortBy = 'date' | 'title' | 'stage';
+export interface ProjectListFilterable {
+  title: string;
+  status: string;
+  created_at: string;
+  course_code?: string | null;
+  program?: string | null;
+}
+
+export type ProjectSortBy = 'date' | 'title' | 'stage' | 'adviser';
 export type ProjectSortDirection = 'asc' | 'desc';
 
 export interface ProjectListFilterState {
@@ -46,18 +53,23 @@ function uniqueSortedLabels(values: Array<string | undefined | null>): string[] 
   return [...seen].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
-export function getProjectCourseOptions(projects: Project[]): string[] {
+export function getProjectCourseOptions(projects: ProjectListFilterable[]): string[] {
   return uniqueSortedLabels(projects.map((project) => project.course_code));
 }
 
-export function getProjectProgramOptions(projects: Project[]): string[] {
+export function getProjectProgramOptions(projects: ProjectListFilterable[]): string[] {
   return uniqueSortedLabels(projects.map((project) => project.program));
 }
 
-export function filterAndSortProjects(
-  projects: Project[],
+export interface FilterAndSortProjectsOptions<T extends ProjectListFilterable> {
+  getAdviserName?: (project: T) => string;
+}
+
+export function filterAndSortProjects<T extends ProjectListFilterable>(
+  projects: T[],
   filters: ProjectListFilterState,
-): Project[] {
+  options?: FilterAndSortProjectsOptions<T>,
+): T[] {
   const query = filters.searchQuery.trim().toLowerCase();
 
   const filtered = projects.filter((project) => {
@@ -84,6 +96,19 @@ export function filterAndSortProjects(
       const stageDiff = stageSortIndex(a.status) - stageSortIndex(b.status);
       if (stageDiff !== 0) {
         return applyDirection(stageDiff, filters.sortDirection);
+      }
+      return applyDirection(
+        a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+        filters.sortDirection,
+      );
+    }
+    if (filters.sortBy === 'adviser') {
+      const getAdviserName = options?.getAdviserName ?? (() => '');
+      const adviserDiff = getAdviserName(a).localeCompare(getAdviserName(b), undefined, {
+        sensitivity: 'base',
+      });
+      if (adviserDiff !== 0) {
+        return applyDirection(adviserDiff, filters.sortDirection);
       }
       return applyDirection(
         a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),

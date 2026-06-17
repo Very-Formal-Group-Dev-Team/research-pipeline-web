@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import EmptyState from '@/components/layout/EmptyState';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { FiChevronDown, FiChevronRight, FiFolder } from 'react-icons/fi';
+import ProjectListToolbar from '@/components/projects/ProjectListToolbar';
+import { FiFolder } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   getProjectsByAdviser,
@@ -14,10 +16,26 @@ import {
   type InstitutionProject,
 } from '@/lib/api/coordinator';
 import {
+  DEFAULT_PROJECT_LIST_FILTERS,
+  filterAndSortProjects,
+  getProjectCourseOptions,
+  getProjectProgramOptions,
+  isProjectListFiltersDirty,
+  type ProjectListFilterState,
+  type ProjectSortBy,
+} from '@/lib/projects/listFilters';
+import {
   formatProjectStageLabel,
   projectStageBadgeVariant,
 } from '@/lib/utils/projectStage';
 import type { BadgeVariant } from '@/components/ui/Badge';
+
+const COORDINATOR_SORT_OPTIONS: { value: ProjectSortBy; label: string; shortLabel: string }[] = [
+  { value: 'date', label: 'Date', shortLabel: 'Date' },
+  { value: 'title', label: 'Alphabetical', shortLabel: 'A–Z' },
+  { value: 'stage', label: 'Research stage', shortLabel: 'Stage' },
+  { value: 'adviser', label: 'Adviser', shortLabel: 'Adviser' },
+];
 
 function projectStatusBadge(status: string): { label: string; variant: BadgeVariant } {
   return {
@@ -48,11 +66,10 @@ function formatProjectCourse(project: InstitutionProject): string {
 export default function CoordinatorProjectsPage() {
   const router = useRouter();
   const { user, handleLogout } = useDashboardUser('Coordinator');
-  const [tab, setTab] = useState<'by-adviser' | 'all'>('by-adviser');
   const [advisers, setAdvisers] = useState<AdviserWithProjects[]>([]);
   const [allProjects, setAllProjects] = useState<InstitutionProject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [listFilters, setListFilters] = useState<ProjectListFilterState>(DEFAULT_PROJECT_LIST_FILTERS);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,134 +89,85 @@ export default function CoordinatorProjectsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  function toggleExpand(adviserId: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(adviserId)) next.delete(adviserId);
-      else next.add(adviserId);
-      return next;
-    });
-  }
+  const adviserNameByProjectId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const adviser of advisers) {
+      const name = adviser.full_name?.trim() || adviser.email?.trim() || '';
+      for (const project of adviser.projects) {
+        map.set(project.id, name);
+      }
+    }
+    return map;
+  }, [advisers]);
+
+  const courseOptions = useMemo(() => getProjectCourseOptions(allProjects), [allProjects]);
+  const programOptions = useMemo(() => getProjectProgramOptions(allProjects), [allProjects]);
+  const filteredProjects = useMemo(
+    () =>
+      filterAndSortProjects(allProjects, listFilters, {
+        getAdviserName: (project) => adviserNameByProjectId.get(project.id) || '',
+      }),
+    [allProjects, listFilters, adviserNameByProjectId],
+  );
+  const filtersActive = isProjectListFiltersDirty(listFilters);
+  const hasNoMatches = allProjects.length > 0 && filteredProjects.length === 0;
+
+  const noMatchingProjectsState = (
+    <Card>
+      <EmptyState
+        icon={<FiFolder />}
+        title="No matching projects"
+        description={
+          filtersActive
+            ? 'Try adjusting your search, course, or program filters.'
+            : 'No projects match the current sort and filter settings.'
+        }
+        action={
+          filtersActive
+            ? {
+                label: 'Reset filters',
+                onClick: () => setListFilters(DEFAULT_PROJECT_LIST_FILTERS),
+              }
+            : undefined
+        }
+      />
+    </Card>
+  );
 
   return (
     <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-primary-700">All Projects</h1>
-          <p className="text-neutral-600 mt-1">
-            Projects in your institution, grouped by assigned adviser
-          </p>
-        </div>
+        <div className="space-y-4">
+          <div>
+            <h1 className="text-3xl font-bold text-primary-700">All Projects</h1>
+            <p className="text-neutral-600 mt-1">
+              Projects in your institution
+            </p>
+          </div>
 
-        <div className="flex gap-2 border-b border-neutral-200 pb-0">
-          <button
-            onClick={() => setTab('by-adviser')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              tab === 'by-adviser'
-                ? 'border-primary-500 text-primary-700'
-                : 'border-transparent text-neutral-500 hover:text-neutral-700'
-            }`}
-          >
-            By Adviser
-          </button>
-          <button
-            onClick={() => setTab('all')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              tab === 'all'
-                ? 'border-primary-500 text-primary-700'
-                : 'border-transparent text-neutral-500 hover:text-neutral-700'
-            }`}
-          >
-            All Projects
-            {allProjects.length > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs bg-neutral-100 text-neutral-600 rounded-full">
-                {allProjects.length}
-              </span>
-            )}
-          </button>
+          {!loading && allProjects.length > 0 && (
+            <ProjectListToolbar
+              filters={listFilters}
+              courseOptions={courseOptions}
+              programOptions={programOptions}
+              onFiltersChange={setListFilters}
+              sortOptions={COORDINATOR_SORT_OPTIONS}
+            />
+          )}
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
           </div>
-        ) : tab === 'by-adviser' ? (
-          advisers.length === 0 ? (
-            <Card>
-              <div className="text-center py-8 text-neutral-500">
-                No advisers or projects found in your institution.
-              </div>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {advisers.map((adviser) => {
-                const isOpen = expanded.has(adviser.id);
-                return (
-                  <Card key={adviser.id} padding="none">
-                    <button
-                      onClick={() => toggleExpand(adviser.id)}
-                      className="w-full px-4 py-3 sm:px-6 flex items-center gap-3 hover:bg-neutral-50 transition-colors text-left"
-                    >
-                      {isOpen ? <FiChevronDown className="text-neutral-400" /> : <FiChevronRight className="text-neutral-400" />}
-                      <div className="w-9 h-9 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                        {adviser.full_name?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-neutral-800 truncate">{adviser.full_name}</p>
-                        <p className="text-xs text-neutral-500 truncate">{adviser.email}</p>
-                      </div>
-                      <span className="text-xs text-neutral-500 bg-neutral-100 px-2 py-1 rounded-full">
-                        {adviser.projects.length} project{adviser.projects.length !== 1 ? 's' : ''}
-                      </span>
-                    </button>
-                    {isOpen && (
-                      <div className="border-t border-neutral-100">
-                        {adviser.projects.length === 0 ? (
-                          <p className="px-4 py-3 sm:px-6 text-sm text-neutral-400 italic">No projects assigned</p>
-                        ) : (
-                          <div className="divide-y divide-neutral-50">
-                            {adviser.projects.map((proj) => {
-                              const badge = projectStatusBadge(proj.status);
-                              return (
-                                <div
-                                  key={proj.id}
-                                  role="link"
-                                  tabIndex={0}
-                                  aria-label={`View project ${proj.title}`}
-                                  className="px-4 py-3 sm:px-6 pl-14 flex items-center gap-3 cursor-pointer hover:bg-neutral-50 transition-colors"
-                                  onClick={() => router.push(`/coordinator/projects/${proj.id}`)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Enter' || event.key === ' ') {
-                                      event.preventDefault();
-                                      router.push(`/coordinator/projects/${proj.id}`);
-                                    }
-                                  }}
-                                >
-                                  <FiFolder className="text-neutral-300 flex-shrink-0" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-neutral-800 truncate">{proj.title}</p>
-                                    <p className="text-xs text-neutral-500">{proj.project_code} &middot; {formatDate(proj.created_at)}</p>
-                                  </div>
-                                  <Badge variant={badge.variant}>{badge.label}</Badge>
-                                  {/*Add the booking button here, must match sizes of the card it's in.*/}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Card>
-                );
-              })}
-            </div>
-          )
         ) : allProjects.length === 0 ? (
           <Card>
             <div className="text-center py-8 text-neutral-500">
               No projects found under your assigned advisers.
             </div>
           </Card>
+        ) : hasNoMatches ? (
+          noMatchingProjectsState
         ) : (
           <Card padding="none" className="overflow-hidden">
             <div className="overflow-x-auto overscroll-x-contain">
@@ -213,6 +181,9 @@ export default function CoordinatorProjectsPage() {
                       Code
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
+                      Adviser
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
                       Course
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
@@ -224,8 +195,9 @@ export default function CoordinatorProjectsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 bg-white">
-                  {allProjects.map((project) => {
+                  {filteredProjects.map((project) => {
                     const badge = projectStatusBadge(project.status);
+                    const adviserName = adviserNameByProjectId.get(project.id);
                     return (
                       <tr
                         key={project.id}
@@ -249,6 +221,9 @@ export default function CoordinatorProjectsPage() {
                           title={project.project_code}
                         >
                           {project.project_code}
+                        </td>
+                        <td className="max-w-[12rem] truncate px-4 py-3 sm:px-6 text-neutral-600" title={adviserName}>
+                          {adviserName || '—'}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 sm:px-6 text-neutral-600">
                           {formatProjectCourse(project)}
