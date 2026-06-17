@@ -149,11 +149,12 @@ export default function PendingInvitationsCard({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <Button
                   variant="accept"
                   size="sm"
-                  leftIcon={<FiCheck className="text-sm" />}
+                  className="!bg-malachiteDark/90 hover:!bg-malachiteDark/85 !px-2.5 !py-1 !text-xs gap-1 shadow-none hover:shadow-none"
+                  leftIcon={<FiCheck className="text-xs" />}
                   loading={respondingId === invitation.id}
                   disabled={respondingId !== null && respondingId !== invitation.id}
                   onClick={() => handleRespond(invitation, true)}
@@ -161,9 +162,10 @@ export default function PendingInvitationsCard({
                   Accept
                 </Button>
                 <Button
-                  variant="error"
+                  variant="decline"
                   size="sm"
-                  leftIcon={<FiX className="text-sm" />}
+                  className="!bg-archivumRed/85 hover:!bg-archivumRed/80 !px-2.5 !py-1 !text-xs gap-1 shadow-none hover:shadow-none"
+                  leftIcon={<FiX className="text-xs" />}
                   disabled={respondingId !== null}
                   onClick={() => handleRespond(invitation, false)}
                 >
