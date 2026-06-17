@@ -129,6 +129,8 @@ export interface RelatedStudiesResult {
     created_at: string;
   };
   keywords: string[];
+  predicted_labels?: string[];
+  predicted_fields?: Array<{ label: string; confidence: number }>;
   vectorization: {
     shape?: number[];
     non_zero?: number;
@@ -160,6 +162,15 @@ export interface CrossReferenceParams {
   sort?: CrossReferenceSort;
   fromYear?: string;
   toYear?: string;
+  predictedFields?: Array<{ code: string; confidence: number }>;
+  predictedLabels?: string[];
+  confidenceThreshold?: number;
+}
+
+export interface CrossReferenceScopeField {
+  code: string;
+  label: string;
+  confidence: number;
 }
 
 export interface CrossReferenceResult {
@@ -169,6 +180,7 @@ export interface CrossReferenceResult {
   perPage: number;
   hasMore: boolean;
   studies: CrossReferenceStudy[];
+  scopedFields?: CrossReferenceScopeField[];
 }
 
 // ─── API calls ──────────────────────────────────────────────────────────────
@@ -375,6 +387,16 @@ export function crossReferenceStudies(projectId: string, params: CrossReferenceP
   if (params.sort) search.set('sort', params.sort);
   if (params.fromYear) search.set('fromYear', params.fromYear);
   if (params.toYear) search.set('toYear', params.toYear);
+  if (params.predictedFields?.length) {
+    const encoded = params.predictedFields
+      .map((field) => `${field.code}:${field.confidence}`)
+      .join(',');
+    search.set('predictedFields', encoded);
+  }
+  if (params.predictedLabels?.length) search.set('predictedLabels', params.predictedLabels.join(','));
+  if (typeof params.confidenceThreshold === 'number') {
+    search.set('confidenceThreshold', String(params.confidenceThreshold));
+  }
   const query = search.toString();
   const path = `/projects/${projectId}/cross-reference${query ? `?${query}` : ''}`;
   return get<CrossReferenceResult>(path);

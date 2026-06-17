@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Button from '@/components/Button';
 import {
   crossReferenceStudies,
+  type CrossReferenceScopeField,
   type CrossReferenceSort,
   type CrossReferenceStudy,
 } from '@/lib/api/projects';
@@ -15,6 +16,7 @@ import {
 const PER_PAGE = 20;
 const CURRENT_YEAR = new Date().getFullYear();
 const DEFAULT_FROM_YEAR = String(CURRENT_YEAR - 5);
+const SCOPE_CONFIDENCE_THRESHOLD = 0.5;
 
 const SORT_OPTIONS: Array<{ value: CrossReferenceSort; label: string }> = [
   { value: 'relevance_score:desc', label: 'Most relevant' },
@@ -192,7 +194,15 @@ function CrossReferenceStudyCard({ study }: { study: CrossReferenceStudy }) {
   );
 }
 
-export default function CrossReferenceStudiesPanel({ projectId }: { projectId: string }) {
+type CrossReferenceStudiesPanelProps = {
+  projectId: string;
+  predictedFieldPredictions?: CrossReferenceScopeField[];
+};
+
+export default function CrossReferenceStudiesPanel({
+  projectId,
+  predictedFieldPredictions = [],
+}: CrossReferenceStudiesPanelProps) {
   const [studies, setStudies] = useState<CrossReferenceStudy[]>([]);
   const [query, setQuery] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -210,6 +220,23 @@ export default function CrossReferenceStudiesPanel({ projectId }: { projectId: s
   const sentinelRef = useRef<HTMLDivElement>(null);
   const fetchIdRef = useRef(0);
   const loadingMoreRef = useRef(false);
+
+  const scopedFields = useMemo(() => {
+    const seen = new Set<string>();
+    return predictedFieldPredictions
+      .filter((field) => field && typeof field.code === 'string')
+      .map((field) => ({
+        code: String(field.code || '').trim(),
+        label: String(field.label || '').trim(),
+        confidence: typeof field.confidence === 'number' ? field.confidence : Number(field.confidence) || 0,
+      }))
+      .filter((field) => field.code && field.confidence >= SCOPE_CONFIDENCE_THRESHOLD)
+      .filter((field) => {
+        if (seen.has(field.code)) return false;
+        seen.add(field.code);
+        return true;
+      });
+  }, [predictedFieldPredictions]);
 
   const fetchPage = useCallback(
     async (targetPage: number, append: boolean) => {
@@ -229,6 +256,12 @@ export default function CrossReferenceStudiesPanel({ projectId }: { projectId: s
         sort,
         fromYear: fromYear || undefined,
         toYear: toYear || undefined,
+        predictedFields: scopedFields.map((field) => ({
+          code: field.code,
+          confidence: field.confidence,
+        })),
+        predictedLabels: scopedFields.length ? scopedFields.map((field) => field.code) : undefined,
+        confidenceThreshold: SCOPE_CONFIDENCE_THRESHOLD,
       });
 
       if (fetchId !== fetchIdRef.current) return;
@@ -253,7 +286,7 @@ export default function CrossReferenceStudiesPanel({ projectId }: { projectId: s
       loadingMoreRef.current = false;
       setLoadingMore(false);
     },
-    [projectId, sort, fromYear, toYear],
+    [projectId, sort, fromYear, toYear, scopedFields],
   );
 
   const handleSearch = () => {
@@ -396,6 +429,15 @@ export default function CrossReferenceStudiesPanel({ projectId }: { projectId: s
           </span>
         </div>
       </div>
+
+      {scopedFields.length > 0 ? (
+        <p className="mt-2 text-xs text-neutral-600 md:text-sm">
+          Scoped to:{' '}
+          {scopedFields
+            .map((field) => `${field.label} (${Math.round(field.confidence * 100)}%)`)
+            .join(', ')}
+        </p>
+      ) : null}
 
       {loading || query !== null || error ? (
         <div className="mt-3 space-y-1">
