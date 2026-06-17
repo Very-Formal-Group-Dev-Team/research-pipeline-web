@@ -14,6 +14,7 @@ import Card, {
   CardTitle,
 } from '@/components/ui/Card';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
+import TranscriptionRecordingListSkeleton from '@/components/skeletons/TranscriptionRecordingListSkeleton';
 import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
 import {
   deleteMeetingRecording,
@@ -193,11 +194,7 @@ export default function TranscriptionRecordingList() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
-      </div>
-    );
+    return <TranscriptionRecordingListSkeleton />;
   }
 
   if (error) {

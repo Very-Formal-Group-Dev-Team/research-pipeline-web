@@ -38,6 +38,8 @@ import {
 } from '@/lib/api/paperReviews';
 import { formatPaperStandard } from '@/lib/utils/projectDisplay';
 import { toast } from 'sonner';
+import PaperVersionTimelineSkeleton from '@/components/skeletons/PaperVersionTimelineSkeleton';
+import ShimmerLine from '@/components/skeletons/ShimmerLine';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -969,7 +971,9 @@ export default function PaperVersionTimeline({
             Paper Version History
           </h2>
           <p className="text-sm text-neutral-500 mt-0.5">
-            {versions.length === 0
+            {loading ? (
+              <ShimmerLine className="inline-block h-4 w-56 max-w-full align-middle" />
+            ) : versions.length === 0
               ? allowUpload
                 ? 'No versions yet — upload your draft or generate a template to get started.'
                 : 'No versions uploaded yet.'
@@ -977,7 +981,7 @@ export default function PaperVersionTimeline({
           </p>
         </div>
 
-        {allowUpload ? (
+        {allowUpload && !loading ? (
           <div className="flex gap-2 flex-wrap">
             {versions.length === 0 && (
               <Button
@@ -1032,10 +1036,7 @@ export default function PaperVersionTimeline({
 
       {/* Timeline */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-neutral-400">
-          <FiRefreshCw className="animate-spin w-5 h-5 mr-2" />
-          Loading versions…
-        </div>
+        <PaperVersionTimelineSkeleton />
       ) : versions.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-neutral-400">
           <FiFileText className="w-10 h-10" />

@@ -28,6 +28,7 @@ import {
   type CourseAdviser,
 } from '@/lib/api/coordinator';
 import { toast } from 'sonner';
+import CoordinatorCoursesListSkeleton from '@/components/skeletons/CoordinatorCoursesListSkeleton';
 import { useUserSearch } from '@/lib/hooks/useUserSearch';
 import type { SearchUserResult } from '@/lib/api/users';
 
@@ -247,9 +248,7 @@ export default function CoordinatorCoursesPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
+          <CoordinatorCoursesListSkeleton />
         ) : courses.length === 0 ? (
           <Card>
             <div className="text-center py-8 text-neutral-500">

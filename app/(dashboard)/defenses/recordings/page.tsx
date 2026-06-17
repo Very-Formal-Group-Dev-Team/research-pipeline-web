@@ -3,6 +3,7 @@
 import React from 'react';
 
 import TranscriptionRecordingList from '@/components/defenses/TranscriptionRecordingList';
+import TranscriptionRecordingListSkeleton from '@/components/skeletons/TranscriptionRecordingListSkeleton';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { normalizeUserRole } from '@/lib/auth/roleAccess';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -23,9 +24,7 @@ export default function RecordingsArchivePage() {
         </div>
 
         {isLoading || !role ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
-          </div>
+          <TranscriptionRecordingListSkeleton />
         ) : (
           <TranscriptionRecordingList />
         )}

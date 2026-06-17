@@ -49,6 +49,8 @@ import {
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import EmptyState from '@/components/layout/EmptyState';
+import ProjectDetailPageSkeleton from '@/components/skeletons/ProjectDetailPageSkeleton';
+import ScheduleListSkeleton from '@/components/events/ScheduleListSkeleton';
 import ResearchStageEditor from '@/components/projects/ResearchStageEditor';
 import {
   formatPaperStandard,
@@ -435,9 +437,7 @@ export default function AdviserProjectDetailPage() {
   if (loading) {
     return (
       <DashboardLayout role="adviser" user={user} onLogout={handleLogout}>
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
-        </div>
+        <ProjectDetailPageSkeleton variant="adviser" />
       </DashboardLayout>
     );
   }
@@ -646,9 +646,7 @@ export default function AdviserProjectDetailPage() {
             </div>
           </CardHeader>
           {meetingsLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
-            </div>
+            <ScheduleListSkeleton count={2} showMeetingExtras />
           ) : meetingsError ? (
             <div className="space-y-3">
               <p className="text-sm text-archivumRed py-4 text-center">{meetingsError}</p>

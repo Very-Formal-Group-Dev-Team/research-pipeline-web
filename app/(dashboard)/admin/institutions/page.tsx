@@ -19,6 +19,7 @@ import {
   type AdminInstitution,
 } from '@/lib/api/admin';
 import { toast } from 'sonner';
+import AdminInstitutionsListSkeleton from '@/components/skeletons/AdminInstitutionsListSkeleton';
 
 function isActive(value: AdminInstitution['is_active']): boolean {
   return value === true || value === 1;
@@ -167,9 +168,7 @@ export default function AdminInstitutionsPage() {
         </div>
 
         {loading ? (
-          <div className="flex h-32 items-center justify-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
-          </div>
+          <AdminInstitutionsListSkeleton />
         ) : institutions.length === 0 ? (
           <Card>
             <div className="py-8 text-center text-neutral-500">

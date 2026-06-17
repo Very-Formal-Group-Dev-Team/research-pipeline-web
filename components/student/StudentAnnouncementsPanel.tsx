@@ -13,6 +13,7 @@ import { RiMegaphoneLine } from 'react-icons/ri';
 
 import Card, { CARD_HEADER_SECTION_CLASS, CARD_PADDING_CLASS } from '@/components/ui/Card';
 import CardIconHeader from '@/components/ui/CardIconHeader';
+import StudentAnnouncementsSkeleton from '@/components/skeletons/StudentAnnouncementsSkeleton';
 import type { Defense } from '@/lib/api/defenses';
 import type { InstitutionEvent } from '@/lib/api/events';
 import {
@@ -133,9 +134,7 @@ export default function StudentAnnouncementsPanel({
 
       <div className={CARD_PADDING_CLASS}>
         {loading ? (
-          <div className="flex h-40 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
-          </div>
+          <StudentAnnouncementsSkeleton />
         ) : filtered.length === 0 ? (
           <p className="text-sm text-neutral-500 py-8 text-center">
             Nothing scheduled for this {view === 'week' ? 'week' : 'month'}.

@@ -7,9 +7,12 @@ import { FiCalendar } from 'react-icons/fi';
 import Button from '@/components/Button';
 import CoordinatorScheduleCard from '@/components/coordinator/CoordinatorScheduleCard';
 import DefenseScheduleCard from '@/components/defenses/DefenseScheduleCard';
-import DefenseSortControls from '@/components/defenses/DefenseSortControls';
+import DefenseSortControls, {
+  INSTITUTION_EVENT_SORT_OPTIONS,
+} from '@/components/defenses/DefenseSortControls';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import EmptyState from '@/components/layout/EmptyState';
+import ScheduleListSkeleton from '@/components/events/ScheduleListSkeleton';
 import MeetingScheduleCard from '@/components/meetings/MeetingScheduleCard';
 import Card from '@/components/ui/Card';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
@@ -25,7 +28,12 @@ import {
 import type { InstitutionEvent } from '@/lib/api/events';
 import { meetingUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import { getMySchedule } from '@/lib/api/schedule';
-import { sortDefenses, type DefenseSortBy, type DefenseSortDirection } from '@/lib/defenses/sort';
+import {
+  sortDefenses,
+  sortInstitutionEvents,
+  type DefenseSortBy,
+  type DefenseSortDirection,
+} from '@/lib/defenses/sort';
 import {
   MEETING_STATUS_FILTER_OPTIONS,
   MEETINGS_FILTER_CONTROL_CLASS,
@@ -37,6 +45,13 @@ import {
 type Tab = 'events' | 'meetings' | 'defenses';
 
 function EventsList({ items }: { items: InstitutionEvent[] }) {
+  const [sortBy, setSortBy] = useState<'time' | 'status'>('time');
+  const [sortDirection, setSortDirection] = useState<DefenseSortDirection>('asc');
+  const sortedItems = useMemo(
+    () => sortInstitutionEvents(items, sortBy, sortDirection),
+    [items, sortBy, sortDirection],
+  );
+
   if (items.length === 0) {
     return (
       <Card>
@@ -46,19 +61,33 @@ function EventsList({ items }: { items: InstitutionEvent[] }) {
   }
 
   return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <CoordinatorScheduleCard
-          key={item.id}
-          title={item.title}
-          description={item.description}
-          startTime={item.start_time}
-          endTime={item.end_time}
-          modality={item.modality}
-          location={item.location}
-          status={item.status}
-        />
-      ))}
+    <div className="space-y-4">
+      <DefenseSortControls
+        sortBy={sortBy}
+        direction={sortDirection}
+        onSortByChange={(value) => {
+          if (value === 'time' || value === 'status') {
+            setSortBy(value);
+          }
+        }}
+        onDirectionChange={setSortDirection}
+        tone="student"
+        options={INSTITUTION_EVENT_SORT_OPTIONS}
+      />
+      <div className="space-y-3">
+        {sortedItems.map((item) => (
+          <CoordinatorScheduleCard
+            key={item.id}
+            title={item.title}
+            description={item.description}
+            startTime={item.start_time}
+            endTime={item.end_time}
+            modality={item.modality}
+            location={item.location}
+            status={item.status}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -80,6 +109,13 @@ function MeetingsList({
   onCancelMeeting: (meetingId: string) => void;
   onCompleteMeeting: (meetingId: string) => void;
 }) {
+  const [sortBy, setSortBy] = useState<'time' | 'status'>('time');
+  const [sortDirection, setSortDirection] = useState<DefenseSortDirection>('asc');
+  const sortedItems = useMemo(
+    () => sortDefenses(items, sortBy, sortDirection),
+    [items, sortBy, sortDirection],
+  );
+
   if (totalCount === 0) {
     return (
       <Card>
@@ -97,20 +133,34 @@ function MeetingsList({
   }
 
   return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <MeetingScheduleCard
-          key={item.id}
-          meeting={item}
-          layout="adviser"
-          actions={{
-            onEdit: () => onEditMeeting(item),
-            onCancel: () => onCancelMeeting(item.id),
-            onComplete: () => void onCompleteMeeting(item.id),
-            disabled: meetingActionLoading,
-          }}
-        />
-      ))}
+    <div className="space-y-4">
+      <DefenseSortControls
+        sortBy={sortBy}
+        direction={sortDirection}
+        onSortByChange={(value) => {
+          if (value === 'time' || value === 'status') {
+            setSortBy(value);
+          }
+        }}
+        onDirectionChange={setSortDirection}
+        tone="student"
+        options={INSTITUTION_EVENT_SORT_OPTIONS}
+      />
+      <div className="space-y-3">
+        {sortedItems.map((item) => (
+          <MeetingScheduleCard
+            key={item.id}
+            meeting={item}
+            layout="adviser"
+            actions={{
+              onEdit: () => onEditMeeting(item),
+              onCancel: () => onCancelMeeting(item.id),
+              onComplete: () => void onCompleteMeeting(item.id),
+              disabled: meetingActionLoading,
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -328,9 +378,15 @@ export default function AdviserEventsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
+          <ScheduleListSkeleton
+            ariaLabel="Loading events"
+            showDescription={tab === 'events'}
+            showMeetingExtras={tab === 'meetings'}
+            showActions={tab === 'meetings'}
+            showSortControls
+            showSecondBadge={tab === 'defenses'}
+            showTrailing={tab === 'defenses'}
+          />
         ) : tab === 'events' ? (
           <EventsList items={events} />
         ) : tab === 'meetings' ? (

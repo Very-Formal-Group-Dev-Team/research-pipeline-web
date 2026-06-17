@@ -65,6 +65,7 @@ import {
 import { formatProjectStageLabel, isProjectLocked } from '@/lib/utils/projectStage';
 import LeaveProjectModal, { type LeaveProjectRole } from '@/components/projects/LeaveProjectModal';
 import CrossReferenceStudiesPanel from '@/components/projects/CrossReferenceStudiesPanel';
+import ProjectDetailPageSkeleton from '@/components/skeletons/ProjectDetailPageSkeleton';
 import {
   Tooltip,
   TooltipContent,
@@ -139,6 +140,7 @@ export default function ProjectDetailPage() {
   const [editableKeywords, setEditableKeywords] = useState<string[]>([]);
   const [savingKeywords, setSavingKeywords] = useState(false);
   const [keywordsError, setKeywordsError] = useState<string | null>(null);
+  const [extractKeywordsModalOpen, setExtractKeywordsModalOpen] = useState(false);
   const [abstractInput, setAbstractInput] = useState('');
   const [savingAbstract, setSavingAbstract] = useState(false);
   const [abstractError, setAbstractError] = useState<string | null>(null);
@@ -439,22 +441,74 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleFindRelatedStudies = async () => {
+  const mergeKeywords = (existing: string[], extracted: string[]) => {
+    const seen = new Set(existing.map((item) => item.toLowerCase()));
+    const merged = [...existing];
+    for (const keyword of extracted) {
+      const normalized = keyword.toLowerCase();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        merged.push(keyword);
+      }
+    }
+    return merged.slice(0, 30);
+  };
+
+  const persistKeywords = async (keywords: string[]) => {
+    if (!project) return false;
+    setSavingKeywords(true);
+    setKeywordsError(null);
+    const res = await updateProjectKeywords(project.id, keywords);
+    if (res.error || !res.data) {
+      setKeywordsError(res.error || 'Failed to save keywords');
+      setSavingKeywords(false);
+      return false;
+    }
+    setProject((prev) => (prev ? { ...prev, keywords: res.data?.keywords || [] } : prev));
+    setEditableKeywords(res.data.keywords || []);
+    setSavingKeywords(false);
+    return true;
+  };
+
+  const runKeywordExtraction = async (mode: 'fresh' | 'merge' | 'override') => {
     if (!project) return;
     setFindingRelated(true);
     setRelatedStudiesError(null);
 
     const res = await findRelatedStudies(project.id);
     if (res.error || !res.data) {
-      setRelatedStudiesError(res.error || 'Failed to process related studies');
+      setRelatedStudiesError(res.error || 'Failed to extract keywords');
       setFindingRelated(false);
       return;
     }
 
     setRelatedStudiesResult(res.data);
-    setProject((prev) => (prev ? { ...prev, keywords: res.data?.keywords || [] } : prev));
-    setEditableKeywords(res.data?.keywords || []);
+
+    const extractedKeywords = res.data.keywords || [];
+    const nextKeywords =
+      mode === 'merge'
+        ? mergeKeywords(editableKeywords, extractedKeywords)
+        : extractedKeywords;
+
+    const saved = await persistKeywords(nextKeywords);
     setFindingRelated(false);
+    if (saved) {
+      toast.success('Keywords saved');
+    }
+  };
+
+  const handleExtractKeywordsClick = () => {
+    if (!project || findingRelated || savingKeywords) return;
+    if (editableKeywords.length > 0) {
+      setExtractKeywordsModalOpen(true);
+      return;
+    }
+    void runKeywordExtraction('fresh');
+  };
+
+  const handleExtractKeywordsConfirm = (mode: 'merge' | 'override') => {
+    setExtractKeywordsModalOpen(false);
+    void runKeywordExtraction(mode);
   };
 
   const addKeywordFromInput = () => {
@@ -479,18 +533,10 @@ export default function ProjectDetailPage() {
 
   const commitKeywords = async () => {
     if (!project || !keywordsDirty) return;
-    setSavingKeywords(true);
-    setKeywordsError(null);
-    const res = await updateProjectKeywords(project.id, editableKeywords);
-    if (res.error || !res.data) {
-      setKeywordsError(res.error || 'Failed to save keywords');
-      setSavingKeywords(false);
-      return;
+    const saved = await persistKeywords(editableKeywords);
+    if (saved) {
+      toast.success('Changes saved');
     }
-    setProject((prev) => (prev ? { ...prev, keywords: res.data?.keywords || [] } : prev));
-    setEditableKeywords(res.data.keywords || []);
-    setSavingKeywords(false);
-    toast.success('Changes saved');
   };
 
   const startEditingTitle = () => {
@@ -608,9 +654,7 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <DashboardLayout role="student" user={user} onLogout={handleLogout}>
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
-        </div>
+        <ProjectDetailPageSkeleton variant="student" />
       </DashboardLayout>
     );
   }
@@ -1017,10 +1061,10 @@ export default function ProjectDetailPage() {
                 <Button
                   size="sm"
                   variant="primary"
-                  disabled={findingRelated}
-                  onClick={handleFindRelatedStudies}
+                  disabled={findingRelated || savingKeywords}
+                  onClick={handleExtractKeywordsClick}
                 >
-                  {findingRelated ? 'Running keyword model...' : 'Set Keywords'}
+                  {findingRelated ? 'Running keyword model...' : 'Extract Keywords'}
                 </Button>
                 <Button
                   size="sm"
@@ -1036,7 +1080,7 @@ export default function ProjectDetailPage() {
                   onClick={commitKeywords}
                   disabled={savingKeywords || !keywordsDirty}
                 >
-                  {savingKeywords ? 'Saving...' : 'Commit'}
+                  {savingKeywords ? 'Saving...' : 'Save'}
                 </Button>
               </div>
             </div>
@@ -1240,6 +1284,44 @@ export default function ProjectDetailPage() {
             }}
           >
             Discard Changes
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={extractKeywordsModalOpen}
+        onClose={() => setExtractKeywordsModalOpen(false)}
+        title="Replace existing keywords?"
+        size="sm"
+      >
+        <p className="text-sm text-neutral-600">
+          This project already has keywords. Extracting new ones from your latest paper will update
+          the list. Choose how to apply the extracted keywords.
+        </p>
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setExtractKeywordsModalOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleExtractKeywordsConfirm('merge')}
+          >
+            Merge
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => handleExtractKeywordsConfirm('override')}
+          >
+            Override
           </Button>
         </div>
       </Modal>

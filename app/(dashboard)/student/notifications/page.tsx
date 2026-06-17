@@ -19,6 +19,7 @@ import {
   FiEdit,
 } from 'react-icons/fi';
 import EmptyState from '@/components/layout/EmptyState';
+import NotificationListSkeleton from '@/components/notifications/NotificationListSkeleton';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
   getMyNotifications,
@@ -178,9 +179,7 @@ export default function StudentNotificationsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
+          <NotificationListSkeleton />
         ) : (
           <>
             {/* Pending Project Invitations */}

@@ -18,11 +18,11 @@ import NotificationPrefsSection from '@/components/settings/NotificationPrefsSec
 import AppearanceSection from '@/components/settings/AppearanceSection';
 import CalendarPrefsSection from '@/components/settings/CalendarPrefsSection';
 import SettingsHeaderActions, { SettingsSaveStatus } from '@/components/settings/SettingsHeaderActions';
+import SettingsSectionSkeleton from '@/components/skeletons/SettingsSectionSkeleton';
 import { SettingsPreferencesProvider } from '@/components/settings/SettingsPreferencesContext';
 import Card from '@/components/ui/Card';
 import {
   settingsInlineLinkClassName,
-  settingsLoadingSpinnerClassName,
   settingsPageSubtitleClassName,
   settingsPageTitleClassName,
   settingsTabClassName,
@@ -82,8 +82,38 @@ export default function SettingsPageContent({
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className={settingsLoadingSpinnerClassName} />
+      <div className="space-y-6">
+        <div>
+          <h1 className={settingsPageTitleClassName}>Settings</h1>
+          <p className={settingsPageSubtitleClassName}>
+            Manage your account, security, notifications, and display preferences.{' '}
+            <Link href={profilePath} className={settingsInlineLinkClassName}>
+              Edit profile
+            </Link>
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3 overflow-hidden border-b border-neutral-200 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden">
+            {SECTIONS.map((section) => {
+              const Icon = section.icon;
+              const active = activeSection === section.id;
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => setActiveSection(section.id)}
+                  className={`${settingsTabClassName(active)} flex items-center gap-2`}
+                >
+                  <Icon className={active ? 'text-coordinator-rose' : 'text-neutral-400'} />
+                  {section.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <SettingsSectionSkeleton />
       </div>
     );
   }

@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'sonner';
 import { sortDefenses, type DefenseSortBy, type DefenseSortDirection } from '@/lib/defenses/sort';
+import ScheduleListSkeleton from '@/components/events/ScheduleListSkeleton';
 import { formatStatusLabel } from '@/lib/utils/formatStatus';
 import {
   getAllDefenses,
@@ -358,9 +359,13 @@ export default function CoordinatorDefenseSections({ section, onDataChange }: Co
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-32">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 coordinator-spinner" />
-      </div>
+      <ScheduleListSkeleton
+        count={4}
+        showSortControls
+        showActions
+        showSecondBadge
+        ariaLabel="Loading defenses"
+      />
     );
   }
 

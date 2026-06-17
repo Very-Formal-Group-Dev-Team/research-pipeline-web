@@ -41,6 +41,7 @@ import {
   type Invitation,
 } from '@/lib/api/projects';
 import { PROJECT_INVITATION_RESPONDED_EVENT } from '@/components/projects/PendingInvitationsCard';
+import NotificationDropdownSkeleton from '@/components/skeletons/NotificationDropdownSkeleton';
 
 export interface HeaderProps {
   user?: {
@@ -59,6 +60,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [bellOpen, setBellOpen] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const bellRef = useRef<HTMLDivElement>(null);
@@ -70,8 +72,11 @@ export default function Header({ user, onLogout }: HeaderProps) {
       setUnreadCount(0);
       setNotifications([]);
       setInvitations([]);
+      setNotificationsLoading(false);
       return;
     }
+
+    setNotificationsLoading(true);
 
     const [notifResult, invResult] = await Promise.all([
       getMyNotifications(25),
@@ -94,6 +99,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
     }
 
     setUnreadCount(unread);
+    setNotificationsLoading(false);
   }, [user]);
 
   useEffect(() => {
@@ -269,49 +275,53 @@ export default function Header({ user, onLogout }: HeaderProps) {
             )}
           </div>
 
-          {invitations.length > 0 && (
-            <div className="border-b border-neutral-100">
-              <div className="px-4 py-2 bg-primary-50">
-                <span className="text-xs font-semibold text-primary-700 uppercase tracking-wide">
-                  Project Invitations
-                </span>
-              </div>
-              {invitations.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="px-4 py-3 border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50"
-                >
-                  <p className="text-sm font-medium text-neutral-800">{inv.project_title}</p>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    Invited by {inv.invited_by_name} &middot; Role: {inv.role}
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      className="flex items-center gap-1 rounded-md bg-success-600 px-3 py-1 text-xs font-medium text-white hover:bg-success-700 transition-colors disabled:opacity-50"
-                      onClick={() => handleRespondInvitation(inv, true)}
-                      disabled={respondingId === inv.id}
-                    >
-                      <FiCheck className="text-xs" /> Accept
-                    </button>
-                    <button
-                      className="flex items-center gap-1 rounded-md bg-error-100 px-3 py-1 text-xs font-medium text-error-700 hover:bg-error-200 transition-colors disabled:opacity-50"
-                      onClick={() => handleRespondInvitation(inv, false)}
-                      disabled={respondingId === inv.id}
-                    >
-                      <FiX className="text-xs" /> Decline
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {notifications.length === 0 && invitations.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-neutral-400">
-              No notifications yet
-            </div>
+          {notificationsLoading ? (
+            <NotificationDropdownSkeleton />
           ) : (
-            notifications.map((n) => (
+            <>
+              {invitations.length > 0 && (
+                <div className="border-b border-neutral-100">
+                  <div className="px-4 py-2 bg-primary-50">
+                    <span className="text-xs font-semibold text-primary-700 uppercase tracking-wide">
+                      Project Invitations
+                    </span>
+                  </div>
+                  {invitations.map((inv) => (
+                    <div
+                      key={inv.id}
+                      className="px-4 py-3 border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50"
+                    >
+                      <p className="text-sm font-medium text-neutral-800">{inv.project_title}</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        Invited by {inv.invited_by_name} &middot; Role: {inv.role}
+                      </p>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          className="flex items-center gap-1 rounded-md bg-success-600 px-3 py-1 text-xs font-medium text-white hover:bg-success-700 transition-colors disabled:opacity-50"
+                          onClick={() => handleRespondInvitation(inv, true)}
+                          disabled={respondingId === inv.id}
+                        >
+                          <FiCheck className="text-xs" /> Accept
+                        </button>
+                        <button
+                          className="flex items-center gap-1 rounded-md bg-error-100 px-3 py-1 text-xs font-medium text-error-700 hover:bg-error-200 transition-colors disabled:opacity-50"
+                          onClick={() => handleRespondInvitation(inv, false)}
+                          disabled={respondingId === inv.id}
+                        >
+                          <FiX className="text-xs" /> Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {notifications.length === 0 && invitations.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-neutral-400">
+                  No notifications yet
+                </div>
+              ) : (
+                notifications.map((n) => (
               <div
                 key={n.id}
                 className={`px-4 py-3 border-b border-neutral-50 last:border-b-0 flex items-start gap-3 cursor-pointer hover:bg-neutral-50 ${
@@ -364,6 +374,8 @@ export default function Header({ user, onLogout }: HeaderProps) {
                 )}
               </div>
             ))
+              )}
+            </>
           )}
         </div>
       )}

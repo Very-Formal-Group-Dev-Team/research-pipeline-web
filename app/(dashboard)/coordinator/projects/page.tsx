@@ -7,6 +7,7 @@ import EmptyState from '@/components/layout/EmptyState';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import ProjectListToolbar from '@/components/projects/ProjectListToolbar';
+import CoordinatorProjectsListSkeleton from '@/components/skeletons/CoordinatorProjectsListSkeleton';
 import { FiFolder } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
@@ -157,9 +158,7 @@ export default function CoordinatorProjectsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
+          <CoordinatorProjectsListSkeleton />
         ) : allProjects.length === 0 ? (
           <Card>
             <div className="text-center py-8 text-neutral-500">

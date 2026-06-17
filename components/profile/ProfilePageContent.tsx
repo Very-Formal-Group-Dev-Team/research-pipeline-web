@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
 import EditProfileForm, { type EditProfileUser } from '@/components/profile/EditProfileForm';
+import ProfileFormSkeleton from '@/components/skeletons/ProfileFormSkeleton';
 import { getRoleSettingsPath } from '@/lib/auth/roleAccess';
 import type { DashboardRole } from '@/lib/auth/roleAccess';
 
@@ -28,8 +29,20 @@ export default function ProfilePageContent({
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-neutral-500">Loading...</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-primary-700">Profile</h1>
+          <p className="mt-1 text-neutral-600">
+            Manage your account information.{' '}
+            <Link href={settingsPath} className="font-medium text-primary-600 hover:text-primary-700">
+              Account settings
+            </Link>
+          </p>
+        </div>
+
+        <Card>
+          <ProfileFormSkeleton />
+        </Card>
       </div>
     );
   }
