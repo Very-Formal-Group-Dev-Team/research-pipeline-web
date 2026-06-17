@@ -16,6 +16,7 @@ export type NotificationType =
   | 'member_left'
   | 'ownership_transferred'
   | 'paper_version_committed'
+  | 'project_updated'
   | 'review_requested'
   | 'review_completed';
 

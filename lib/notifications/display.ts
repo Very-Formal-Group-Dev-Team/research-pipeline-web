@@ -27,6 +27,8 @@ export function getNotificationTypeLabel(type: string): string {
       return 'Join request';
     case 'paper_version_committed':
       return 'Document';
+    case 'project_updated':
+      return 'Project';
     case 'review_requested':
       return 'Review';
     case 'review_completed':
@@ -53,6 +55,8 @@ export function getNotificationVariant(type: string): NotificationBadgeVariant {
     case 'join_request':
       return 'warning';
     case 'paper_version_committed':
+      return 'primary';
+    case 'project_updated':
       return 'primary';
     case 'review_requested':
       return 'warning';

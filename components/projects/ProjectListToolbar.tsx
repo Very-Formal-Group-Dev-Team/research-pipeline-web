@@ -15,7 +15,7 @@ import {
 const INACTIVE_CLASS = 'bg-neutral-100 text-neutral-600';
 const ACTIVE_CLASS = 'bg-primary-600/10 text-primary-700';
 
-const SORT_OPTIONS: { value: ProjectSortBy; label: string; shortLabel: string }[] = [
+const DEFAULT_SORT_OPTIONS: { value: ProjectSortBy; label: string; shortLabel: string }[] = [
   { value: 'date', label: 'Date', shortLabel: 'Date' },
   { value: 'title', label: 'Alphabetical', shortLabel: 'A–Z' },
   { value: 'stage', label: 'Research stage', shortLabel: 'Stage' },
@@ -26,6 +26,7 @@ export interface ProjectListToolbarProps {
   courseOptions: string[];
   programOptions: string[];
   onFiltersChange: (next: ProjectListFilterState) => void;
+  sortOptions?: { value: ProjectSortBy; label: string; shortLabel: string }[];
 }
 
 function pillClass(active: boolean) {
@@ -39,6 +40,7 @@ export default function ProjectListToolbar({
   courseOptions,
   programOptions,
   onFiltersChange,
+  sortOptions = DEFAULT_SORT_OPTIONS,
 }: ProjectListToolbarProps) {
   const update = (patch: Partial<ProjectListFilterState>) => {
     onFiltersChange({ ...filters, ...patch });
@@ -98,7 +100,7 @@ export default function ProjectListToolbar({
       <div className="flex w-full items-center justify-between gap-2 text-xs lg:text-sm">
         <div className="-mx-1 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-1 flex-nowrap lg:overflow-visible">
           <span className="shrink-0 text-neutral-500">Sort by:</span>
-          {SORT_OPTIONS.map((option) => (
+          {sortOptions.map((option) => (
             <button
               key={option.value}
               type="button"
