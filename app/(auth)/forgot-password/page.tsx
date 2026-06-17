@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { requestPasswordReset } from '@/lib/api/auth';
@@ -11,14 +11,29 @@ const authCardClassName =
 const authActionButtonClassName =
   'w-full h-11 flex items-center justify-center px-6 font-medium rounded-[3px] transition-all duration-200';
 
+const RESEND_COOLDOWN_SECONDS = 60;
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+
+    const interval = setInterval(() => {
+      setCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldown]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (cooldown > 0) return;
+
     setLoading(true);
     setMessage(null);
     setError(null);
@@ -35,6 +50,7 @@ export default function ForgotPasswordPage() {
       res.data?.message ||
         'If an account exists for that email, we sent password reset instructions.',
     );
+    setCooldown(RESEND_COOLDOWN_SECONDS);
   };
 
   return (
@@ -95,10 +111,10 @@ export default function ForgotPasswordPage() {
         <div className="mt-8">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || cooldown > 0}
             className={`${authActionButtonClassName} bg-velvetWine text-snow text-md shadow-sm hover:bg-velvetWine/90 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {loading ? 'Sending…' : 'Send reset link'}
+            {loading ? 'Sending…' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Send reset link'}
           </button>
         </div>
 
