@@ -19,6 +19,7 @@ export const ALL_NOTIFICATION_TYPES = [
   'review_requested',
   'review_completed',
   'paper_version_committed',
+  'project_updated',
   'schedule',
   'defense_approved',
   'defense_rejected',

@@ -24,6 +24,7 @@ const NOTIFICATION_GROUPS: {
       { type: 'member_left', label: 'Member left' },
       { type: 'ownership_transferred', label: 'Ownership transfers' },
       { type: 'project_stage_updated', label: 'Research stage updates' },
+      { type: 'project_updated', label: 'Project content and member removals' },
     ],
   },
   {

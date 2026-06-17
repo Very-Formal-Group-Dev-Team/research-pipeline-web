@@ -63,17 +63,26 @@ export default function Modal({
     if (isOpen) {
       setShouldRender(true);
       setIsClosing(false);
-      document.body.style.overflow = 'hidden';
     } else if (shouldRender) {
       setIsClosing(true);
       const timer = setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
       }, 200); // Match animation duration
-      document.body.style.overflow = 'unset';
       return () => clearTimeout(timer);
     }
   }, [isOpen, shouldRender]);
+
+  useEffect(() => {
+    if (!shouldRender) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [shouldRender]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
