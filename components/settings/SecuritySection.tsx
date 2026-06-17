@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FiLock, FiLogOut } from 'react-icons/fi';
 import Button from '@/components/Button';
 import Input from '@/components/ui/Input';
@@ -11,6 +11,8 @@ import type { UserProfileView } from '@/lib/hooks/useUserProfile';
 import { settingsSectionIntroClassName } from '@/components/settings/settingsUi';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function SecuritySection({
   profile,
@@ -25,10 +27,21 @@ export default function SecuritySection({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isEmailAccount = profile.authProvider === 'email';
   const needsVerification = isEmailAccount && !profile.emailVerified;
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +73,7 @@ export default function SecuritySection({
   };
 
   const handleResendVerification = async () => {
-    if (!profile.email) return;
+    if (!profile.email || resendCooldown > 0) return;
     setIsResending(true);
     const res = await resendVerification(profile.email);
     setIsResending(false);
@@ -69,6 +82,7 @@ export default function SecuritySection({
       return;
     }
     toast.success(res.data?.message || 'Verification email sent');
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
   };
 
   const handleLogout = async () => {
@@ -90,9 +104,13 @@ export default function SecuritySection({
             type="button"
             variant="outline"
             onClick={handleResendVerification}
-            disabled={isResending}
+            disabled={isResending || resendCooldown > 0}
           >
-            {isResending ? 'Sending…' : 'Resend verification email'}
+            {isResending
+              ? 'Sending…'
+              : resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : 'Resend verification email'}
           </Button>
         </Card>
       ) : null}
