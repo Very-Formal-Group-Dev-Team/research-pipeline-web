@@ -17,6 +17,7 @@ import {
   FiCheckCircle,
 } from 'react-icons/fi';
 import { Sparkles } from 'lucide-react';
+import * as DOCX from 'docx-preview';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
@@ -61,109 +62,177 @@ function shortHash(id: string): string {
   return id.replace(/-/g, '').slice(0, 7);
 }
 
-function RenderedDiffView({ diff, mode, className }: { diff: DiffResult; mode: 'current' | 'previous'; className?: string }) {
+function RenderedDiffView({
+  diff,
+  mode,
+  className,
+  projectId,
+  versionId,
+  fileName,
+}: {
+  diff: DiffResult;
+  mode: 'current' | 'previous';
+  className?: string;
+  projectId: string;
+  versionId: string;
+  fileName?: string;
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [docxLoading, setDocxLoading] = useState(false);
+
+  const isDocxFile = fileName?.toLowerCase().endsWith('.docx');
 
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
-    const html = mode === 'current' ? diff.currentHtml : diff.previousHtml;
-    if (!html) {
-      container.innerHTML = '<div class="text-sm text-neutral-500 italic">Rendered view not available for this file type.</div>';
-      return;
-    }
 
-    // Set the HTML first
-    container.innerHTML = html;
+    if (isDocxFile) {
+      const renderDocx = async () => {
+        setDocxLoading(true);
+        try {
+          container.innerHTML = '';
+          const tokenMatch = document.cookie.match(/(?:^|;\s*)session_token=([^;]*)/);
+          const token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
 
-    if (!diff.changes || diff.changes.length === 0) return;
+          const url = getPaperVersionDownloadUrl(projectId, versionId);
+          const headers: Record<string, string> = {};
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
 
-    // Build the plain text used for mapping: current = all non-removed parts; previous = all non-added parts
-    const parts = diff.changes;
-    // Collect text nodes with cumulative offsets
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
-    const nodes: { node: Text; start: number; end: number }[] = [];
-    let cur: Node | null = walker.nextNode();
-    let idx = 0;
-    while (cur) {
-      const txt = cur.nodeValue || '';
-      const len = txt.length;
-      if (len > 0) {
-        nodes.push({ node: cur as Text, start: idx, end: idx + len });
-        idx += len;
-      }
-      cur = walker.nextNode();
-    }
+          const res = await fetch(url, {
+            credentials: 'include',
+            headers,
+          });
+          if (!res.ok) throw new Error('Failed to fetch document');
 
-    const fullText = nodes.map((n) => n.node.nodeValue || '').join('');
-    if (!fullText || fullText.length === 0) return;
+          const blob = await res.blob();
 
-    // Find ranges for parts in the plain text
-    const ranges: { start: number; end: number; type: 'added' | 'removed' }[] = [];
-    let pointer = 0;
-    for (const part of parts) {
-      if (mode === 'current' && part.removed) continue;
-      if (mode === 'previous' && part.added) continue;
-      const val = part.value || '';
-      if (!val) continue;
-      const startIndex = fullText.indexOf(val, pointer);
-      if (startIndex === -1) {
-        // try from beginning if not found
-        const alt = fullText.indexOf(val);
-        if (alt === -1) continue;
-        pointer = alt + val.length;
-        ranges.push({ start: alt, end: alt + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
-      } else {
-        ranges.push({ start: startIndex, end: startIndex + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
-        pointer = startIndex + val.length;
-      }
-    }
+          const styleEl = document.createElement('style');
+          styleEl.textContent = `
+            .docx-preview {
+              max-width: 100%;
+              margin: 0 auto;
+            }
+            .docx-preview section {
+              page-break-after: always;
+              page-break-inside: avoid;
+              margin-bottom: 1.5rem;
+            }
+            .docx-preview section:last-child {
+              page-break-after: auto;
+            }
+          `;
+          container.appendChild(styleEl);
 
-    if (ranges.length === 0) return;
+          container.classList.add('docx-preview');
 
-    // Wrap ranges from end -> start to avoid offset invalidation
-    ranges.sort((a, b) => b.start - a.start);
-    for (const r of ranges) {
-      // find start node
-      let startNodeIndex = -1;
-      for (let i = 0; i < nodes.length; i++) {
-        if (r.start >= nodes[i].start && r.start < nodes[i].end) {
-          startNodeIndex = i;
-          break;
+          await DOCX.renderAsync(blob, container);
+        } catch {
+          container.innerHTML = '<div class="text-sm text-error-600 bg-error-50 p-3 rounded">Failed to render document</div>';
+        } finally {
+          setDocxLoading(false);
         }
+      };
+
+      renderDocx();
+    } else {
+      setDocxLoading(false);
+      const html = mode === 'current' ? diff.currentHtml : diff.previousHtml;
+      if (!html) {
+        container.innerHTML = '<div class="text-sm text-neutral-500 italic">Rendered view not available for this file type.</div>';
+        return;
       }
-      if (startNodeIndex === -1) continue;
 
-      let endNodeIndex = startNodeIndex;
-      while (endNodeIndex < nodes.length && r.end > nodes[endNodeIndex].end) endNodeIndex++;
-      if (endNodeIndex >= nodes.length) continue;
+      container.innerHTML = html;
 
-      const startNode = nodes[startNodeIndex].node;
-      const endNode = nodes[endNodeIndex].node;
-      const startOffset = r.start - nodes[startNodeIndex].start;
-      const endOffset = r.end - nodes[endNodeIndex].start;
+      if (!diff.changes || diff.changes.length === 0) return;
 
-      const range = document.createRange();
-      try {
-        range.setStart(startNode, startOffset);
-        range.setEnd(endNode, endOffset);
-        const wrapper = document.createElement('span');
-        if (r.type === 'added') {
-          wrapper.className = 'bg-success-100 text-success-800 decoration-success-400';
+      const parts = diff.changes;
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+      const nodes: { node: Text; start: number; end: number }[] = [];
+      let cur: Node | null = walker.nextNode();
+      let idx = 0;
+      while (cur) {
+        const txt = cur.nodeValue || '';
+        const len = txt.length;
+        if (len > 0) {
+          nodes.push({ node: cur as Text, start: idx, end: idx + len });
+          idx += len;
+        }
+        cur = walker.nextNode();
+      }
+
+      const fullText = nodes.map((n) => n.node.nodeValue || '').join('');
+      if (!fullText || fullText.length === 0) return;
+
+      const ranges: { start: number; end: number; type: 'added' | 'removed' }[] = [];
+      let pointer = 0;
+      for (const part of parts) {
+        if (mode === 'current' && part.removed) continue;
+        if (mode === 'previous' && part.added) continue;
+        const val = part.value || '';
+        if (!val) continue;
+        const startIndex = fullText.indexOf(val, pointer);
+        if (startIndex === -1) {
+          const alt = fullText.indexOf(val);
+          if (alt === -1) continue;
+          pointer = alt + val.length;
+          ranges.push({ start: alt, end: alt + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
         } else {
-          wrapper.className = 'bg-error-100 text-error-800 line-through decoration-error-400';
+          ranges.push({ start: startIndex, end: startIndex + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
+          pointer = startIndex + val.length;
         }
-        range.surroundContents(wrapper);
-      } catch {
-        // surroundContents may throw for malformed ranges; ignore and continue
-        // (best-effort highlighting)
-        // console.error('wrap error', e);
+      }
+
+      if (ranges.length === 0) return;
+
+      ranges.sort((a, b) => b.start - a.start);
+      for (const r of ranges) {
+        let startNodeIndex = -1;
+        for (let i = 0; i < nodes.length; i++) {
+          if (r.start >= nodes[i].start && r.start < nodes[i].end) {
+            startNodeIndex = i;
+            break;
+          }
+        }
+        if (startNodeIndex === -1) continue;
+
+        let endNodeIndex = startNodeIndex;
+        while (endNodeIndex < nodes.length && r.end > nodes[endNodeIndex].end) endNodeIndex++;
+        if (endNodeIndex >= nodes.length) continue;
+
+        const startNode = nodes[startNodeIndex].node;
+        const endNode = nodes[endNodeIndex].node;
+        const startOffset = r.start - nodes[startNodeIndex].start;
+        const endOffset = r.end - nodes[endNodeIndex].start;
+
+        const range = document.createRange();
+        try {
+          range.setStart(startNode, startOffset);
+          range.setEnd(endNode, endOffset);
+          const wrapper = document.createElement('span');
+          if (r.type === 'added') {
+            wrapper.className = 'bg-success-100 text-success-800 decoration-success-400';
+          } else {
+            wrapper.className = 'bg-error-100 text-error-800 line-through decoration-error-400';
+          }
+          range.surroundContents(wrapper);
+        } catch {
+          // surroundContents may throw for malformed ranges; ignore and continue
+        }
       }
     }
-  }, [diff, mode]);
+  }, [diff, mode, isDocxFile, projectId, versionId]);
 
   return (
     <div className={`rounded-lg border border-neutral-200 bg-white p-4 overflow-y-auto ${className ?? 'max-h-96'}`}>
+      {docxLoading && (
+        <div className="flex items-center gap-2 text-sm text-neutral-400 py-6 justify-center">
+          <FiRefreshCw className="w-4 h-4 animate-spin" />
+          Rendering document…
+        </div>
+      )}
       <div ref={containerRef} />
     </div>
   );
@@ -509,6 +578,9 @@ function VersionCard({
                     diff={isFirst ? { ...diff, changes: [] } : diff}
                     mode={isFirst ? 'current' : renderSide}
                     className="min-h-[200px] max-h-[65vh]"
+                    projectId={projectId}
+                    versionId={version.id}
+                    fileName={version.file_name}
                   />
                 </div>
               )}
