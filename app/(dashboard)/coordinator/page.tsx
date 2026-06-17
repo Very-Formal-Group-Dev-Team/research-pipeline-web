@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card, { CARD_BODY_FLUSH_CLASS, CARD_HEADER_SECTION_CLASS } from '@/components/ui/Card';
 import CardIconHeader from '@/components/ui/CardIconHeader';
-import { FiFolder, FiCalendar, FiBookOpen, FiShield, FiUsers } from 'react-icons/fi';
+import { FiFolder, FiCalendar, FiBookOpen, FiUsers } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import CoordinatorFullCalendar from '@/components/coordinator/CoordinatorFullCalendar';
