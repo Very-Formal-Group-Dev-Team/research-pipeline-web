@@ -28,6 +28,7 @@ import {
   type Project,
   type ProjectMember,
   type RelatedStudiesResult,
+  type CrossReferenceScopeField,
 } from '@/lib/api/projects';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
@@ -290,8 +291,7 @@ export default function ProjectDetailPage() {
     load();
     loadPaperVersions();
     loadReviewRequest();
-    const interval = setInterval(loadMembers, 10000);
-    return () => { cancelled = true; clearInterval(interval); };
+    return () => { cancelled = true; };
   }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCatalog, resolveCourseId, resolveProgramId, loadReviewRequest]);
 
   useEffect(() => {
@@ -370,6 +370,28 @@ export default function ProjectDetailPage() {
     if (savedKeywords.length !== editableKeywords.length) return true;
     return savedKeywords.some((keyword, index) => keyword !== editableKeywords[index]);
   }, [project, editableKeywords]);
+
+  const predictedFieldPredictions = useMemo<CrossReferenceScopeField[]>(() => {
+    const predictedLabels = relatedStudiesResult?.predicted_labels || [];
+    const predictedFields = relatedStudiesResult?.predicted_fields || [];
+    if (!predictedLabels.length) {
+      return [];
+    }
+
+    return predictedLabels
+      .map((code, index) => {
+        const predictedField = predictedFields[index];
+        return {
+          code: String(code || '').trim(),
+          label: String(predictedField?.label || code || '').trim(),
+          confidence:
+            typeof predictedField?.confidence === 'number'
+              ? predictedField.confidence
+              : Number(predictedField?.confidence) || 0,
+        };
+      })
+      .filter((field) => field.code);
+  }, [relatedStudiesResult]);
 
   const titleDirty = useMemo(() => {
     if (!project || !isEditingTitle) return false;
@@ -1059,6 +1081,23 @@ export default function ProjectDetailPage() {
             <p className="text-sm text-neutral-500">No detected keywords yet.</p>
           )}
 
+          {relatedStudiesResult?.predicted_fields && relatedStudiesResult.predicted_fields.length > 0 && (
+            <div className="mt-5">
+              <p className="text-sm font-medium text-neutral-500 mb-2">Predicted Research Fields</p>
+              <div className="flex flex-wrap gap-2">
+                {relatedStudiesResult.predicted_fields.map((field) => (
+                  <span
+                    key={field.label}
+                    className="inline-flex items-center gap-2 rounded-full bg-oxfordBlue/10 border border-oxfordBlue/20 px-3 py-1 text-sm text-oxfordBlue"
+                  >
+                    <span className="font-medium">{field.label}</span>
+                    <span className="text-xs font-mono text-oxfordBlue/60">{Math.round(field.confidence * 100)}%</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {relatedStudiesError && (
             <p className="mt-3 text-sm text-archivumRed">{relatedStudiesError}</p>
           )}
@@ -1075,7 +1114,10 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
-          <CrossReferenceStudiesPanel projectId={project.id} />
+          <CrossReferenceStudiesPanel
+            projectId={project.id}
+            predictedFieldPredictions={predictedFieldPredictions}
+          />
         </Card>
 
         {/* Document Reference */}
