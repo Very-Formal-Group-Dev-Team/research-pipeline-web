@@ -26,6 +26,7 @@ import {
 } from '@/components/coordinator/CoordinatorTimeRangeFields';
 import CoordinatorGroupMultiSelect from '@/components/coordinator/CoordinatorGroupMultiSelect';
 import CoordinatorDefenseSections from '@/components/coordinator/CoordinatorDefenseSections';
+import ScheduleListSkeleton from '@/components/events/ScheduleListSkeleton';
 import DefenseSortControls, {
   INSTITUTION_EVENT_SORT_OPTIONS,
 } from '@/components/defenses/DefenseSortControls';
@@ -562,9 +563,12 @@ export default function CoordinatorEventsPage() {
 
         {activeTab === 'events' && (
           loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 coordinator-spinner" />
-            </div>
+            <ScheduleListSkeleton
+              ariaLabel="Loading institution events"
+              showDescription
+              showSortControls
+              showActions
+            />
           ) : events.length === 0 ? (
             <Card><p className="text-sm text-neutral-600">No events scheduled yet.</p></Card>
           ) : (

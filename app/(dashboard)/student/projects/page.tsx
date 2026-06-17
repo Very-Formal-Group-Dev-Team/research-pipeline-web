@@ -23,6 +23,7 @@ import {
   type ProjectMember,
 } from '@/lib/api/projects';
 import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
+import ProjectListSkeleton from '@/components/projects/ProjectListSkeleton';
 import ProjectListToolbar from '@/components/projects/ProjectListToolbar';
 import {
   DEFAULT_PROJECT_LIST_FILTERS,
@@ -407,9 +408,7 @@ export default function StudentProjectsPage() {
 
         {/* Projects Grid */}
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <p className="text-neutral-500">Loading projects...</p>
-          </div>
+          <ProjectListSkeleton showRoleBadge />
         ) : projects.length > 0 && filteredProjects.length === 0 ? (
           <Card>
             <EmptyState

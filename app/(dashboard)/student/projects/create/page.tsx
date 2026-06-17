@@ -18,6 +18,7 @@ import {
   type InstitutionProgram,
 } from '@/lib/api/institutions';
 import { toast } from 'sonner';
+import CreateProjectFormSkeleton from '@/components/skeletons/CreateProjectFormSkeleton';
 
 type InviteMembershipRole = 'member' | 'adviser';
 
@@ -283,8 +284,12 @@ export default function CreateProjectPage() {
   if (profileLoading) {
     return (
       <DashboardLayout role="student" user={user} onLogout={handleLogout}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-neutral-500">Loading...</p>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-primary-700">Create New Project</h1>
+            <p className="text-neutral-600 mt-1">Set up your research project and invite your team</p>
+          </div>
+          <CreateProjectFormSkeleton />
         </div>
       </DashboardLayout>
     );

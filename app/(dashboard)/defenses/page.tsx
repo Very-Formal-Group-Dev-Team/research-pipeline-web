@@ -26,6 +26,8 @@ import { getMeeting } from '@/lib/api/defenses';
 import { createPortal } from 'react-dom';
 import { toast as sonnerToast } from 'sonner';
 import { formatWallClockDateTime } from '@/lib/utils/formatDateTime';
+import MeetingBookingFormSkeleton from '@/components/skeletons/MeetingBookingFormSkeleton';
+import ScheduledMeetingsTableSkeleton from '@/components/skeletons/ScheduledMeetingsTableSkeleton';
 
 interface ScheduledDefense {
   id: string;
@@ -506,12 +508,6 @@ export default function MeetingSchedule() {
           document.body
         )}
       <div className="space-y-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <p className="text-neutral-500">Loading...</p>
-          </div>
-        ) : (
-          <>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-primary-700">Meeting Schedule</h1>
@@ -548,10 +544,8 @@ export default function MeetingSchedule() {
                 </CardDescription>
               </CardHeader>
 
-              {editFormLoading ? (
-                <div className="flex justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
-                </div>
+              {isLoading || editFormLoading ? (
+                <MeetingBookingFormSkeleton />
               ) : (
               <form
                 className="mt-4 space-y-4"
@@ -686,12 +680,11 @@ export default function MeetingSchedule() {
             {/* Scheduled Meetings Table */}
             <div className="pt-6">
               <h1 className="text-3xl font-bold text-primary-700">Recent Scheduled Meetings</h1>
+              {isLoading || defensesLoading ? (
+                <ScheduledMeetingsTableSkeleton className="mt-4" />
+              ) : (
               <Card className="border border-neutral-300 mt-4 overflow-hidden">
-                {defensesLoading ? (
-                  <div className="flex items-center justify-center h-32">
-                    <p className="text-neutral-500">Loading meetings...</p>
-                  </div>
-                ) : defenses.length === 0 ? (
+                {defenses.length === 0 ? (
                   <table className="w-full text-sm text-left">
                       <thead className="bg-neutral-50 border-b border-neutral-200">
                         <tr>
@@ -758,6 +751,7 @@ export default function MeetingSchedule() {
                   </div>
                 )}
               </Card>
+              )}
             </div>
 
             {/* Meeting Actions Modal (shown when clicking a row) */}
@@ -948,8 +942,6 @@ export default function MeetingSchedule() {
               </div>
             </Modal>
 
-          </>
-        )}
       </div>
     </DashboardLayout>
   );

@@ -38,6 +38,8 @@ import {
 } from '@/lib/meetings/statusFilter';
 import Select from '@/components/ui/Select';
 import EmptyState from '@/components/layout/EmptyState';
+import ProjectDetailPageSkeleton from '@/components/skeletons/ProjectDetailPageSkeleton';
+import ScheduleListSkeleton from '@/components/events/ScheduleListSkeleton';
 import {
   formatPaperStandard,
   formatProjectType,
@@ -214,9 +216,7 @@ export default function CoordinatorProjectDetailPage() {
   if (loading) {
     return (
       <DashboardLayout role="coordinator" user={user} onLogout={handleLogout}>
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
-        </div>
+        <ProjectDetailPageSkeleton variant="coordinator" />
       </DashboardLayout>
     );
   }
@@ -385,9 +385,7 @@ export default function CoordinatorProjectDetailPage() {
             </div>
           </CardHeader>
           {meetingsLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-500" />
-            </div>
+            <ScheduleListSkeleton count={2} />
           ) : meetingsError ? (
             <p className="py-4 text-center text-sm text-archivumRed">{meetingsError}</p>
           ) : meetings.length > 0 ? (
