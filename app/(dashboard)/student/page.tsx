@@ -35,8 +35,21 @@ export default function StudentDashboardPage() {
   if (isLoading) {
     return (
       <DashboardLayout role="student" user={user} onLogout={handleLogout}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-neutral-500">Loading...</p>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-primary-700">Welcome back!</h1>
+            <p className="text-neutral-600 mt-1">View your assigned research and classes</p>
+          </div>
+          <StudentAnnouncementsPanel
+            defenses={[]}
+            meetings={[]}
+            events={[]}
+            loading
+          />
+          <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+            <JoinGroupCard />
+            <PendingInvitationsCard />
+          </div>
         </div>
       </DashboardLayout>
     );

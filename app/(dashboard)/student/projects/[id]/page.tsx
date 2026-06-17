@@ -64,6 +64,7 @@ import {
 import { formatProjectStageLabel, isProjectLocked } from '@/lib/utils/projectStage';
 import LeaveProjectModal, { type LeaveProjectRole } from '@/components/projects/LeaveProjectModal';
 import CrossReferenceStudiesPanel from '@/components/projects/CrossReferenceStudiesPanel';
+import ProjectDetailPageSkeleton from '@/components/skeletons/ProjectDetailPageSkeleton';
 import {
   Tooltip,
   TooltipContent,
@@ -631,9 +632,7 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <DashboardLayout role="student" user={user} onLogout={handleLogout}>
-        <div className="flex h-64 items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
-        </div>
+        <ProjectDetailPageSkeleton variant="student" />
       </DashboardLayout>
     );
   }

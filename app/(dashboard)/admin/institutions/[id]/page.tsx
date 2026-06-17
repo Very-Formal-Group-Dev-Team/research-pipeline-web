@@ -33,6 +33,7 @@ import {
   type AdminInstitution,
   type AdminProgram,
 } from '@/lib/api/admin';
+import AdminInstitutionDetailSkeleton from '@/components/skeletons/AdminInstitutionDetailSkeleton';
 
 function isActive(value: AdminInstitution['is_active'] | AdminProgram['is_active']): boolean {
   return value === true || value === 1;
@@ -319,9 +320,7 @@ export default function AdminInstitutionDetailPage() {
         </div>
 
         {loading ? (
-          <div className="flex h-32 items-center justify-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-500" />
-          </div>
+          <AdminInstitutionDetailSkeleton />
         ) : !institution ? (
           <Card>
             <div className="py-8 text-center text-neutral-500">Institution not found.</div>

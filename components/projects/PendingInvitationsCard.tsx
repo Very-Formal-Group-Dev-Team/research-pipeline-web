@@ -7,6 +7,7 @@ import { FiCheck, FiMail, FiX } from 'react-icons/fi';
 import Button from '@/components/Button';
 import Card from '@/components/ui/Card';
 import CardIconHeader from '@/components/ui/CardIconHeader';
+import PendingInvitationsSkeleton from '@/components/skeletons/PendingInvitationsSkeleton';
 import {
   getMyInvitations,
   respondToInvitation,
@@ -119,7 +120,7 @@ export default function PendingInvitationsCard({
 
       <div className="flex min-h-0 flex-1 flex-col">
         {loading ? (
-          <p className="font-sans text-sm text-neutral-500 py-4">Loading invitations...</p>
+          <PendingInvitationsSkeleton />
         ) : error ? (
           <p className="font-sans text-sm text-archivumRed py-4">{error}</p>
         ) : invitations.length === 0 ? (

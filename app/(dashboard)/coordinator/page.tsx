@@ -8,6 +8,8 @@ import { FiFolder, FiCalendar, FiBookOpen, FiUsers } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import CoordinatorFullCalendar from '@/components/coordinator/CoordinatorFullCalendar';
+import DashboardStatTilesSkeleton from '@/components/skeletons/DashboardStatTilesSkeleton';
+import ScheduleCalendarSkeleton from '@/components/skeletons/ScheduleCalendarSkeleton';
 import {
   getAllDefenses,
   getCoordinatorDashboard,
@@ -91,67 +93,47 @@ export default function CoordinatorDashboardPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
+          <DashboardStatTilesSkeleton className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4" />
         ) : (
-          <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-              {statCards.map((stat, idx) => (
-                <Card key={idx} hover onClick={() => router.push(stat.href)}>
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center shrink-0 ${stat.color}`}>
-                      <div className="text-xl sm:text-2xl">{stat.icon}</div>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs sm:text-sm text-neutral-600 truncate">{stat.label}</p>
-                      <p className="text-xl sm:text-2xl font-bold text-primary-700">{stat.value}</p>
-                    </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {statCards.map((stat, idx) => (
+              <Card key={idx} hover onClick={() => router.push(stat.href)}>
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center shrink-0 ${stat.color}`}>
+                    <div className="text-xl sm:text-2xl">{stat.icon}</div>
                   </div>
-                </Card>
-              ))}
-            </div>
-
-            {/* <Card hover onClick={() => router.push('/coordinator/events?tab=pending')}>
-              <CardIconHeader
-                title="Defense Verification"
-                description="Review and approve defense schedules proposed by advisers"
-                icon={<FiShield className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
-              />
-              <div className="flex items-center justify-between gap-2 min-w-0">
-                {stats && stats.pendingDefenses > 0 ? (
-                  <span className="inline-flex min-w-0 shrink items-center px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium bg-warning-100 text-warning-700 truncate">
-                    {stats.pendingDefenses} pending verification
-                  </span>
-                ) : (
-                  <span className="text-sm text-neutral-600 min-w-0 truncate">No pending defenses</span>
-                )}
-                <span className="text-sm font-medium text-primary-600 shrink-0">
-                  Review defenses →
-                </span>
-              </div>
-            </Card> */}
-
-            <Card padding="none" className="overflow-hidden">
-              <div className={CARD_HEADER_SECTION_CLASS}>
-                <CardIconHeader
-                  className="mb-0"
-                  title="Schedule Calendar"
-                  description="Defenses and institution events in month, week, day, year, and agenda views"
-                  icon={<FiCalendar className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
-                />
-              </div>
-              <div className={CARD_BODY_FLUSH_CLASS}>
-                <CoordinatorFullCalendar
-                  defenses={defenses ?? []}
-                  institutionEvents={institutionEvents ?? []}
-                  coordinatorId={user.email}
-                  coordinatorName={user.name}
-                />
-              </div>
-            </Card>
-          </>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-neutral-600 truncate">{stat.label}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-primary-700">{stat.value}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
+
+        <Card padding="none" className="overflow-hidden">
+          <div className={CARD_HEADER_SECTION_CLASS}>
+            <CardIconHeader
+              className="mb-0"
+              title="Schedule Calendar"
+              description="Defenses and institution events in month, week, day, year, and agenda views"
+              icon={<FiCalendar className="h-8 w-8" strokeWidth={2.5} aria-hidden />}
+            />
+          </div>
+          <div className={CARD_BODY_FLUSH_CLASS}>
+            {loading ? (
+              <ScheduleCalendarSkeleton />
+            ) : (
+              <CoordinatorFullCalendar
+                defenses={defenses ?? []}
+                institutionEvents={institutionEvents ?? []}
+                coordinatorId={user.email}
+                coordinatorName={user.name}
+              />
+            )}
+          </div>
+        </Card>
       </div>
     </DashboardLayout>
   );

@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/Button';
 import Modal from '@/components/ui/Modal';
 import RubricEditorModal from '@/components/coordinator/RubricEditorModal';
+import RubricListSkeleton from '@/components/skeletons/RubricListSkeleton';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
 import {
@@ -96,9 +97,7 @@ export default function AdviserRubricPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
+          <RubricListSkeleton />
         ) : rubrics.length === 0 ? (
           <Card>
             <div className="text-center py-8 text-neutral-500">

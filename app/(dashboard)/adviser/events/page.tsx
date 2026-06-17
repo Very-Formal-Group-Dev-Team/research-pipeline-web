@@ -10,6 +10,7 @@ import DefenseScheduleCard from '@/components/defenses/DefenseScheduleCard';
 import DefenseSortControls from '@/components/defenses/DefenseSortControls';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import EmptyState from '@/components/layout/EmptyState';
+import ScheduleListSkeleton from '@/components/events/ScheduleListSkeleton';
 import MeetingScheduleCard from '@/components/meetings/MeetingScheduleCard';
 import Card from '@/components/ui/Card';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
@@ -328,9 +329,15 @@ export default function AdviserEventsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
+          <ScheduleListSkeleton
+            ariaLabel="Loading events"
+            showDescription={tab === 'events'}
+            showMeetingExtras={tab === 'meetings'}
+            showActions={tab === 'meetings'}
+            showSortControls={tab === 'defenses'}
+            showSecondBadge={tab === 'defenses'}
+            showTrailing={tab === 'defenses'}
+          />
         ) : tab === 'events' ? (
           <EventsList items={events} />
         ) : tab === 'meetings' ? (

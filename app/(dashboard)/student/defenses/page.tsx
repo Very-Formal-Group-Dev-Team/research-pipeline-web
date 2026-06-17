@@ -11,6 +11,7 @@ import { getMyProjectDefenses, type Defense } from '@/lib/api/defenses';
 import JoinMeetingButton from '@/components/meetings/JoinMeetingButton';
 import { isOnlineModality } from '@/lib/meetings/jitsi';
 import { formatWallClockDateLong, formatWallClockTime } from '@/lib/utils/formatDateTime';
+import ScheduleListSkeleton from '@/components/events/ScheduleListSkeleton';
 
 const typeVariant: Record<string, 'primary' | 'warning' | 'success'> = {
   proposal: 'primary',
@@ -43,9 +44,7 @@ export default function StudentDefensesPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
-          </div>
+          <ScheduleListSkeleton count={3} showSecondBadge />
         ) : defenses.length > 0 ? (
           <div className="space-y-4">
             {defenses.map((defense) => (
