@@ -74,9 +74,9 @@ function HelpCenterContent() {
         <div className={`${contentWidthClass} py-8 space-y-6`}>
           <p className="text-sm leading-relaxed text-neutral-600 md:text-md">
             Learn what each role can do in Archivum, from starting a research project and submitting
-            papers to scheduling defenses and managing institutions. Each guide includes an overview,
-            key tasks, step-by-step workflows, detailed capabilities, and good-to-know tips. Your
-            role is highlighted below.
+            papers to leaving inline document comments, scheduling defenses, and managing
+            institutions. Each guide includes an overview, key tasks, step-by-step workflows,
+            detailed capabilities, and good-to-know tips. Your role is highlighted below.
           </p>
 
           <div className="space-y-6">
