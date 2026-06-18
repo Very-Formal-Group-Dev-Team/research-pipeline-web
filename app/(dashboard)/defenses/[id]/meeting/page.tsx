@@ -193,9 +193,11 @@ export default function DefenseMeetingPage() {
             open={panelOpen}
             onOpenChange={setPanelOpen}
             defenseId={defenseId}
+            meetingProjects={session.meeting_projects || []}
             rubric={session.rubric}
             evaluations={session.evaluations}
             initialNotes={session.notes}
+            initialTotalScore={session.total_score}
           />
         ) : null}
       </div>

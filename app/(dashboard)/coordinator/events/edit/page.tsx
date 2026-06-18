@@ -23,6 +23,12 @@ import {
   type InstitutionAdviser,
 } from '@/lib/api/coordinator';
 import type { BatchLane } from '@/lib/coordinator/defenseBatchPlanner';
+import {
+  getBatchDisplayName,
+  isAssignableLane,
+  validateLaneSlotAssignments,
+  validateManualLanes,
+} from '@/lib/coordinator/defenseBatchPlanner';
 import type { DefenseBatchPlannerDraft } from '@/lib/coordinator/defenseBatchSession';
 import {
   clearDefenseBatchSession,
@@ -118,10 +124,26 @@ export default function CoordinatorDefenseEditPage() {
     setError(null);
     setSubmitting(true);
 
-    const lanesWithGroups = lanes.filter((lane) => lane.groupIds.length > 0);
+    const lanesWithGroups = lanes.filter(
+      (lane) => lane.groupIds.length > 0 && isAssignableLane(lane),
+    );
     if (!lanesWithGroups.length) {
       setSubmitting(false);
-      setError('Assign at least one group to a batch before saving.');
+      setError('Assign at least one group to a defense batch before saving.');
+      return;
+    }
+
+    const laneValidation = validateManualLanes(lanes, draft.startTime, draft.endTime);
+    if (!laneValidation.valid) {
+      setSubmitting(false);
+      setError(laneValidation.errors[0]);
+      return;
+    }
+
+    const slotValidation = validateLaneSlotAssignments(lanes);
+    if (!slotValidation.valid) {
+      setSubmitting(false);
+      setError(slotValidation.errors[0]);
       return;
     }
 
@@ -164,8 +186,8 @@ export default function CoordinatorDefenseEditPage() {
         setSubmitting(false);
         setError(
           count
-            ? `Batch ${lane.batchNumber} conflict (${count} overlap${count === 1 ? '' : 's'}${domains ? `: ${domains}` : ''}). Adjust assignments or times.`
-            : `Batch ${lane.batchNumber} has a schedule conflict. Adjust assignments or times.`,
+            ? `${getBatchDisplayName(lane)} conflict (${count} overlap${count === 1 ? '' : 's'}${domains ? `: ${domains}` : ''}). Adjust assignments or times.`
+            : `${getBatchDisplayName(lane)} has a schedule conflict. Adjust assignments or times.`,
         );
         return;
       }

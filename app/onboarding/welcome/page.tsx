@@ -62,7 +62,8 @@ export default function OnboardingWelcomePage() {
           <h1 className="text-2xl font-bold sm:text-3xl">Welcome, {displayName}!</h1>
           <p className="mt-2 text-sm leading-relaxed text-snow/80 md:text-md">
             Here is a quick overview of what you can do as a{' '}
-            {dashboardRole === 'adviser' ? 'teacher / adviser' : dashboardRole}.
+            {dashboardRole === 'adviser' ? 'teacher / adviser' : dashboardRole}, including inline
+            document comments on paper versions.
           </p>
         </div>
 

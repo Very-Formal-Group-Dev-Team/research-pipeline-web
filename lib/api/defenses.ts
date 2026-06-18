@@ -137,12 +137,61 @@ export interface DefensePanelEvaluation {
   comments?: string;
 }
 
+export interface DefenseMeetingProject {
+  defense_id: string;
+  project_id: string;
+  project_title: string;
+  project_code: string;
+}
+
 export interface DefenseMeetingSession {
   defense: DefenseMeetingSessionDefense;
   is_panelist: boolean;
   rubric: CoordinatorRubric | null;
   evaluations: DefensePanelEvaluation[];
   notes: string;
+  total_score?: number | null;
+  meeting_projects?: DefenseMeetingProject[];
+}
+
+export interface DefenseMeetingGradeCriterionSummary {
+  criterion_id: string;
+  criterion_name: string;
+  max_score: number;
+  average_score: number | null;
+}
+
+export interface DefenseMeetingGradePanelistScore {
+  criterion_id: string;
+  criterion_name: string;
+  max_score: number;
+  score: number;
+  comments: string;
+}
+
+export interface DefenseMeetingGradePanelist {
+  panelist_id: string;
+  panelist_name: string;
+  scores: DefenseMeetingGradePanelistScore[];
+  notes: string;
+  total_score: number | null;
+}
+
+export interface DefenseMeetingGradeProject {
+  defense_id: string;
+  project_id: string;
+  project_title: string;
+  project_code: string;
+  overall_score: number | null;
+  verdict: string | null;
+  recommendations: string | null;
+  criterion_summaries: DefenseMeetingGradeCriterionSummary[];
+  panelists: DefenseMeetingGradePanelist[];
+}
+
+export interface DefenseMeetingGradesResponse {
+  rubric: CoordinatorRubric | null;
+  projects: DefenseMeetingGradeProject[];
 }
 
 export interface SaveDefensePanelEvaluationsPayload {
@@ -163,5 +212,9 @@ export function saveDefensePanelEvaluations(
   payload: SaveDefensePanelEvaluationsPayload,
 ) {
   return put<DefenseMeetingSession>(`/defenses/${defenseId}/panel-evaluations`, payload);
+}
+
+export function getDefenseMeetingGrades(defenseId: string) {
+  return get<DefenseMeetingGradesResponse>(`/defenses/${defenseId}/meeting-grades`);
 }
 

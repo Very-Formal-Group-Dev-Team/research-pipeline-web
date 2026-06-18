@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiDownload, FiLoader, FiMaximize2, FiMinimize2 } from 'react-icons/fi';
 
 import Button from '@/components/Button';
+import DefenseMeetingGradesPanel from '@/components/defenses/DefenseMeetingGradesPanel';
 import RecordingControlPanel from '@/components/defenses/RecordingControlPanel';
 import TranscriptionEditorPanel from '@/components/defenses/TranscriptionEditorPanel';
 import Card, {
@@ -22,7 +23,7 @@ import {
 import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
 import { recordingDisplayTitle } from '@/lib/recordings/display';
 
-type TranscriptTab = 'original' | 'editor';
+type TranscriptTab = 'original' | 'editor' | 'grades';
 
 interface TranscriptionArchiveViewerProps {
   scheduleId: string;
@@ -186,8 +187,10 @@ export default function TranscriptionArchiveViewer({
   const isProcessing = transcriptionStatus === 'pending' || transcriptionStatus === 'processing';
   const hasTranscript = detail.segments.length > 0;
 
+  const isDefenseRecording = detail.recording.schedule_source === 'defense';
   const isEditorTab = transcriptTab === 'editor';
-  const collapsedTranscriptCardClass = isEditorTab
+  const isGradesTab = transcriptTab === 'grades';
+  const collapsedTranscriptCardClass = isEditorTab || isGradesTab
     ? 'h-[calc(100dvh-22rem)] max-h-[calc(100dvh-22rem)]'
     : 'h-[calc(100dvh-24rem)] max-h-[calc(100dvh-24rem)]';
 
@@ -303,13 +306,26 @@ export default function TranscriptionArchiveViewer({
               >
                 Editor workspace
               </button>
+              {isDefenseRecording ? (
+                <button
+                  type="button"
+                  onClick={() => setTranscriptTab('grades')}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                    transcriptTab === 'grades'
+                      ? 'bg-primary-600 text-white'
+                      : 'text-neutral-600 hover:bg-neutral-100'
+                  }`}
+                >
+                  Grades
+                </button>
+              ) : null}
             </div>
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="shrink-0 !px-2"
-              disabled={!hasTranscript}
+              disabled={!hasTranscript || isGradesTab}
               onClick={() => setTranscriptExpanded((prev) => !prev)}
               aria-pressed={transcriptExpanded}
               aria-label={transcriptExpanded ? 'Collapse transcript' : 'Expand transcript'}
@@ -347,6 +363,13 @@ export default function TranscriptionArchiveViewer({
                 </Button>
               ) : null}
             </div>
+          ) : isGradesTab ? (
+            <div>
+              <CardTitle>Defense grades</CardTitle>
+              <CardDescription lines={2} className="!mt-1">
+                Rubric scores, panel notes, and overall grades for every project in this defense meeting.
+              </CardDescription>
+            </div>
           ) : (
             <div>
               <CardTitle>Transcript editor workspace</CardTitle>
@@ -376,6 +399,12 @@ export default function TranscriptionArchiveViewer({
               isProcessing={isProcessing}
               canManage={Boolean(detail.recording.can_manage ?? detail.recording.can_delete)}
               onSeek={seekToMs}
+            />
+          ) : isGradesTab ? (
+            <DefenseMeetingGradesPanel
+              scheduleId={scheduleId}
+              expanded={transcriptExpanded}
+              className={transcriptExpanded ? CARD_INSET_X_CLASS : CARD_INSET_X_CLASS}
             />
           ) : (
             <div
