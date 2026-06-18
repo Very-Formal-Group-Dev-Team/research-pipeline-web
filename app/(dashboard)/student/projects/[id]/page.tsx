@@ -38,6 +38,7 @@ import UserSearchModal from '@/components/UserSearchModal';
 import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import ProjectTeamMembersCard from '@/components/projects/ProjectTeamMembersCard';
 import PaperVersionTimeline from '@/components/PaperVersionTimeline';
+import { studentManuscriptReviewUrl } from '@/lib/projects/navigation';
 import type { SearchUserResult } from '@/lib/api/users';
 import {
   getMyInstitutionCourses,
@@ -1194,6 +1195,8 @@ export default function ProjectDetailPage() {
             canRequestReview={Boolean(currentMembership)}
             reviewRequestsDisabled={projectIsLocked}
             onReviewChange={loadReviewRequest}
+            getManuscriptReviewUrl={(versionId) => studentManuscriptReviewUrl(project.id, versionId)}
+            manuscriptLinkLabel="Comment"
           />
         </Card>
 

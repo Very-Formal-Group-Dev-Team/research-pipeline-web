@@ -38,7 +38,7 @@ import ProjectCodeCopyRow from '@/components/projects/ProjectCodeCopyRow';
 import { UndoActionToastHost, useUndoActionToast } from '@/components/ui/UndoActionToast';
 import { meetingUndoToastMessage } from '@/lib/meetings/undoStatusMessages';
 import { PROJECT_MEETINGS_SECTION_ID } from '@/lib/meetings/navigation';
-import { PROJECT_PAPER_VERSIONS_SECTION_ID } from '@/lib/projects/navigation';
+import { PROJECT_PAPER_VERSIONS_SECTION_ID, adviserManuscriptReviewUrl } from '@/lib/projects/navigation';
 import {
   MEETING_STATUS_FILTER_OPTIONS,
   MEETINGS_FILTER_CONTROL_CLASS,
@@ -729,6 +729,7 @@ export default function AdviserProjectDetailPage() {
             activeReviewRequest={activeReviewRequest}
             canCompleteReview={Boolean(activeReviewRequest)}
             onReviewChange={loadReviewRequest}
+            getManuscriptReviewUrl={(versionId) => adviserManuscriptReviewUrl(project.id, versionId)}
           />
         </Card>
       </div>

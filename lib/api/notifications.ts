@@ -18,7 +18,10 @@ export type NotificationType =
   | 'paper_version_committed'
   | 'project_updated'
   | 'review_requested'
-  | 'review_completed';
+  | 'review_completed'
+  | 'comment_added'
+  | 'comment_resolved'
+  | 'revision_requested';
 
 export interface NotificationItem {
   id: string;

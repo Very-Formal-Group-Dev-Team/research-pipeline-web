@@ -33,6 +33,12 @@ export function getNotificationTypeLabel(type: string): string {
       return 'Review';
     case 'review_completed':
       return 'Reviewed';
+    case 'comment_added':
+      return 'Comment';
+    case 'comment_resolved':
+      return 'Resolved';
+    case 'revision_requested':
+      return 'Revision';
     default:
       return formatStatusLabel(type.replace(/_/g, ' '));
   }
@@ -62,6 +68,12 @@ export function getNotificationVariant(type: string): NotificationBadgeVariant {
       return 'warning';
     case 'review_completed':
       return 'success';
+    case 'comment_added':
+      return 'warning';
+    case 'comment_resolved':
+      return 'success';
+    case 'revision_requested':
+      return 'warning';
     default:
       return 'default';
   }

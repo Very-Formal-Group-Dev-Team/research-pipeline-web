@@ -35,7 +35,7 @@ const CROSS_REF_CONTROL_CLASS = [
 const CROSS_REF_SORT_SELECT_CLASS = [
   formSelectResponsiveClassName,
   CROSS_REF_CONTROL_CLASS,
-  '!w-[10.5rem] !pr-8 bg-[length:0.875rem_0.875rem] bg-[right_0.5rem_center]',
+  '!w-[9.5rem] !pr-8 bg-[length:0.875rem_0.875rem] bg-[right_0.5rem_center]',
 ].join(' ');
 
 const CROSS_REF_YEAR_GROUP_CLASS = [
@@ -49,7 +49,7 @@ const CROSS_REF_YEAR_PREFIX_CLASS = 'shrink-0 text-sm text-neutral-500 md:text-m
 
 const CROSS_REF_YEAR_INNER_INPUT_CLASS = [
   projectDetailMetadataTextClassName,
-  'w-[4.25rem] min-w-[4.25rem] border-0 bg-transparent p-0 text-sm tabular-nums',
+  'w-[3.75rem] min-w-[3.75rem] border-0 bg-transparent p-0 text-sm tabular-nums',
   'focus:outline-none focus:ring-0 md:text-md',
   'placeholder:text-neutral-400',
   'disabled:cursor-not-allowed disabled:text-neutral-600',
