@@ -32,6 +32,7 @@ interface ManuscriptViewerProps {
   projectId: string;
   versionId: string;
   fileName?: string;
+  isMergeCommit?: boolean;
   onSelection?: (selection: ManuscriptSelection) => void;
   onCommentClick?: (commentId: string) => void;
   viewerRef?: React.RefObject<HTMLDivElement | null>;
@@ -124,6 +125,7 @@ export default function ManuscriptViewer({
   projectId,
   versionId,
   fileName,
+  isMergeCommit = false,
   onSelection,
   onCommentClick,
   viewerRef,
@@ -136,7 +138,7 @@ export default function ManuscriptViewer({
   const [renderError, setRenderError] = useState<string | null>(null);
   const [docxReady, setDocxReady] = useState(false);
 
-  const isDocx = isDocxFileName(fileName);
+  const isDocx = isDocxFileName(fileName) && !isMergeCommit;
 
   const applyHtmlOverlays = useCallback(
     (container: HTMLElement) => {

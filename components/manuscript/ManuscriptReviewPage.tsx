@@ -97,7 +97,8 @@ export default function ManuscriptReviewPage({
 
   const isFirstVersion = useMemo(() => version?.version_number === 1, [version]);
   const isReviewTarget = reviewRequest?.paper_version_id === versionId;
-  const isDocx = isDocxFileName(version?.file_name);
+  const isMergeCommit = version?.tag === 'merge';
+  const isDocx = isDocxFileName(version?.file_name) && !isMergeCommit;
 
   const loadComments = useCallback(async () => {
     setCommentsLoading(true);
@@ -439,6 +440,7 @@ export default function ManuscriptReviewPage({
                 projectId={projectId}
                 versionId={versionId}
                 fileName={version?.file_name}
+                isMergeCommit={isMergeCommit}
                 className={`${DOCUMENT_VIEWER_HEIGHT_CLASS} shrink-0`}
                 viewerRef={viewerRef}
                 onSelection={setPendingSelection}

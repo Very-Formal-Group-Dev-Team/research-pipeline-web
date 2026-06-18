@@ -16,9 +16,14 @@ import {
   FiSend,
   FiCheckCircle,
   FiMessageSquare,
+  FiGitBranch,
+  FiGitMerge,
+  FiArrowRight,
 } from 'react-icons/fi';
 import { Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { listBranches, createBranch, type Branch } from '@/lib/api/paperBranches';
 import { renderDocxPreview, isDocxFileName, observeDocxPreviewResize, scaleDocxPreviewToFit, HTML_PREVIEW_MOBILE_CLASS, DOCX_PREVIEW_SCROLL_CLASS } from '@/lib/manuscript/docxPreview';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Button from '@/components/Button';
@@ -77,6 +82,7 @@ function RenderedDiffView({
   projectId,
   versionId,
   fileName,
+  isMergeCommit = false,
 }: {
   diff: DiffResult;
   mode: 'current' | 'previous';
@@ -84,6 +90,7 @@ function RenderedDiffView({
   projectId: string;
   versionId: string;
   fileName?: string;
+  isMergeCommit?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -91,7 +98,7 @@ function RenderedDiffView({
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const [docxLoading, setDocxLoading] = useState(false);
 
-  const isDocxFile = isDocxFileName(fileName);
+  const isDocxFile = isDocxFileName(fileName) && !isMergeCommit;
 
   const rescaleDocx = useCallback(() => {
     if (!viewportRef.current || !scrollRef.current) return;
@@ -263,6 +270,8 @@ function VersionCard({
   commentCounts,
   getManuscriptReviewUrl,
   manuscriptLinkLabel = 'Review & comment',
+  isHeadCommit = false,
+  onMerge,
 }: {
   version: PaperVersion;
   isLatest: boolean;
@@ -279,6 +288,8 @@ function VersionCard({
   commentCounts?: { open: number; needs_revision: number };
   getManuscriptReviewUrl?: (versionId: string) => string;
   manuscriptLinkLabel?: string;
+  isHeadCommit?: boolean;
+  onMerge?: (e: React.MouseEvent) => void;
 }) {
   const [downloading, setDownloading] = useState(false);
   const [diff, setDiff] = useState<DiffResult | null>(null);
@@ -525,6 +536,17 @@ function VersionCard({
                   Mark reviewed
                 </Button>
               ) : null}
+              {isHeadCommit && onMerge ? (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onMerge(e); }}
+                  className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50 hover:text-neutral-800"
+                  title="Merge this branch into another branch"
+                >
+                  <FiGitMerge className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Merge…</span>
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={handleDownload}
@@ -639,6 +661,7 @@ function VersionCard({
                     projectId={projectId}
                     versionId={version.id}
                     fileName={version.file_name}
+                    isMergeCommit={version.tag === 'merge'}
                   />
                 </div>
               )}
@@ -852,11 +875,13 @@ function UploadVersionModal({
   onClose,
   onSuccess,
   projectId,
+  branchName,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   projectId: string;
+  branchName: string;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [commitMessage, setCommitMessage] = useState('');
@@ -906,7 +931,7 @@ function UploadVersionModal({
     setSubmitting(true);
     setError(null);
 
-    const res = await uploadPaperVersion(projectId, file, commitMessage.trim());
+    const res = await uploadPaperVersion(projectId, file, commitMessage.trim(), branchName);
     if (res.error) {
       setError(res.error);
       setSubmitting(false);
@@ -998,7 +1023,181 @@ function UploadVersionModal({
   );
 }
 
-//Main component 
+function NewBranchModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  projectId,
+  fromVersionId,
+  fromBranchName,
+  fromVersionNumber,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: (newBranch: Branch) => void;
+  projectId: string;
+  fromVersionId: string;
+  fromBranchName: string;
+  fromVersionNumber: number;
+}) {
+  const [name, setName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleClose = () => {
+    if (submitting) return;
+    setName('');
+    setError(null);
+    onClose();
+  };
+
+  const handleSubmit = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) { setError('Branch name is required.'); return; }
+    if (!/^[a-zA-Z0-9/_-]+$/.test(trimmed)) {
+      setError('Use letters, numbers, hyphens, underscores, or forward slashes only.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    const res = await createBranch(projectId, trimmed, fromVersionId);
+    setSubmitting(false);
+    if (res.error) { setError(res.error); return; }
+    if (res.data) {
+      toast.success(`Branch "${trimmed}" created`);
+      setName('');
+      onSuccess(res.data);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Create New Branch" size="sm">
+      <div className="space-y-4">
+        <p className="text-sm text-neutral-600">
+          Branching from{' '}
+          <code className="font-mono text-xs bg-neutral-100 px-1.5 py-0.5 rounded">{fromBranchName}</code>{' '}
+          at{' '}
+          <code className="font-mono text-xs bg-neutral-100 px-1.5 py-0.5 rounded">v{fromVersionNumber}</code>.
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+            Branch name <span className="text-error-600">*</span>
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => { setName(e.target.value); if (error) setError(null); }}
+            placeholder="e.g. feature/introduction-revision"
+            className="w-full px-4 py-2.5 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 placeholder:text-neutral-400 text-sm font-mono"
+            onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmit(); }}
+            autoFocus
+          />
+          <p className="mt-1 text-xs text-neutral-500">
+            Letters, numbers, hyphens, underscores, forward slashes.
+          </p>
+        </div>
+        {error ? (
+          <p className="text-sm text-error-600 bg-error-50 px-3 py-2 rounded-lg">{error}</p>
+        ) : null}
+        <ModalFooter>
+          <Button variant="outline" onClick={handleClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => void handleSubmit()}
+            loading={submitting}
+            disabled={submitting || !name.trim()}
+          >
+            Create Branch
+          </Button>
+        </ModalFooter>
+      </div>
+    </Modal>
+  );
+}
+
+function MergePickerModal({
+  isOpen,
+  onClose,
+  projectId,
+  sourceBranch,
+  branches,
+  router,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId: string;
+  sourceBranch: Branch;
+  branches: Branch[];
+  router: ReturnType<typeof useRouter>;
+}) {
+  const otherBranches = branches.filter((b) => b.id !== sourceBranch.id);
+  const [targetName, setTargetName] = useState('');
+
+  useEffect(() => {
+    if (isOpen && otherBranches.length > 0) {
+      const main = otherBranches.find((b) => b.name === 'main');
+      setTargetName(main?.name ?? otherBranches[0].name);
+    }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePreview = () => {
+    if (!targetName) return;
+    router.push(
+      `/student/projects/${projectId}/merge/${encodeURIComponent(sourceBranch.name)}/${encodeURIComponent(targetName)}`
+    );
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Merge Branch" size="sm">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm flex-wrap">
+          <code className="font-mono px-2 py-1 bg-primary-50 border border-primary-200 rounded text-primary-700 text-xs">
+            {sourceBranch.name}
+          </code>
+          <FiArrowRight className="text-neutral-400 shrink-0 w-4 h-4" />
+          <span className="text-neutral-600 text-xs">into</span>
+        </div>
+        {otherBranches.length === 0 ? (
+          <p className="text-sm text-neutral-500 italic">No other branches to merge into. Create another branch first.</p>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+              Target branch
+            </label>
+            <select
+              value={targetName}
+              onChange={(e) => setTargetName(e.target.value)}
+              className="w-full px-3 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+            >
+              {otherBranches.map((b) => (
+                <option key={b.id} value={b.name}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <ModalFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handlePreview}
+            disabled={!targetName || otherBranches.length === 0}
+          >
+            <FiGitMerge className="w-3.5 h-3.5 mr-1.5" />
+            Preview &amp; Merge
+          </Button>
+        </ModalFooter>
+      </div>
+    </Modal>
+  );
+}
+
+//Main component
 export interface PaperVersionTimelineProps {
   projectId: string;
   paperStandard: string;
@@ -1031,17 +1230,44 @@ export default function PaperVersionTimeline({
   getManuscriptReviewUrl,
   manuscriptLinkLabel,
 }: PaperVersionTimelineProps) {
+  const router = useRouter();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [openVersionId, setOpenVersionId] = useState<string | null>(null);
   const [commentSummary, setCommentSummary] = useState<PaperCommentSummary | null>(null);
 
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
+  const [newBranchOpen, setNewBranchOpen] = useState(false);
+  const [mergePickerOpen, setMergePickerOpen] = useState(false);
+
+  const loadBranches = useCallback(async () => {
+    const res = await listBranches(projectId);
+    if (res.data) {
+      setBranches(res.data);
+      setActiveBranchId((prev) => {
+        if (prev) return prev;
+        const main = res.data!.find((b) => b.name === 'main');
+        return main?.id ?? res.data![0]?.id ?? null;
+      });
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    void loadBranches();
+  }, [loadBranches]);
+
   useEffect(() => {
     getPaperCommentSummary(projectId).then((res) => {
       if (res.data) setCommentSummary(res.data);
     });
   }, [projectId, versions.length]);
+
+  const activeBranch = branches.find((b) => b.id === activeBranchId) ?? null;
+  const filteredVersions = activeBranchId
+    ? versions.filter((v) => v.branch_id === activeBranchId)
+    : versions;
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -1055,7 +1281,7 @@ export default function PaperVersionTimeline({
     setGenerating(false);
   };
 
-  const latestRealUploadId = versions.find((v) => v.is_generated === 0)?.id ?? null;
+  const latestRealUploadId = filteredVersions.find((v) => v.is_generated === 0)?.id ?? null;
 
   const handleReviewChange = () => {
     onReviewChange?.();
@@ -1068,21 +1294,21 @@ export default function PaperVersionTimeline({
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
             <FiGitCommit className="text-primary-600" />
             Paper Version History
           </h2>
-          <p className="text-sm text-neutral-500 mt-0.5">
+          <div className="text-sm text-neutral-500 mt-0.5">
             {loading ? (
               <ShimmerLine className="inline-block h-4 w-56 max-w-full align-middle" />
             ) : versions.length === 0
               ? allowUpload
                 ? 'No versions yet — upload your draft or generate a template to get started.'
                 : 'No versions uploaded yet.'
-              : `${versions.length} version${versions.length !== 1 ? 's' : ''} · ${formatPaperStandard(paperStandard)} format`}
-          </p>
+              : `${filteredVersions.length} version${filteredVersions.length !== 1 ? 's' : ''} · ${formatPaperStandard(paperStandard)} format`}
+          </div>
         </div>
 
         {allowUpload && !loading ? (
@@ -1110,6 +1336,12 @@ export default function PaperVersionTimeline({
               <FiUploadCloud className="w-3.5 h-3.5 mr-1.5" />
               Upload New Version
             </Button>
+            {activeBranch?.head_version_id ? (
+              <Button variant="outline" size="sm" onClick={() => setNewBranchOpen(true)}>
+                <FiGitBranch className="w-3.5 h-3.5 mr-1" />
+                New Branch
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -1117,6 +1349,29 @@ export default function PaperVersionTimeline({
       {genError && (
         <p className="text-sm text-error-600 bg-error-50 px-3 py-2 rounded-lg mb-4">{genError}</p>
       )}
+
+      {!loading && branches.length > 1 ? (
+        <div className="mb-5 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-sm text-neutral-500">
+            <FiGitBranch className="w-4 h-4" />
+          </div>
+          <div className="inline-flex rounded-md bg-neutral-100 p-1 gap-0.5 flex-wrap">
+            {branches.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => setActiveBranchId(b.id)}
+                className={`px-3 py-1 text-xs rounded transition-colors font-mono ${
+                  activeBranchId === b.id
+                    ? 'bg-white shadow-sm font-medium text-neutral-800'
+                    : 'text-neutral-600 hover:text-neutral-800'
+                }`}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {activeReviewRequest && canRequestReview ? (
         <div className="mb-4 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-900">
@@ -1141,19 +1396,21 @@ export default function PaperVersionTimeline({
       {/* Timeline */}
       {loading ? (
         <PaperVersionTimelineSkeleton />
-      ) : versions.length === 0 ? (
+      ) : filteredVersions.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-neutral-400">
           <FiFileText className="w-10 h-10" />
-          <p className="text-sm">No paper versions yet.</p>
+          <p className="text-sm">
+            {versions.length > 0 ? 'No versions on this branch yet.' : 'No paper versions yet.'}
+          </p>
         </div>
       ) : (
         <div>
-          {versions.map((v, idx) => (
+          {filteredVersions.map((v, idx) => (
             <VersionCard
               key={v.id}
               version={v}
               isLatest={idx === 0}
-              isFirst={idx === versions.length - 1}
+              isFirst={idx === filteredVersions.length - 1}
               isLatestRealUpload={v.id === latestRealUploadId}
               projectId={projectId}
               isOpen={openVersionId === v.id}
@@ -1166,6 +1423,12 @@ export default function PaperVersionTimeline({
               commentCounts={commentSummary?.by_version?.[v.id]}
               getManuscriptReviewUrl={getManuscriptReviewUrl}
               manuscriptLinkLabel={manuscriptLinkLabel}
+              isHeadCommit={v.id === activeBranch?.head_version_id && branches.length > 1}
+              onMerge={
+                v.id === activeBranch?.head_version_id && branches.length > 1 && activeBranch
+                  ? () => setMergePickerOpen(true)
+                  : undefined
+              }
             />
           ))}
           {/* End of timeline dot */}
@@ -1184,6 +1447,34 @@ export default function PaperVersionTimeline({
           onClose={() => setUploadOpen(false)}
           onSuccess={onRefresh}
           projectId={projectId}
+          branchName={activeBranch?.name ?? 'main'}
+        />
+      ) : null}
+
+      {activeBranch?.head_version_id ? (
+        <NewBranchModal
+          isOpen={newBranchOpen}
+          onClose={() => setNewBranchOpen(false)}
+          onSuccess={(newBranch) => {
+            setNewBranchOpen(false);
+            setBranches((prev) => [...prev, newBranch]);
+            setActiveBranchId(newBranch.id);
+          }}
+          projectId={projectId}
+          fromVersionId={activeBranch.head_version_id}
+          fromBranchName={activeBranch.name}
+          fromVersionNumber={activeBranch.head_version_number ?? 0}
+        />
+      ) : null}
+
+      {activeBranch ? (
+        <MergePickerModal
+          isOpen={mergePickerOpen}
+          onClose={() => setMergePickerOpen(false)}
+          projectId={projectId}
+          sourceBranch={activeBranch}
+          branches={branches}
+          router={router}
         />
       ) : null}
     </div>

@@ -21,6 +21,7 @@ export interface PaperVersion {
   uploader_avatar: string | null;
   is_generated: number; // 0 | 1 (tinyint)
   created_at: string;
+  branch_id: string | null;
 }
 
 export interface DiffChange {
@@ -57,10 +58,12 @@ export async function uploadPaperVersion(
   projectId: string,
   file: File,
   commitMessage: string,
+  branchName?: string,
 ) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('commitMessage', commitMessage);
+  if (branchName) formData.append('branchName', branchName);
   return post<{ versionNumber: number; fileUrl: string }>(
     `/projects/${projectId}/paper-versions`,
     formData,
