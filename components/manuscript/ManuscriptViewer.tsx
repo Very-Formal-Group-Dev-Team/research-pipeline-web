@@ -175,7 +175,7 @@ export default function ManuscriptViewer({
           }
           rescaleDocx();
           setDocxReady(true);
-          applyCommentHighlights(container, comments, selectedCommentId, pendingAnchor);
+          applyHtmlOverlays(container);
         } catch {
           if (!cancelled) {
             setRenderError('Failed to render document');
