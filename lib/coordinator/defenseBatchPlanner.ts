@@ -1,10 +1,14 @@
 import type { CourseGroup } from '@/lib/api/coordinator';
 
-export type DivisionMethod = 'by_batches' | 'by_duration' | 'manual';
+export type DivisionMethod = 'by_batches' | 'by_duration' | 'custom';
+
+export type BatchSlotKind = 'defense' | 'non_defense';
 
 export interface BatchLane {
   id: string;
   batchNumber: number;
+  label?: string;
+  slotKind?: BatchSlotKind;
   startTime: string;
   endTime: string;
   groupIds: string[];
@@ -55,6 +59,19 @@ export function formatDefenseTypeLabel(defenseType: string): string {
 
 export function formatTimeRange(startTime: string, endTime: string): string {
   return `${startTime} – ${endTime}`;
+}
+
+export function getBatchDisplayName(lane: Pick<BatchLane, 'batchNumber' | 'label'>): string {
+  const trimmed = lane.label?.trim();
+  return trimmed || `Batch ${lane.batchNumber}`;
+}
+
+export function getLaneSlotKind(lane: Pick<BatchLane, 'slotKind'>): BatchSlotKind {
+  return lane.slotKind ?? 'defense';
+}
+
+export function isAssignableLane(lane: Pick<BatchLane, 'slotKind'>): boolean {
+  return getLaneSlotKind(lane) !== 'non_defense';
 }
 
 function createLaneId(batchNumber: number) {
@@ -132,13 +149,13 @@ export function buildLanesForByDuration({
 export function buildLanesForManual({
   startTime,
   endTime,
-  groupCount,
+  batchCount,
 }: {
   startTime: string;
   endTime: string;
-  groupCount: number;
+  batchCount: number;
 }): Omit<BatchLane, 'groupIds'>[] {
-  const laneCount = Math.max(1, groupCount);
+  const laneCount = Math.max(1, Math.floor(batchCount));
   const totalMinutes = getTimeframeMinutes(startTime, endTime);
   const durationPerBatch = totalMinutes > 0 ? Math.floor(totalMinutes / laneCount) : 60;
   const slots = buildSequentialSlots(startTime, durationPerBatch || 60, laneCount);
@@ -149,6 +166,213 @@ export function buildLanesForManual({
     startTime: slot.startTime,
     endTime: slot.endTime,
   }));
+}
+
+export function createInitialManualLanes(
+  startTime: string,
+  endTime: string,
+  batchCount = 2,
+): BatchLane[] {
+  return createEmptyLanes(buildLanesForManual({ startTime, endTime, batchCount }));
+}
+
+function timesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
+  const aStart = parseTimeToMinutes(startA);
+  const aEnd = parseTimeToMinutes(endA);
+  const bStart = parseTimeToMinutes(startB);
+  const bEnd = parseTimeToMinutes(endB);
+  return aStart < bEnd && bStart < aEnd;
+}
+
+export function addManualLane(
+  lanes: BatchLane[],
+  eventStartTime: string,
+  eventEndTime: string,
+): BatchLane[] {
+  const eventEnd = parseTimeToMinutes(eventEndTime);
+  const defaultDuration = 60;
+
+  let newStart: number;
+  let newEnd: number;
+
+  if (lanes.length === 0) {
+    newStart = parseTimeToMinutes(eventStartTime);
+    newEnd = Math.min(newStart + defaultDuration, eventEnd);
+  } else {
+    const lastLane = lanes[lanes.length - 1];
+    newStart = parseTimeToMinutes(lastLane.endTime);
+    newEnd = Math.min(newStart + defaultDuration, eventEnd);
+    if (newEnd <= newStart) {
+      newStart = parseTimeToMinutes(eventStartTime);
+      newEnd = Math.min(newStart + defaultDuration, eventEnd);
+    }
+  }
+
+  const newBatchNumber = lanes.length + 1;
+  return [
+    ...lanes,
+    {
+      id: createLaneId(newBatchNumber),
+      batchNumber: newBatchNumber,
+      startTime: formatMinutesToTime(newStart),
+      endTime: formatMinutesToTime(newEnd),
+      groupIds: [],
+    },
+  ];
+}
+
+export function addManualLanes(
+  lanes: BatchLane[],
+  eventStartTime: string,
+  eventEndTime: string,
+  count: number,
+): BatchLane[] {
+  const safeCount = Math.max(0, Math.floor(count));
+  let result = lanes;
+  for (let i = 0; i < safeCount; i++) {
+    result = addManualLane(result, eventStartTime, eventEndTime);
+  }
+  return result;
+}
+
+export function removeManualLane(
+  lanes: BatchLane[],
+  laneId: string,
+): { lanes: BatchLane[]; releasedGroupIds: string[] } {
+  const target = lanes.find((lane) => lane.id === laneId);
+  if (!target || lanes.length <= 1) {
+    return { lanes, releasedGroupIds: [] };
+  }
+
+  const releasedGroupIds = [...target.groupIds];
+  const renumbered = lanes
+    .filter((lane) => lane.id !== laneId)
+    .map((lane, index) => ({
+      ...lane,
+      id: createLaneId(index + 1),
+      batchNumber: index + 1,
+    }));
+
+  return { lanes: renumbered, releasedGroupIds };
+}
+
+export function updateLaneTimes(
+  lanes: BatchLane[],
+  laneId: string,
+  patch: { startTime?: string; endTime?: string },
+): BatchLane[] {
+  return lanes.map((lane) => (lane.id === laneId ? { ...lane, ...patch } : lane));
+}
+
+export function updateLaneLabel(
+  lanes: BatchLane[],
+  laneId: string,
+  label: string | undefined,
+): BatchLane[] {
+  return lanes.map((lane) => {
+    if (lane.id !== laneId) return lane;
+    const trimmed = label?.trim();
+    const defaultName = `Batch ${lane.batchNumber}`;
+    if (!trimmed || trimmed === defaultName) {
+      const next = { ...lane };
+      delete next.label;
+      return next;
+    }
+    return { ...lane, label: trimmed };
+  });
+}
+
+export function updateLaneSlotKind(
+  lanes: BatchLane[],
+  laneId: string,
+  slotKind: BatchSlotKind,
+): { lanes: BatchLane[]; releasedGroupIds: string[] } {
+  let releasedGroupIds: string[] = [];
+
+  const nextLanes = lanes.map((lane) => {
+    if (lane.id !== laneId) return lane;
+
+    if (slotKind === 'non_defense') {
+      releasedGroupIds = [...lane.groupIds];
+      return { ...lane, slotKind, groupIds: [] };
+    }
+
+    const next = { ...lane };
+    delete next.slotKind;
+    return next;
+  });
+
+  return { lanes: nextLanes, releasedGroupIds };
+}
+
+export function validateLaneSlotAssignments(lanes: BatchLane[]): ManualLaneValidationResult {
+  const errors: string[] = [];
+
+  for (const lane of lanes) {
+    if (getLaneSlotKind(lane) === 'non_defense' && lane.groupIds.length > 0) {
+      errors.push(`${getBatchDisplayName(lane)} is marked non-defense but has assigned groups.`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+export interface ManualLaneValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export function validateManualLanes(
+  lanes: BatchLane[],
+  eventStartTime: string,
+  eventEndTime: string,
+): ManualLaneValidationResult {
+  const errors: string[] = [];
+  const eventStart = parseTimeToMinutes(eventStartTime);
+  const eventEnd = parseTimeToMinutes(eventEndTime);
+  const lanesWithGroups = lanes.filter((lane) => lane.groupIds.length > 0);
+
+  for (const lane of lanesWithGroups) {
+    const start = parseTimeToMinutes(lane.startTime);
+    const end = parseTimeToMinutes(lane.endTime);
+
+    if (start >= end) {
+      errors.push(`${getBatchDisplayName(lane)}: start time must be before end time.`);
+    }
+    if (start < eventStart) {
+      errors.push(`${getBatchDisplayName(lane)}: start time is before the event start (${eventStartTime}).`);
+    }
+    if (end > eventEnd) {
+      errors.push(`${getBatchDisplayName(lane)}: end time is after the event end (${eventEndTime}).`);
+    }
+  }
+
+  for (let i = 0; i < lanes.length; i++) {
+    for (let j = i + 1; j < lanes.length; j++) {
+      const a = lanes[i];
+      const b = lanes[j];
+      if (a.groupIds.length === 0 || b.groupIds.length === 0) continue;
+      if (timesOverlap(a.startTime, a.endTime, b.startTime, b.endTime)) {
+        errors.push(`${getBatchDisplayName(a)} and ${getBatchDisplayName(b)} have overlapping times.`);
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+export function summarizeManualSchedule(
+  lanes: BatchLane[],
+  startTime: string,
+  endTime: string,
+): { batchCount: number; scheduledMinutes: number; breakMinutes: number } {
+  const eventMinutes = getTimeframeMinutes(startTime, endTime);
+  const scheduledMinutes = lanes.reduce(
+    (sum, lane) => sum + getTimeframeMinutes(lane.startTime, lane.endTime),
+    0,
+  );
+  const breakMinutes = Math.max(0, eventMinutes - scheduledMinutes);
+  return { batchCount: lanes.length, scheduledMinutes, breakMinutes };
 }
 
 export function appendRemainderLane(
@@ -206,7 +430,7 @@ export function buildLaneTemplates({
     return buildLanesForByDuration({ startTime, endTime, durationMinutes: safeDuration });
   }
 
-  return buildLanesForManual({ startTime, endTime, groupCount });
+  return buildLanesForManual({ startTime, endTime, batchCount });
 }
 
 export function createEmptyLanes(templates: Omit<BatchLane, 'groupIds'>[]): BatchLane[] {
@@ -231,11 +455,19 @@ export function rebuildLanesPreservingAssignments(
   currentLanes.forEach((oldLane, index) => {
     const targetIndex = Math.min(index, lanes.length - 1);
     const targetLane = lanes[targetIndex];
-    oldLane.groupIds.forEach((groupId) => {
-      if (!targetLane.groupIds.includes(groupId)) {
-        targetLane.groupIds.push(groupId);
-      }
-    });
+    if (oldLane.label?.trim()) {
+      targetLane.label = oldLane.label.trim();
+    }
+    if (oldLane.slotKind) {
+      targetLane.slotKind = oldLane.slotKind;
+    }
+    if (isAssignableLane(targetLane)) {
+      oldLane.groupIds.forEach((groupId) => {
+        if (!targetLane.groupIds.includes(groupId)) {
+          targetLane.groupIds.push(groupId);
+        }
+      });
+    }
   });
 
   return {
@@ -336,11 +568,11 @@ export function moveGroupBetweenContainers({
   if (target.type === 'unassigned') {
     nextUnassigned = [...nextUnassigned, groupId];
   } else {
-    nextLanes.forEach((lane) => {
-      if (lane.id === target.laneId) {
-        lane.groupIds = [...lane.groupIds, groupId];
-      }
-    });
+    const targetLane = nextLanes.find((lane) => lane.id === target.laneId);
+    if (!targetLane || !isAssignableLane(targetLane)) {
+      return { lanes, unassignedIds };
+    }
+    targetLane.groupIds = [...targetLane.groupIds, groupId];
   }
 
   return { lanes: nextLanes, unassignedIds: nextUnassigned };
@@ -351,6 +583,8 @@ export interface PlannerDirtyState {
   lanes: Array<{
     id: string;
     batchNumber: number;
+    label?: string;
+    slotKind?: BatchSlotKind;
     startTime: string;
     endTime: string;
     groupIds: string[];
@@ -372,6 +606,8 @@ export function buildPlannerDirtyState(
     lanes: lanes.map((lane) => ({
       id: lane.id,
       batchNumber: lane.batchNumber,
+      label: lane.label,
+      slotKind: lane.slotKind,
       startTime: lane.startTime,
       endTime: lane.endTime,
       groupIds: [...lane.groupIds],
@@ -384,4 +620,162 @@ export function buildPlannerDirtyState(
 
 export function serializePlannerDirtyState(state: PlannerDirtyState): string {
   return JSON.stringify(state);
+}
+
+export type AutoAssignSortField = 'title' | 'project_code' | 'random';
+export type AutoAssignSortDirection = 'asc' | 'desc';
+export type AutoAssignDistribution = 'round_robin' | 'sequential_fill';
+export type AutoAssignScope = 'unassigned_only' | 'reassign_all';
+
+export interface AutoAssignOptions {
+  sortField: AutoAssignSortField;
+  sortDirection: AutoAssignSortDirection;
+  distribution: AutoAssignDistribution;
+  scope: AutoAssignScope;
+}
+
+export const DEFAULT_AUTO_ASSIGN_OPTIONS: AutoAssignOptions = {
+  sortField: 'title',
+  sortDirection: 'asc',
+  distribution: 'round_robin',
+  scope: 'unassigned_only',
+};
+
+function randomSortKey(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  }
+  return hash;
+}
+
+export function sortGroupsForAutoAssign(
+  groups: CourseGroup[],
+  options: Pick<AutoAssignOptions, 'sortField' | 'sortDirection'>,
+): CourseGroup[] {
+  const copy = [...groups];
+
+  if (options.sortField === 'random') {
+    copy.sort((a, b) => randomSortKey(a.id) - randomSortKey(b.id));
+    return copy;
+  }
+
+  copy.sort((a, b) => {
+    const cmp = a[options.sortField].localeCompare(b[options.sortField], undefined, {
+      sensitivity: 'base',
+    });
+    return options.sortDirection === 'asc' ? cmp : -cmp;
+  });
+
+  return copy;
+}
+
+function getAssignableLaneRefs(lanes: BatchLane[]) {
+  return lanes
+    .map((lane, index) => ({ lane, index }))
+    .filter(({ lane }) => isAssignableLane(lane));
+}
+
+function distributeRoundRobin(groupIds: string[], assignableLaneRefs: Array<{ index: number }>, lanes: BatchLane[]) {
+  groupIds.forEach((groupId, groupIndex) => {
+    const laneIndex = assignableLaneRefs[groupIndex % assignableLaneRefs.length].index;
+    lanes[laneIndex].groupIds.push(groupId);
+  });
+}
+
+function distributeSequentialFill(
+  groupIds: string[],
+  assignableLaneRefs: Array<{ index: number }>,
+  lanes: BatchLane[],
+) {
+  const laneCount = assignableLaneRefs.length;
+  const base = Math.floor(groupIds.length / laneCount);
+  const remainder = groupIds.length % laneCount;
+  let groupIndex = 0;
+
+  for (let laneOffset = 0; laneOffset < laneCount; laneOffset++) {
+    const count = base + (laneOffset < remainder ? 1 : 0);
+    const laneIndex = assignableLaneRefs[laneOffset].index;
+    for (let i = 0; i < count; i++) {
+      lanes[laneIndex].groupIds.push(groupIds[groupIndex]);
+      groupIndex += 1;
+    }
+  }
+}
+
+function distributeUnassignedSequentialFill(
+  groupIds: string[],
+  assignableLaneRefs: Array<{ index: number }>,
+  lanes: BatchLane[],
+) {
+  groupIds.forEach((groupId) => {
+    const target = assignableLaneRefs.reduce((best, current) => {
+      const bestCount = lanes[best.index].groupIds.length;
+      const currentCount = lanes[current.index].groupIds.length;
+      if (currentCount < bestCount) return current;
+      if (currentCount > bestCount) return best;
+      return current.index < best.index ? current : best;
+    });
+    lanes[target.index].groupIds.push(groupId);
+  });
+}
+
+export function autoAssignGroupsToLanes({
+  lanes,
+  groups,
+  unassignedIds,
+  options,
+}: {
+  lanes: BatchLane[];
+  groups: CourseGroup[];
+  unassignedIds: string[];
+  options: AutoAssignOptions;
+}): { lanes: BatchLane[]; unassignedIds: string[] } {
+  const assignableLaneRefs = getAssignableLaneRefs(lanes);
+  if (!assignableLaneRefs.length) {
+    return { lanes, unassignedIds };
+  }
+
+  const groupMap = getGroupsById(groups);
+  const sourceGroupIds =
+    options.scope === 'reassign_all' ? groups.map((group) => group.id) : [...unassignedIds];
+
+  if (!sourceGroupIds.length) {
+    return { lanes, unassignedIds };
+  }
+
+  const sortedGroups = sortGroupsForAutoAssign(
+    sourceGroupIds
+      .map((groupId) => groupMap.get(groupId))
+      .filter((group): group is CourseGroup => Boolean(group)),
+    options,
+  );
+  const sortedGroupIds = sortedGroups.map((group) => group.id);
+
+  const nextLanes = lanes.map((lane) => {
+    if (!isAssignableLane(lane)) {
+      return { ...lane, groupIds: [...lane.groupIds] };
+    }
+    if (options.scope === 'reassign_all') {
+      return { ...lane, groupIds: [] };
+    }
+    return { ...lane, groupIds: [...lane.groupIds] };
+  });
+
+  if (options.scope === 'reassign_all') {
+    if (options.distribution === 'round_robin') {
+      distributeRoundRobin(sortedGroupIds, assignableLaneRefs, nextLanes);
+    } else {
+      distributeSequentialFill(sortedGroupIds, assignableLaneRefs, nextLanes);
+    }
+  } else if (options.distribution === 'round_robin') {
+    distributeRoundRobin(sortedGroupIds, assignableLaneRefs, nextLanes);
+  } else {
+    distributeUnassignedSequentialFill(sortedGroupIds, assignableLaneRefs, nextLanes);
+  }
+
+  return {
+    lanes: nextLanes,
+    unassignedIds: collectUnassignedGroupIds(groups, nextLanes),
+  };
 }

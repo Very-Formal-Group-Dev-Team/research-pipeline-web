@@ -1,5 +1,7 @@
 'use client';
 
+import { FiClock } from 'react-icons/fi';
+
 import { formControlResponsiveClassName, formLabelClassName } from '@/lib/utils/formControls';
 
 /** Date column: compact but fits typical date inputs; pair with a wider modal on sm+. */
@@ -51,6 +53,13 @@ const TIME_INPUT_CLASS = `${formControlResponsiveClassName} min-w-0 w-full flex-
 
 const TIME_INPUT_FULL_WIDTH_CLASS = `${formControlResponsiveClassName} min-w-0 w-full flex-1 basis-0`;
 
+const TIME_INPUT_COMPACT_CLASS = [
+  formControlResponsiveClassName,
+  '!px-1 !py-1 !text-sm !rounded-sm',
+  'min-w-0 flex-1 basis-0',
+  '[&::-webkit-calendar-picker-indicator]:hidden [appearance:auto]',
+].join(' ');
+
 const TIME_SLOT_INPUT_CLASS = `${formControlResponsiveClassName} min-w-0 w-full sm:w-[9rem] sm:max-w-[9rem] sm:shrink-0`;
 
 export function CoordinatorTimeSlotField({
@@ -89,6 +98,7 @@ export function CoordinatorTimeRangeFields({
   onEndChange,
   required,
   fullWidth = false,
+  compact = false,
 }: {
   startTime: string;
   endTime: string;
@@ -96,8 +106,41 @@ export function CoordinatorTimeRangeFields({
   onEndChange: (value: string) => void;
   required?: boolean;
   fullWidth?: boolean;
+  /** Tighter padding for narrow containers (e.g. batch assignment cards). */
+  compact?: boolean;
 }) {
-  const inputClass = fullWidth ? TIME_INPUT_FULL_WIDTH_CLASS : TIME_INPUT_CLASS;
+  const inputClass = compact
+    ? TIME_INPUT_COMPACT_CLASS
+    : fullWidth
+      ? TIME_INPUT_FULL_WIDTH_CLASS
+      : TIME_INPUT_CLASS;
+
+  if (compact) {
+    return (
+      <div className="flex w-full min-w-0 items-center gap-1.5">
+        <FiClock className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+        <input
+          type="time"
+          required={required}
+          value={startTime}
+          onChange={(e) => onStartChange(e.target.value)}
+          aria-label="Start time"
+          className={inputClass}
+        />
+        <span className="shrink-0 text-xs text-neutral-400" aria-hidden>
+          –
+        </span>
+        <input
+          type="time"
+          required={required}
+          value={endTime}
+          onChange={(e) => onEndChange(e.target.value)}
+          aria-label="End time"
+          className={inputClass}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`min-w-0 w-full max-w-full ${fullWidth ? '' : 'sm:w-auto'}`}>
