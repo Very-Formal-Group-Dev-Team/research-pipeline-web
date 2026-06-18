@@ -15,9 +15,11 @@ import {
   FiMinus,
   FiSend,
   FiCheckCircle,
+  FiMessageSquare,
 } from 'react-icons/fi';
 import { Sparkles } from 'lucide-react';
-import * as DOCX from 'docx-preview';
+import Link from 'next/link';
+import { renderDocxPreview, isDocxFileName, observeDocxPreviewResize, scaleDocxPreviewToFit, HTML_PREVIEW_MOBILE_CLASS, DOCX_PREVIEW_SCROLL_CLASS } from '@/lib/manuscript/docxPreview';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
@@ -36,6 +38,10 @@ import {
   completePaperReviewRequest,
   type PaperReviewRequest,
 } from '@/lib/api/paperReviews';
+import {
+  getPaperCommentSummary,
+  type PaperCommentSummary,
+} from '@/lib/api/paperComments';
 import { formatPaperStandard } from '@/lib/utils/projectDisplay';
 import { toast } from 'sonner';
 import PaperVersionTimelineSkeleton from '@/components/skeletons/PaperVersionTimelineSkeleton';
@@ -79,163 +85,164 @@ function RenderedDiffView({
   versionId: string;
   fileName?: string;
 }) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLElement | null>(null);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const [docxLoading, setDocxLoading] = useState(false);
 
-  const isDocxFile = fileName?.toLowerCase().endsWith('.docx');
+  const isDocxFile = isDocxFileName(fileName);
+
+  const rescaleDocx = useCallback(() => {
+    if (!viewportRef.current || !scrollRef.current) return;
+    scaleDocxPreviewToFit(viewportRef.current, scrollRef.current);
+  }, []);
 
   useEffect(() => {
-    if (!containerRef.current) return;
     const container = containerRef.current;
+    if (!container) return;
 
     if (isDocxFile) {
+      let cancelled = false;
+
       const renderDocx = async () => {
         setDocxLoading(true);
+        resizeCleanupRef.current?.();
+        resizeCleanupRef.current = null;
         try {
-          container.innerHTML = '';
-          const tokenMatch = document.cookie.match(/(?:^|;\s*)session_token=([^;]*)/);
-          const token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
-
-          const url = getPaperVersionDownloadUrl(projectId, versionId);
-          const headers: Record<string, string> = {};
-          if (token) {
-            headers.Authorization = `Bearer ${token}`;
+          const viewport = await renderDocxPreview(container, projectId, versionId);
+          if (cancelled) return;
+          viewportRef.current = viewport;
+          if (scrollRef.current) {
+            resizeCleanupRef.current = observeDocxPreviewResize(scrollRef.current, rescaleDocx);
           }
-
-          const res = await fetch(url, {
-            credentials: 'include',
-            headers,
-          });
-          if (!res.ok) throw new Error('Failed to fetch document');
-
-          const blob = await res.blob();
-
-          const styleEl = document.createElement('style');
-          styleEl.textContent = `
-            .docx-preview {
-              max-width: 100%;
-              margin: 0 auto;
-            }
-            .docx-preview section {
-              page-break-after: always;
-              page-break-inside: avoid;
-              margin-bottom: 1.5rem;
-            }
-            .docx-preview section:last-child {
-              page-break-after: auto;
-            }
-          `;
-          container.appendChild(styleEl);
-
-          container.classList.add('docx-preview');
-
-          await DOCX.renderAsync(blob, container);
+          rescaleDocx();
         } catch {
-          container.innerHTML = '<div class="text-sm text-error-600 bg-error-50 p-3 rounded">Failed to render document</div>';
+          if (!cancelled) {
+            container.innerHTML =
+              '<div class="text-sm text-error-600 bg-error-50 p-3 rounded">Failed to render document</div>';
+          }
         } finally {
-          setDocxLoading(false);
+          if (!cancelled) setDocxLoading(false);
         }
       };
 
-      renderDocx();
-    } else {
-      setDocxLoading(false);
-      const html = mode === 'current' ? diff.currentHtml : diff.previousHtml;
-      if (!html) {
-        container.innerHTML = '<div class="text-sm text-neutral-500 italic">Rendered view not available for this file type.</div>';
-        return;
+      void renderDocx();
+      return () => {
+        cancelled = true;
+        resizeCleanupRef.current?.();
+        resizeCleanupRef.current = null;
+      };
+    }
+
+    setDocxLoading(false);
+    viewportRef.current = null;
+    resizeCleanupRef.current?.();
+    resizeCleanupRef.current = null;
+
+    const html = mode === 'current' ? diff.currentHtml : diff.previousHtml;
+    if (!html) {
+      container.innerHTML =
+        '<div class="text-sm text-neutral-500 italic">Rendered view not available for this file type.</div>';
+      return;
+    }
+
+    container.innerHTML = html;
+
+    if (!diff.changes || diff.changes.length === 0) return;
+
+    const parts = diff.changes;
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+    const nodes: { node: Text; start: number; end: number }[] = [];
+    let cur: Node | null = walker.nextNode();
+    let idx = 0;
+    while (cur) {
+      const txt = cur.nodeValue || '';
+      const len = txt.length;
+      if (len > 0) {
+        nodes.push({ node: cur as Text, start: idx, end: idx + len });
+        idx += len;
       }
+      cur = walker.nextNode();
+    }
 
-      container.innerHTML = html;
+    const fullText = nodes.map((n) => n.node.nodeValue || '').join('');
+    if (!fullText || fullText.length === 0) return;
 
-      if (!diff.changes || diff.changes.length === 0) return;
-
-      const parts = diff.changes;
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
-      const nodes: { node: Text; start: number; end: number }[] = [];
-      let cur: Node | null = walker.nextNode();
-      let idx = 0;
-      while (cur) {
-        const txt = cur.nodeValue || '';
-        const len = txt.length;
-        if (len > 0) {
-          nodes.push({ node: cur as Text, start: idx, end: idx + len });
-          idx += len;
-        }
-        cur = walker.nextNode();
-      }
-
-      const fullText = nodes.map((n) => n.node.nodeValue || '').join('');
-      if (!fullText || fullText.length === 0) return;
-
-      const ranges: { start: number; end: number; type: 'added' | 'removed' }[] = [];
-      let pointer = 0;
-      for (const part of parts) {
-        if (mode === 'current' && part.removed) continue;
-        if (mode === 'previous' && part.added) continue;
-        const val = part.value || '';
-        if (!val) continue;
-        const startIndex = fullText.indexOf(val, pointer);
-        if (startIndex === -1) {
-          const alt = fullText.indexOf(val);
-          if (alt === -1) continue;
-          pointer = alt + val.length;
-          ranges.push({ start: alt, end: alt + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
-        } else {
-          ranges.push({ start: startIndex, end: startIndex + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
-          pointer = startIndex + val.length;
-        }
-      }
-
-      if (ranges.length === 0) return;
-
-      ranges.sort((a, b) => b.start - a.start);
-      for (const r of ranges) {
-        let startNodeIndex = -1;
-        for (let i = 0; i < nodes.length; i++) {
-          if (r.start >= nodes[i].start && r.start < nodes[i].end) {
-            startNodeIndex = i;
-            break;
-          }
-        }
-        if (startNodeIndex === -1) continue;
-
-        let endNodeIndex = startNodeIndex;
-        while (endNodeIndex < nodes.length && r.end > nodes[endNodeIndex].end) endNodeIndex++;
-        if (endNodeIndex >= nodes.length) continue;
-
-        const startNode = nodes[startNodeIndex].node;
-        const endNode = nodes[endNodeIndex].node;
-        const startOffset = r.start - nodes[startNodeIndex].start;
-        const endOffset = r.end - nodes[endNodeIndex].start;
-
-        const range = document.createRange();
-        try {
-          range.setStart(startNode, startOffset);
-          range.setEnd(endNode, endOffset);
-          const wrapper = document.createElement('span');
-          if (r.type === 'added') {
-            wrapper.className = 'bg-success-100 text-success-800 decoration-success-400';
-          } else {
-            wrapper.className = 'bg-error-100 text-error-800 line-through decoration-error-400';
-          }
-          range.surroundContents(wrapper);
-        } catch {
-          // surroundContents may throw for malformed ranges; ignore and continue
-        }
+    const ranges: { start: number; end: number; type: 'added' | 'removed' }[] = [];
+    let pointer = 0;
+    for (const part of parts) {
+      if (mode === 'current' && part.removed) continue;
+      if (mode === 'previous' && part.added) continue;
+      const val = part.value || '';
+      if (!val) continue;
+      const startIndex = fullText.indexOf(val, pointer);
+      if (startIndex === -1) {
+        const alt = fullText.indexOf(val);
+        if (alt === -1) continue;
+        pointer = alt + val.length;
+        ranges.push({ start: alt, end: alt + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
+      } else {
+        ranges.push({ start: startIndex, end: startIndex + val.length, type: part.added ? 'added' : part.removed ? 'removed' : 'added' });
+        pointer = startIndex + val.length;
       }
     }
-  }, [diff, mode, isDocxFile, projectId, versionId]);
+
+    if (ranges.length === 0) return;
+
+    ranges.sort((a, b) => b.start - a.start);
+    for (const r of ranges) {
+      let startNodeIndex = -1;
+      for (let i = 0; i < nodes.length; i++) {
+        if (r.start >= nodes[i].start && r.start < nodes[i].end) {
+          startNodeIndex = i;
+          break;
+        }
+      }
+      if (startNodeIndex === -1) continue;
+
+      let endNodeIndex = startNodeIndex;
+      while (endNodeIndex < nodes.length && r.end > nodes[endNodeIndex].end) endNodeIndex++;
+      if (endNodeIndex >= nodes.length) continue;
+
+      const startNode = nodes[startNodeIndex].node;
+      const endNode = nodes[endNodeIndex].node;
+      const startOffset = r.start - nodes[startNodeIndex].start;
+      const endOffset = r.end - nodes[endNodeIndex].start;
+
+      const range = document.createRange();
+      try {
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        const wrapper = document.createElement('span');
+        if (r.type === 'added') {
+          wrapper.className = 'bg-success-100 text-success-800 decoration-success-400';
+        } else {
+          wrapper.className = 'bg-error-100 text-error-800 line-through decoration-error-400';
+        }
+        range.surroundContents(wrapper);
+      } catch {
+        // surroundContents may throw for malformed ranges; ignore and continue
+      }
+    }
+  }, [diff, mode, isDocxFile, projectId, versionId, rescaleDocx]);
 
   return (
-    <div className={`rounded-lg border border-neutral-200 bg-white p-4 overflow-y-auto ${className ?? 'max-h-96'}`}>
-      {docxLoading && (
-        <div className="flex items-center gap-2 text-sm text-neutral-400 py-6 justify-center">
+    <div
+      className={`relative min-h-0 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50/40 ${className ?? 'max-h-96'}`}
+    >
+      {docxLoading ? (
+        <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-white/80 text-sm text-neutral-400">
           <FiRefreshCw className="w-4 h-4 animate-spin" />
           Rendering document…
         </div>
-      )}
-      <div ref={containerRef} />
+      ) : null}
+      <div
+        ref={scrollRef}
+        className={`h-full min-h-0 ${DOCX_PREVIEW_SCROLL_CLASS} ${docxLoading ? 'invisible' : ''}`}
+      >
+        <div ref={containerRef} className={`w-full min-w-0 ${HTML_PREVIEW_MOBILE_CLASS}`} />
+      </div>
     </div>
   );
 }
@@ -253,6 +260,9 @@ function VersionCard({
   canCompleteReview,
   reviewRequestsDisabled,
   onReviewChange,
+  commentCounts,
+  getManuscriptReviewUrl,
+  manuscriptLinkLabel = 'Review & comment',
 }: {
   version: PaperVersion;
   isLatest: boolean;
@@ -266,6 +276,9 @@ function VersionCard({
   canCompleteReview?: boolean;
   reviewRequestsDisabled?: boolean;
   onReviewChange?: () => void;
+  commentCounts?: { open: number; needs_revision: number };
+  getManuscriptReviewUrl?: (versionId: string) => string;
+  manuscriptLinkLabel?: string;
 }) {
   const [downloading, setDownloading] = useState(false);
   const [diff, setDiff] = useState<DiffResult | null>(null);
@@ -275,6 +288,12 @@ function VersionCard({
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [reviewActionLoading, setReviewActionLoading] = useState(false);
+  const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
+  const [completeConflict, setCompleteConflict] = useState<{
+    open: number;
+    needs_revision: number;
+    resolved: number;
+  } | null>(null);
   const hasFetchedRef = useRef(false);
 
   const isReviewTarget = activeReviewRequest?.paper_version_id === version.id;
@@ -352,21 +371,31 @@ function VersionCard({
     onReviewChange?.();
   };
 
-  const handleCompleteReview = async (e: React.MouseEvent) => {
+  const handleCompleteReview = async (e: React.MouseEvent, force = false) => {
     e.stopPropagation();
     setReviewActionLoading(true);
-    const res = await completePaperReviewRequest(projectId);
+    const res = await completePaperReviewRequest(projectId, force);
     setReviewActionLoading(false);
+    if (res.status === 409 && res.data && 'requiresConfirmation' in res.data && res.data.requiresConfirmation) {
+      setCompleteConflict(res.data.commentCounts || { open: 0, needs_revision: 0, resolved: 0 });
+      setCompleteConfirmOpen(true);
+      return;
+    }
     if (res.error) {
       toast.error(res.error);
       return;
     }
+    setCompleteConfirmOpen(false);
+    setCompleteConflict(null);
     toast.success('Marked as reviewed');
     onReviewChange?.();
   };
 
+  const versionCommentCounts = commentCounts || { open: 0, needs_revision: 0 };
+  const manuscriptUrl = getManuscriptReviewUrl?.(version.id);
+
   return (
-    <div className="flex gap-3 sm:gap-4">
+    <div className="flex min-w-0 gap-3 sm:gap-4">
       <div className="flex flex-col items-center">
         <div
           className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${
@@ -380,10 +409,10 @@ function VersionCard({
         <div className="w-px flex-1 bg-neutral-200 mt-1" />
       </div>
 
-      <div className="flex-1 mb-4">
+      <div className="min-w-0 flex-1 mb-4">
         <div
           onClick={onToggle}
-          className={`rounded-xl border p-4 transition-all cursor-pointer hover:shadow-sm ${
+          className={`min-w-0 overflow-hidden rounded-xl border p-4 transition-all cursor-pointer hover:shadow-sm ${
             isReviewTarget
               ? 'border-warning-300 bg-warning-50/50 ring-1 ring-warning-200'
               : isLatest
@@ -391,40 +420,48 @@ function VersionCard({
               : 'border-neutral-200 bg-white'
           } ${isOpen ? 'ring-1 ring-primary-200 shadow-sm' : ''}`}
         >
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap mb-2">
-                <span className="font-semibold text-neutral-900 break-words">
-                  {version.commit_message.length > 80
-                    ? version.commit_message.slice(0, 80) + '…'
-                    : version.commit_message}
-                </span>
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="font-semibold text-neutral-900 break-words">
+                {version.commit_message.length > 80
+                  ? version.commit_message.slice(0, 80) + '…'
+                  : version.commit_message}
+              </p>
 
-                {isLatest && <Badge variant="primary" size="sm">latest</Badge>}
-                {isReviewTarget && (
+              <div className="flex flex-wrap items-center gap-2">
+                {isLatest ? <Badge variant="primary" size="sm">latest</Badge> : null}
+                {isReviewTarget ? (
                   <Badge variant="warning" size="sm">review requested</Badge>
-                )}
-                {version.is_generated === 1 && (
+                ) : null}
+                {version.is_generated === 1 ? (
                   <Badge variant="default" size="sm">
                     <FiZap className="inline w-3 h-3 mr-1" />
                     generated
                   </Badge>
-                )}
-                {version.tag && version.tag !== 'template' && (
+                ) : null}
+                {version.tag && version.tag !== 'template' ? (
                   <Badge variant="success" size="sm">
                     <FiTag className="inline w-3 h-3 mr-1" />
                     {version.tag}
                   </Badge>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-neutral-500">
-                <code className="font-mono bg-neutral-100 px-1.5 py-0.5 rounded text-xs text-neutral-600">
+                ) : null}
+                {versionCommentCounts.open > 0 ? (
+                  <Badge variant="warning" size="sm">
+                    {versionCommentCounts.open} open comment{versionCommentCounts.open !== 1 ? 's' : ''}
+                  </Badge>
+                ) : null}
+                {versionCommentCounts.needs_revision > 0 ? (
+                  <Badge variant="warning" size="sm">
+                    {versionCommentCounts.needs_revision} need revision
+                  </Badge>
+                ) : null}
+                <code className="font-mono rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-600">
                   {shortHash(version.id)}
                 </code>
-                <span className="font-mono text-xs font-medium text-neutral-600">
-                  v{version.version_number}
-                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500 sm:text-sm">
+                <span className="font-mono font-medium text-neutral-600">v{version.version_number}</span>
                 <span className="flex items-center gap-1">
                   <Avatar
                     src={version.uploader_avatar ?? undefined}
@@ -434,14 +471,24 @@ function VersionCard({
                   {version.uploader_name}
                 </span>
                 <span className="flex items-center gap-1">
-                  <FiClock className="w-3 h-3" />
+                  <FiClock className="w-3 h-3 shrink-0" />
                   {formatDate(version.created_at)}
                 </span>
-                <span className="text-xs">{formatBytes(version.file_size)}</span>
+                <span>{formatBytes(version.file_size)}</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            <div className="flex flex-wrap items-center gap-2 sm:max-w-[17rem] sm:flex-shrink-0 sm:justify-end lg:max-w-none">
+              {manuscriptUrl ? (
+                <Link
+                  href={manuscriptUrl}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-neutral-200 text-neutral-700 hover:bg-neutral-50 font-medium transition-colors"
+                >
+                  <FiMessageSquare className="w-3.5 h-3.5" />
+                  {manuscriptLinkLabel}
+                </Link>
+              ) : null}
               {showRequestButton ? (
                 <Button
                   variant="outline"
@@ -470,7 +517,7 @@ function VersionCard({
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={handleCompleteReview}
+                  onClick={(e) => handleCompleteReview(e, false)}
                   disabled={reviewActionLoading}
                   loading={reviewActionLoading}
                 >
@@ -479,9 +526,10 @@ function VersionCard({
                 </Button>
               ) : null}
               <button
+                type="button"
                 onClick={handleDownload}
                 disabled={downloading}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-primary-200 text-primary-600 hover:bg-primary-50 hover:text-primary-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 rounded-lg border border-primary-200 px-3 py-1.5 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
                 title={`Download ${version.file_name}`}
               >
                 {downloading ? (
@@ -491,11 +539,19 @@ function VersionCard({
                 )}
                 <span className="hidden sm:inline">Download</span>
               </button>
-              <FiChevronDown
-                className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${
-                  isOpen ? 'rotate-180' : ''
-                }`}
-              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggle();
+                }}
+                className="inline-flex items-center justify-center p-1 text-neutral-400 transition-colors hover:text-neutral-600"
+                aria-label={isOpen ? 'Collapse version details' : 'Expand version details'}
+              >
+                <FiChevronDown
+                  className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
             </div>
           </div>
 
@@ -524,12 +580,12 @@ function VersionCard({
               )}
 
               {diff && diff.supported && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-neutral-700">Document Preview</span>
+                <div className="min-w-0 space-y-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                      <span className="text-sm font-medium text-neutral-700 shrink-0">Document Preview</span>
                       {!isFirst && diff.stats && (
-                        <div className="flex items-center gap-2 text-sm">
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
                           <span className="flex items-center gap-1 text-success-700 font-medium">
                             <FiPlus className="w-3.5 h-3.5" />
                             +{diff.stats.addedWords}
@@ -538,7 +594,7 @@ function VersionCard({
                             <FiMinus className="w-3.5 h-3.5" />
                             −{diff.stats.removedWords}
                           </span>
-                          <span className="text-neutral-400 text-xs">
+                          <span className="text-xs text-neutral-500">
                             {diff.stats.previousWords} → {diff.stats.currentWords} words
                           </span>
                         </div>
@@ -546,7 +602,7 @@ function VersionCard({
                     </div>
 
                     {!isFirst && diff.previousHtml && (
-                      <div className="inline-flex rounded-md bg-neutral-100 p-1">
+                      <div className="inline-flex shrink-0 rounded-md bg-neutral-100 p-1">
                         <button
                           onClick={(e) => { e.stopPropagation(); setRenderSide('current'); }}
                           className={`px-3 py-1 text-xs rounded transition-colors ${renderSide === 'current' ? 'bg-white shadow-sm font-medium text-neutral-800' : 'text-neutral-600 hover:text-neutral-800'}`}
@@ -564,7 +620,7 @@ function VersionCard({
                   </div>
 
                   {!isFirst && diff.changes && diff.changes.length > 0 && (
-                    <div className="flex items-center gap-4 text-xs text-neutral-500">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
                       <span className="flex items-center gap-1.5">
                         <span className="inline-block w-3 h-3 rounded bg-success-100 border border-success-300" />
                         Added text
@@ -579,7 +635,7 @@ function VersionCard({
                   <RenderedDiffView
                     diff={isFirst ? { ...diff, changes: [] } : diff}
                     mode={isFirst ? 'current' : renderSide}
-                    className="min-h-[200px] max-h-[65vh]"
+                    className="h-[min(480px,65vh)]"
                     projectId={projectId}
                     versionId={version.id}
                     fileName={version.file_name}
@@ -612,6 +668,40 @@ function VersionCard({
         loading={reviewActionLoading}
         versionNumber={version.version_number}
       />
+
+      <Modal
+        isOpen={completeConfirmOpen}
+        onClose={() => {
+          if (reviewActionLoading) return;
+          setCompleteConfirmOpen(false);
+        }}
+        title="Unresolved comments"
+      >
+        <p className="text-sm text-neutral-700">
+          This version still has {completeConflict?.open ?? 0} open and{' '}
+          {completeConflict?.needs_revision ?? 0} revision-requested comments. Mark the review
+          complete anyway?
+        </p>
+        <ModalFooter>
+          <Button
+            variant="outline"
+            onClick={() => setCompleteConfirmOpen(false)}
+            disabled={reviewActionLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            loading={reviewActionLoading}
+            onClick={(e) => {
+              e.preventDefault();
+              void handleCompleteReview(e as unknown as React.MouseEvent, true);
+            }}
+          >
+            Complete anyway
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
@@ -922,6 +1012,8 @@ export interface PaperVersionTimelineProps {
   canCompleteReview?: boolean;
   reviewRequestsDisabled?: boolean;
   onReviewChange?: () => void;
+  getManuscriptReviewUrl?: (versionId: string) => string;
+  manuscriptLinkLabel?: string;
 }
 
 export default function PaperVersionTimeline({
@@ -936,11 +1028,20 @@ export default function PaperVersionTimeline({
   canCompleteReview = false,
   reviewRequestsDisabled = false,
   onReviewChange,
+  getManuscriptReviewUrl,
+  manuscriptLinkLabel,
 }: PaperVersionTimelineProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [openVersionId, setOpenVersionId] = useState<string | null>(null);
+  const [commentSummary, setCommentSummary] = useState<PaperCommentSummary | null>(null);
+
+  useEffect(() => {
+    getPaperCommentSummary(projectId).then((res) => {
+      if (res.data) setCommentSummary(res.data);
+    });
+  }, [projectId, versions.length]);
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -959,6 +1060,9 @@ export default function PaperVersionTimeline({
   const handleReviewChange = () => {
     onReviewChange?.();
     onRefresh();
+    getPaperCommentSummary(projectId).then((res) => {
+      if (res.data) setCommentSummary(res.data);
+    });
   };
 
   return (
@@ -1059,6 +1163,9 @@ export default function PaperVersionTimeline({
               canCompleteReview={canCompleteReview}
               reviewRequestsDisabled={reviewRequestsDisabled}
               onReviewChange={handleReviewChange}
+              commentCounts={commentSummary?.by_version?.[v.id]}
+              getManuscriptReviewUrl={getManuscriptReviewUrl}
+              manuscriptLinkLabel={manuscriptLinkLabel}
             />
           ))}
           {/* End of timeline dot */}

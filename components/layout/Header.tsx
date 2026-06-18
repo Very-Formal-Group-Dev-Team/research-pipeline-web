@@ -33,7 +33,7 @@ import {
   getRoleNotificationsPath,
   notificationFocusQuery,
 } from '@/lib/notifications/navigation';
-import { getProjectTeamMembersPath, getProjectDetailsPath, adviserProjectPaperVersionsUrl } from '@/lib/projects/navigation';
+import { getProjectTeamMembersPath, getProjectDetailsPath, adviserProjectPaperVersionsUrl, studentManuscriptReviewUrl } from '@/lib/projects/navigation';
 import { getRoleHomePath, getRoleProfilePath, getRoleSettingsPath } from '@/lib/auth/roleAccess';
 import {
   getMyInvitations,
@@ -166,6 +166,27 @@ export default function Header({ user, onLogout }: HeaderProps) {
 
     if (notification.type === 'review_completed' && projectId) {
       router.push(getProjectDetailsPath(user?.role || 'student', projectId));
+      return;
+    }
+
+    const paperVersionId =
+      typeof notification.metadata?.paperVersionId === 'string'
+        ? notification.metadata.paperVersionId
+        : null;
+
+    if (
+      (notification.type === 'comment_added' ||
+        notification.type === 'revision_requested' ||
+        notification.type === 'comment_resolved') &&
+      projectId &&
+      paperVersionId
+    ) {
+      const role = user?.role || 'student';
+      if (role === 'adviser' || role === 'teacher') {
+        router.push(`/adviser/advisees/${projectId}/manuscript/${paperVersionId}`);
+      } else {
+        router.push(studentManuscriptReviewUrl(projectId, paperVersionId));
+      }
       return;
     }
 

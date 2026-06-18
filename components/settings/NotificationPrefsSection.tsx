@@ -33,6 +33,9 @@ const NOTIFICATION_GROUPS: {
     types: [
       { type: 'review_requested', label: 'Review requests' },
       { type: 'review_completed', label: 'Review completed' },
+      { type: 'comment_added', label: 'Manuscript comments' },
+      { type: 'comment_resolved', label: 'Comments resolved' },
+      { type: 'revision_requested', label: 'Revision requested' },
       { type: 'paper_version_committed', label: 'Paper version commits' },
     ],
   },

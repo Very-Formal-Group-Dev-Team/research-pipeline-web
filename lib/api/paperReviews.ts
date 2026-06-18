@@ -55,8 +55,11 @@ export function withdrawPaperReviewRequest(projectId: string) {
 }
 
 /** Mark the active review request as reviewed (adviser). */
-export function completePaperReviewRequest(projectId: string) {
-  return patch<{ success: boolean }>(`/projects/${projectId}/review-request/complete`, {});
+export function completePaperReviewRequest(projectId: string, force = false) {
+  return patch<{ success: boolean; commentCounts?: { open: number; needs_revision: number; resolved: number } } | { requiresConfirmation: boolean; commentCounts?: { open: number; needs_revision: number; resolved: number } }>(
+    `/projects/${projectId}/review-request/complete`,
+    { force },
+  );
 }
 
 /** Pending review requests across advised projects (adviser). */
