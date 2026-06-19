@@ -154,9 +154,16 @@ export default function CoordinatorDefenseEditPage() {
       }
     }
 
+    const batchExcludeProjectIds = session.eventGroups.map((group) => group.id);
+    const batchExcludeDefenseIds = Object.values(defenseIdsByProjectId);
+
     for (const { groupId, lane } of assignments) {
       const existingDefenseId = defenseIdsByProjectId[groupId];
-      const verifyPayload = buildVerifyPayload(draft, lane);
+      const verifyPayload = {
+        ...buildVerifyPayload(draft, lane),
+        excludeProjectIds: batchExcludeProjectIds,
+        excludeDefenseIds: batchExcludeDefenseIds,
+      };
 
       const res = existingDefenseId
         ? await verifyDefense(existingDefenseId, verifyPayload)
@@ -172,6 +179,8 @@ export default function CoordinatorDefenseEditPage() {
             modality: draft.modality,
             panelistIds: draft.panelistIds.length ? draft.panelistIds : undefined,
             projectIds: [groupId],
+            excludeProjectIds: batchExcludeProjectIds,
+            excludeDefenseIds: batchExcludeDefenseIds,
           });
 
       if (res.error) {
@@ -190,6 +199,10 @@ export default function CoordinatorDefenseEditPage() {
             : `${getBatchDisplayName(lane)} has a schedule conflict. Adjust assignments or times.`,
         );
         return;
+      }
+
+      if (res.data && 'id' in res.data && !batchExcludeDefenseIds.includes(res.data.id)) {
+        batchExcludeDefenseIds.push(res.data.id);
       }
     }
 
