@@ -194,6 +194,8 @@ export function verifyDefense(
     defenseType?: 'proposal' | 'midterm' | 'final';
     rubricId?: string;
     panelistIds?: string[];
+    excludeDefenseIds?: string[];
+    excludeProjectIds?: string[];
   },
 ) {
   return post<Defense | VerifyDefenseConflict>(`/coordinator/defenses/${defenseId}/verify`, payload);
@@ -343,6 +345,8 @@ export interface BookDefenseSchedulePayload {
   panelistIds?: string[];
   projectIds?: string[];
   forceApprove?: boolean;
+  excludeDefenseIds?: string[];
+  excludeProjectIds?: string[];
 }
 
 export function getCoordinatorRubrics() {
