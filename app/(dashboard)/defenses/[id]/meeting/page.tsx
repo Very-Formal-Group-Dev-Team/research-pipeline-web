@@ -17,7 +17,7 @@ import {
 import useAuth from '@/lib/hooks/useAuth';
 import { useMeetingRecording } from '@/lib/hooks/useMeetingRecording';
 import type { JitsiMediaState, JitsiMeetApi } from '@/lib/meetings/jitsiApi';
-import { normalizeJitsiJoinUrl } from '@/lib/meetings/jitsi';
+import { normalizeJitsiJoinUrl, setJitsiBaseUrl } from '@/lib/meetings/jitsi';
 
 export default function DefenseMeetingPage() {
   const router = useRouter();
@@ -55,6 +55,9 @@ export default function DefenseMeetingPage() {
         setError(res.error || 'Failed to load defense meeting');
         setSession(null);
       } else {
+        if (res.data.jitsi_base_url) {
+          setJitsiBaseUrl(res.data.jitsi_base_url);
+        }
         setSession(res.data);
       }
 

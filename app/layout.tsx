@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, DM_Serif_Text } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import JitsiConfigBootstrap from "@/components/providers/JitsiConfigBootstrap";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -41,6 +42,7 @@ export default function RootLayout({
         className={`${dmSans.className} ${dmSans.variable} ${dmSerifText.variable} bg-coordinator-cream text-coordinator-ink antialiased dark:bg-neutral-900 dark:text-neutral-100`}
       >
         <ThemeProvider>
+          <JitsiConfigBootstrap />
           {children}
           <Toaster position="top-right" />
         </ThemeProvider>

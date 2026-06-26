@@ -1,8 +1,7 @@
 /**
- * Auth API service – replaces all direct Supabase auth calls.
+ * Auth API service for the Express backend.
  *
- * Every function hits the backend, which owns the auth provider integration,
- * session management, and token issuance.
+ * Every function hits the backend, which owns session management and JWT issuance.
  */
 
 import { get, post } from './client';

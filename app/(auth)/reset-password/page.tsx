@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FaEye, FaEyeSlash, FaLock } from 'react-icons/fa';
 import { resetPasswordWithToken } from '@/lib/api/auth';
+import { validatePassword } from '@/lib/passwordPolicy';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
 const authCardClassName =
@@ -45,8 +46,9 @@ function ResetPasswordContent() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    const passwordPolicyError = validatePassword(password);
+    if (passwordPolicyError) {
+      setError(passwordPolicyError);
       return;
     }
 
@@ -138,7 +140,9 @@ function ResetPasswordContent() {
               {showPassword ? <FaEyeSlash className="w-4 h-4" /> : <FaEye className="w-4 h-4" />}
             </button>
           </div>
-          {passwordFocused ? <PasswordStrengthIndicator password={password} /> : null}
+          {passwordFocused ? (
+            <PasswordStrengthIndicator password={password} visible={passwordFocused} />
+          ) : null}
         </div>
 
         <div>

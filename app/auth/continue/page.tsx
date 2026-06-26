@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import useAuth from '@/lib/hooks/useAuth';
 import { getRoleHomePath } from '@/lib/auth/roleAccess';
 import { isDebriefPending } from '@/lib/onboarding/debriefSession';
+import { clearSessionTokenCookie, setSessionTokenCookie } from '@/lib/auth-session';
 
 function AuthContinueContent() {
   const router = useRouter();
@@ -13,11 +14,16 @@ function AuthContinueContent() {
 
   useEffect(() => {
     const urlToken = searchParams.get('token');
-    if (urlToken && typeof document !== 'undefined') {
-      document.cookie = `session_token=${encodeURIComponent(urlToken)}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
-      window.history.replaceState({}, '', '/auth/continue');
+    if (!urlToken) {
+      setTokenSaved(true);
+      return;
     }
-    setTokenSaved(true);
+
+    void (async () => {
+      await setSessionTokenCookie(urlToken, true);
+      window.history.replaceState({}, '', '/auth/continue');
+      setTokenSaved(true);
+    })();
   }, [searchParams]);
 
   const { user, loading } = useAuth();
@@ -26,9 +32,7 @@ function AuthContinueContent() {
     if (!tokenSaved || loading) return;
 
     if (!user) {
-      if (typeof document !== 'undefined') {
-        document.cookie = 'session_token=; path=/; max-age=0; samesite=lax';
-      }
+      void clearSessionTokenCookie();
       router.replace('/login');
       return;
     }

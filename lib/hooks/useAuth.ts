@@ -3,12 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getUser } from "@/lib/api/auth";
 import type { AuthUser } from "@/lib/api/auth";
-
-function clearSessionCookie() {
-  if (typeof document !== 'undefined') {
-    document.cookie = 'session_token=; path=/; max-age=0; samesite=lax';
-  }
-}
+import { clearSessionTokenCookie, hydrateSessionFromServer } from "@/lib/auth-session";
 
 export default function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -19,12 +14,13 @@ export default function useAuth() {
     setLoading(true);
     setError(null);
     try {
+      await hydrateSessionFromServer();
       const res = await getUser();
       if (res.error || !res.data) {
         setUser(null);
         setError(res.error || "No user");
         if (res.status === 401) {
-          clearSessionCookie();
+          await clearSessionTokenCookie();
         }
       } else {
         setUser(res.data);

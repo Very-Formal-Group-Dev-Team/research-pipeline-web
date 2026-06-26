@@ -16,7 +16,16 @@ export function hasJoinableMeeting(item: JitsiMeetingFields) {
 
 const DEFAULT_JITSI_BASE = 'https://localhost:8443';
 
+let runtimeJitsiBase: string | null = null;
+
+/** Set Jitsi base URL from API (preferred over env when provided). */
+export function setJitsiBaseUrl(baseUrl: string | null | undefined) {
+  const trimmed = baseUrl?.trim();
+  runtimeJitsiBase = trimmed ? trimmed.replace(/\/+$/, '') : null;
+}
+
 export function getJitsiBaseUrl(): string {
+  if (runtimeJitsiBase) return runtimeJitsiBase;
   const base =
     (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_JITSI_BASE_URL) ||
     DEFAULT_JITSI_BASE;

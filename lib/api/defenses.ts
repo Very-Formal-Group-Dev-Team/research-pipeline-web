@@ -152,6 +152,7 @@ export interface DefenseMeetingSession {
   notes: string;
   total_score?: number | null;
   meeting_projects?: DefenseMeetingProject[];
+  jitsi_base_url?: string | null;
 }
 
 export interface DefenseMeetingGradeCriterionSummary {
@@ -212,6 +213,40 @@ export function saveDefensePanelEvaluations(
   payload: SaveDefensePanelEvaluationsPayload,
 ) {
   return put<DefenseMeetingSession>(`/defenses/${defenseId}/panel-evaluations`, payload);
+}
+
+export function rescheduleMeeting(
+  meetingId: string,
+  payload: { start_time: string; end_time: string },
+) {
+  return patch<{ success: boolean; message?: string; defense?: Defense }>(
+    `/defenses/${meetingId}/reschedule`,
+    payload,
+  );
+}
+
+export type BookMeetingPayload = CreateDefensePayload & {
+  wait_for_slot?: boolean;
+};
+
+export function bookMeeting(payload: BookMeetingPayload) {
+  return post<Defense & OverlapConflictResponse>('/defenses', payload);
+}
+
+export interface OverlapConflictResponse {
+  conflict: true;
+  conflicts: Array<{
+    domain: string;
+    defense_id: string;
+    project_id: string;
+    overlap_minutes: number;
+    remaining_minutes: number;
+  }>;
+  max_overlap_minutes: number;
+  candidate_total_minutes: number;
+  effective_minutes: number;
+  effective_start_time: string;
+  message: string;
 }
 
 export function getDefenseMeetingGrades(defenseId: string) {

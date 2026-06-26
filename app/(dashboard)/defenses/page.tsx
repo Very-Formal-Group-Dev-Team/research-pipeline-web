@@ -22,7 +22,16 @@ import {
 } from '@/lib/meetings/display';
 import { buildMeetingBookingPayload, meetingToBookingForm } from '@/lib/meetings/bookingForm';
 import { adviserProjectMeetingsUrl } from '@/lib/meetings/navigation';
-import { getMeeting } from '@/lib/api/defenses';
+import {
+  bookMeeting,
+  cancelMeeting,
+  getMeeting,
+  getMyDefenses,
+  rescheduleMeeting,
+  updateMeeting,
+  type OverlapConflictResponse,
+} from '@/lib/api/defenses';
+import { getProjectByCode } from '@/lib/api/projects';
 import { createPortal } from 'react-dom';
 import { toast as sonnerToast } from 'sonner';
 import { formatWallClockDateTime } from '@/lib/utils/formatDateTime';
@@ -44,24 +53,6 @@ interface ScheduledDefense {
   status_label: string;
   meeting_url?: string | null;
   meeting_room?: string | null;
-}
-
-interface OverlapConflict {
-  domain: string;
-  defense_id: string;
-  project_id: string;
-  overlap_minutes: number;
-  remaining_minutes: number;
-}
-
-interface OverlapConflictResponse {
-  conflict: true;
-  conflicts: OverlapConflict[];
-  max_overlap_minutes: number;
-  candidate_total_minutes: number;
-  effective_minutes: number;
-  effective_start_time: string;
-  message: string;
 }
 
 function parseNaiveDate(iso?: string | null) {
@@ -248,11 +239,9 @@ export default function MeetingSchedule() {
     let cleared = false;
     async function fetchDefenses() {
       try {
-        const res = await fetch('/api/defenses', { credentials: 'include' }); 
-        if (!res.ok) throw new Error('Failed to fetch defenses');
-        const data = await res.json();
+        const res = await getMyDefenses();
         if (!cleared) {
-          const normalized = Array.isArray(data) ? data.map(normalizeDefense) : [];
+          const normalized = res.data?.map(normalizeDefense) ?? [];
           setDefenses(normalized);
         }
       } catch (err) {
@@ -278,17 +267,10 @@ export default function MeetingSchedule() {
     if (!projectCode?.trim()) return null;
     setProjectLookupLoading(true);
     try {
-      const res = await fetch(
-        `/api/projects/code/${encodeURIComponent(projectCode.trim())}`,
-        { credentials: 'include' }
-      );
-      const data = await res.json();
-      if (!res.ok) return null;
-      if (data?.id) {
-        setForm(prev => ({ ...prev, projectId: data.id }));
-        return data.id;
-      }
-      return null;
+      const res = await getProjectByCode(projectCode.trim());
+      if (res.error || !res.data?.id) return null;
+      setForm((prev) => ({ ...prev, projectId: res.data!.id }));
+      return res.data.id;
     } catch (err) {
       console.error('Project lookup failed:', err);
       return null;
@@ -298,35 +280,27 @@ export default function MeetingSchedule() {
   };
 
   async function refreshDefenses() {
-    const refreshRes = await fetch('/api/defenses', { credentials: 'include' });
-    if (refreshRes.ok) {
-      const data = await refreshRes.json();
-      const normalized = Array.isArray(data) ? data.map(normalizeDefense) : [];
-      setDefenses(normalized);
+    const refreshRes = await getMyDefenses();
+    if (refreshRes.data) {
+      setDefenses(refreshRes.data.map(normalizeDefense));
     }
   }
 
   const submitDefense = async (payload: Record<string, unknown>) => {
-    const res = await fetch('/api/defenses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      credentials: 'include',
-    });
+    const res = await bookMeeting(payload as Parameters<typeof bookMeeting>[0]);
 
-    const data = await res.json();
-
-    if (res.status === 409 && data?.conflict) {
-      setOverlapWarning(data as OverlapConflictResponse);
+    if (res.status === 409 && res.data && 'conflict' in res.data && res.data.conflict) {
+      setOverlapWarning(res.data);
       setPendingSubmitPayload(payload);
       return;
     }
 
-    if (!res.ok) {
-      throw new Error(data?.error || 'Failed to book meeting.');
+    if (res.error) {
+      throw new Error(res.error || 'Failed to book meeting.');
     }
 
-    const createdStatus = data?.status || data?.data?.status;
+    const created = res.data;
+    const createdStatus = created?.status;
     if (createdStatus === 'pending') {
       showToast('Meeting added to wait queue. It will be auto-scheduled when the slot opens.', 'info');
     } else {
@@ -360,23 +334,16 @@ export default function MeetingSchedule() {
   const submitMeetingUpdate = async (payload: Record<string, unknown>) => {
     if (!editingMeetingId) return;
 
-    const res = await fetch(`/api/defenses/${editingMeetingId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      credentials: 'include',
-    });
+    const res = await updateMeeting(editingMeetingId, payload as Parameters<typeof updateMeeting>[1]);
 
-    const data = await res.json();
-
-    if (res.status === 409 && data?.conflict) {
-      setOverlapWarning(data as OverlapConflictResponse);
+    if (res.status === 409 && res.data && 'conflict' in res.data && res.data.conflict) {
+      setOverlapWarning(res.data as OverlapConflictResponse);
       setPendingSubmitPayload(payload);
       return;
     }
 
-    if (!res.ok) {
-      throw new Error(data?.error || 'Failed to update meeting.');
+    if (res.error) {
+      throw new Error(res.error || 'Failed to update meeting.');
     }
 
     sonnerToast.success('Changes saved');
@@ -438,12 +405,8 @@ export default function MeetingSchedule() {
 
   const handleCancelMeeting = async (defenseId: string) => {
     try {
-      const res = await fetch(`/api/defenses/${defenseId}/cancel`, {
-        method: 'PATCH',
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to cancel meeting.');
+      const res = await cancelMeeting(defenseId);
+      if (res.error) throw new Error(res.error || 'Failed to cancel meeting.');
       showToast('Meeting cancelled successfully.', 'success');
       setCancelConfirmId(null);
       setSelectedDefense(null);
@@ -456,17 +419,11 @@ export default function MeetingSchedule() {
   const handleRescheduleMeeting = async () => {
     if (!rescheduleModal) return;
     try {
-      const res = await fetch(`/api/defenses/${rescheduleModal.id}/reschedule`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          start_time: `${rescheduleForm.date}T${rescheduleForm.startTime}:00`,
-          end_time: `${rescheduleForm.date}T${rescheduleForm.endTime}:00`,
-        }),
-        credentials: 'include',
+      const res = await rescheduleMeeting(rescheduleModal.id, {
+        start_time: `${rescheduleForm.date}T${rescheduleForm.startTime}:00`,
+        end_time: `${rescheduleForm.date}T${rescheduleForm.endTime}:00`,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to reschedule meeting.');
+      if (res.error) throw new Error(res.error || 'Failed to reschedule meeting.');
       showToast('Meeting rescheduled successfully.', 'success');
       setRescheduleModal(null);
       setSelectedDefense(null);

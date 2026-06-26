@@ -3,6 +3,7 @@
 import React, { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { verifyEmail } from '@/lib/api/auth';
+import { setSessionTokenCookie } from '@/lib/auth-session';
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -32,7 +33,7 @@ function VerifyEmailContent() {
       }
 
       if (res.data?.token) {
-        document.cookie = `session_token=${encodeURIComponent(res.data.token)}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+        await setSessionTokenCookie(res.data.token, true);
       }
 
       setStatus('success');
