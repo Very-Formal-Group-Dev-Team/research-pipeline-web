@@ -198,6 +198,13 @@ function EditableBatchName({
   const [draft, setDraft] = useState(displayName);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  function resizeInput() {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
   useEffect(() => {
     if (!isEditing) {
       setDraft(displayName);
@@ -215,13 +222,6 @@ function EditableBatchName({
     if (!isEditing || !inputRef.current) return;
     resizeInput();
   }, [draft, isEditing]);
-
-  function resizeInput() {
-    const el = inputRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }
 
   function commit() {
     const trimmed = draft.trim();
