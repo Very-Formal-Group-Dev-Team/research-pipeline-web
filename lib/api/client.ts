@@ -1,3 +1,5 @@
+import { getClientSessionToken } from '@/lib/auth-session';
+
 /**
  * Centralized API client for communicating with the dedicated backend server.
  *
@@ -24,11 +26,13 @@ export interface ApiResponse<T = unknown> {
 
 /**
  * Returns the `Authorization` header value when a session token is available.
- * The token is stored as a cookie named `session_token` by the backend after
- * login / OAuth callback.
+ * The token is stored in an httpOnly cookie on the app domain and hydrated into
+ * memory after login; see `lib/auth-session.ts`.
  */
 function getSessionToken(): string | null {
   if (typeof document === 'undefined') return null; // SSR guard
+  const fromMemory = getClientSessionToken();
+  if (fromMemory) return fromMemory;
   const match = document.cookie.match(/(?:^|;\s*)session_token=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : null;
 }

@@ -1,3 +1,5 @@
+import { validatePassword } from '@/lib/passwordPolicy';
+
 export type AuthField = 'fullName' | 'email' | 'password' | 'confirmPassword';
 
 export type AuthErrorTarget =
@@ -5,7 +7,6 @@ export type AuthErrorTarget =
   | { scope: 'form'; message: string; fields?: AuthField[] };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 6;
 
 type ValidateAuthFormInput = {
   mode: 'login' | 'register';
@@ -52,8 +53,9 @@ export function validateAuthForm({
     return { scope: 'field', message: 'Enter your password.', field: 'password' };
   }
 
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return { scope: 'field', message: 'Use a password with at least 6 characters.', field: 'password' };
+  const passwordPolicyError = validatePassword(password);
+  if (passwordPolicyError) {
+    return { scope: 'field', message: passwordPolicyError, field: 'password' };
   }
 
   if (mode === 'register') {

@@ -6,6 +6,7 @@ import Button from '@/components/Button';
 import Input from '@/components/ui/Input';
 import Card, { CardTitle } from '@/components/ui/Card';
 import { changePassword, resendVerification } from '@/lib/api/auth';
+import { validatePassword } from '@/lib/passwordPolicy';
 import { performLogout } from '@/lib/auth/logout';
 import type { UserProfileView } from '@/lib/hooks/useUserProfile';
 import { settingsSectionIntroClassName } from '@/components/settings/settingsUi';
@@ -45,8 +46,9 @@ export default function SecuritySection({
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters');
+    const passwordPolicyError = validatePassword(newPassword);
+    if (passwordPolicyError) {
+      toast.error(passwordPolicyError);
       return;
     }
     if (newPassword !== confirmPassword) {

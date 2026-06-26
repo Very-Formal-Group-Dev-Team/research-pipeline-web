@@ -14,6 +14,7 @@ import {
 } from '@/lib/hooks/useUnsavedChangesWarning';
 import {
   bookDefenseSchedule,
+  deleteDefense,
   getCoordinatorRubrics,
   getCourseGroups,
   getInstitutionPanelists,
@@ -156,6 +157,13 @@ export default function CoordinatorDefenseEditPage() {
 
     const batchExcludeProjectIds = session.eventGroups.map((group) => group.id);
     const batchExcludeDefenseIds = Object.values(defenseIdsByProjectId);
+    const newDefenseIds: string[] = [];
+
+    const rollbackNewDefenses = async () => {
+      for (const defenseId of [...newDefenseIds].reverse()) {
+        await deleteDefense(defenseId);
+      }
+    };
 
     for (const { groupId, lane } of assignments) {
       const existingDefenseId = defenseIdsByProjectId[groupId];
@@ -184,6 +192,7 @@ export default function CoordinatorDefenseEditPage() {
           });
 
       if (res.error) {
+        await rollbackNewDefenses();
         setSubmitting(false);
         setError(res.error);
         return;
@@ -192,6 +201,7 @@ export default function CoordinatorDefenseEditPage() {
       if (res.data && 'conflict' in res.data && res.data.conflict) {
         const count = res.data.conflicts?.length ?? 0;
         const domains = [...new Set((res.data.conflicts || []).map((c) => c.domain))].join(', ');
+        await rollbackNewDefenses();
         setSubmitting(false);
         setError(
           count
@@ -199,6 +209,10 @@ export default function CoordinatorDefenseEditPage() {
             : `${getBatchDisplayName(lane)} has a schedule conflict. Adjust assignments or times.`,
         );
         return;
+      }
+
+      if (!existingDefenseId && res.data && 'id' in res.data) {
+        newDefenseIds.push(res.data.id);
       }
 
       if (res.data && 'id' in res.data && !batchExcludeDefenseIds.includes(res.data.id)) {

@@ -9,6 +9,7 @@ import { getUser, login, register, oAuthSignIn, resendVerification } from "@/lib
 import { type AuthField, type AuthErrorTarget, resolveApiError, validateAuthForm } from "@/lib/auth-form-validation";
 import {
   clearSessionTokenCookie,
+  hydrateSessionFromServer,
   loadRememberMePreference,
   saveRememberMePreference,
   setSessionTokenCookie,
@@ -204,12 +205,7 @@ function AuthForm({ mode }: { mode: Mode }) {
         return;
       }
 
-      const hasSessionToken = /(?:^|;\s*)session_token=([^;]*)/.test(document.cookie);
-      if (!hasSessionToken) {
-        if (!cancelled) setCheckingSession(false);
-        return;
-      }
-
+      await hydrateSessionFromServer();
       const result = await getUser();
       if (cancelled) return;
 
@@ -286,7 +282,7 @@ function AuthForm({ mode }: { mode: Mode }) {
         if (mode === 'login') {
           saveRememberMePreference(rememberMe);
         }
-        setSessionTokenCookie(result.data.token, mode === 'register' ? true : rememberMe);
+        await setSessionTokenCookie(result.data.token, mode === 'register' ? true : rememberMe);
       }
 
       window.location.href = "/auth/continue";

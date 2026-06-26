@@ -30,21 +30,24 @@ async function getAppOrigin(): Promise<string> {
   return (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
 }
 
-async function fetchPublicStats(): Promise<PublicLandingStats | null> {
+async function fetchPublicStats(): Promise<{ stats: PublicLandingStats | null; unavailable: boolean }> {
   try {
     const origin = await getAppOrigin();
     const res = await fetch(`${origin}/api/public/stats`, { cache: 'no-store' });
-    if (!res.ok) return null;
+    if (!res.ok) return { stats: null, unavailable: true };
     const json = (await res.json()) as Record<string, unknown>;
     const totalProjects = parseStat(json.totalProjects);
     const totalUsers = parseStat(json.totalUsers);
     const finishedProjects = parseStat(json.finishedProjects);
     if (totalProjects == null || totalUsers == null || finishedProjects == null) {
-      return null;
+      return { stats: null, unavailable: true };
     }
-    return { totalProjects, totalUsers, finishedProjects };
+    return {
+      stats: { totalProjects, totalUsers, finishedProjects },
+      unavailable: false,
+    };
   } catch {
-    return null;
+    return { stats: null, unavailable: true };
   }
 }
 
@@ -79,7 +82,8 @@ const heroCtaButtonClassName =
   'rounded-sm flex-1 sm:flex-none whitespace-nowrap !px-5 !py-2.5 !text-base sm:!px-7 sm:!py-3 sm:!text-lg';
 
 export default async function Home() {
-  const stats = (await fetchPublicStats()) ?? {
+  const { stats: loadedStats, unavailable: statsUnavailable } = await fetchPublicStats();
+  const stats = loadedStats ?? {
     totalProjects: 0,
     totalUsers: 0,
     finishedProjects: 0,
@@ -167,6 +171,11 @@ export default async function Home() {
             </div>
 
             <div className="border-y border-neutral-300 pt-8 pb-8 lg:border-t-0 lg:border-b-0 lg:border-l lg:border-neutral-300 lg:pl-12 lg:pb-0 lg:pt-2">
+              {statsUnavailable ? (
+                <p className="text-sm text-neutral-500 text-center lg:text-left">
+                  Platform statistics are temporarily unavailable.
+                </p>
+              ) : null}
               <ul className="grid grid-cols-3 divide-x divide-neutral-300 lg:grid-cols-1 lg:divide-x-0 lg:divide-y">
                 {[
                   { value: formatCount(stats.totalProjects), label: 'Research projects on Archivum' },

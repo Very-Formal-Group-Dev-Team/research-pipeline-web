@@ -190,6 +190,17 @@ export function getMyProjects() {
   return get<Project[]>('/projects');
 }
 
+export interface ProjectCodeLookup {
+  id: string;
+  project_code: string;
+  title: string;
+}
+
+/** Look up a project by its join/booking code (requires access). */
+export function getProjectByCode(code: string) {
+  return get<ProjectCodeLookup>(`/projects/code/${encodeURIComponent(code.trim())}`);
+}
+
 /** Fetch a single project by ID. */
 export function getProject(projectId: string) {
   return get<Project>(`/projects/${projectId}`);

@@ -5,6 +5,30 @@ import Cropper, { Area } from 'react-easy-crop';
 import { uploadCroppedAvatar } from '../lib/api/upload';
 import { getCroppedImg } from '../lib/image/crop';
 
+const MAX_AVATAR_BYTES = 10 * 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+const ALLOWED_AVATAR_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+function validateAvatarFile(file: File): string | null {
+  const mime = file.type.trim().toLowerCase();
+  if (!ALLOWED_AVATAR_TYPES.has(mime)) {
+    return 'Please choose a JPG, PNG, or WEBP image.';
+  }
+
+  const extension = file.name.includes('.')
+    ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase()
+    : '';
+  if (!extension || !ALLOWED_AVATAR_EXTENSIONS.includes(extension)) {
+    return 'Please choose a JPG, PNG, or WEBP image.';
+  }
+
+  if (file.size > MAX_AVATAR_BYTES) {
+    return 'Image must be 10 MB or smaller.';
+  }
+
+  return null;
+}
+
 type Props = {
   onUploaded?: (url: string) => void;
   initialSrc?: string | null;
@@ -17,10 +41,22 @@ export default function AvatarUploader({ onUploaded }: Props) {
   const [zoom, setZoom] = useState(1);
   const [cropping, setCropping] = useState(false);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const error = validateAvatarFile(file);
+    if (error) {
+      setValidationError(error);
+      setCropping(false);
+      setImageSrc(null);
+      e.target.value = '';
+      return;
+    }
+
+    setValidationError(null);
     const url = URL.createObjectURL(file);
     setImageSrc(url);
     setCropping(true);
@@ -34,28 +70,40 @@ export default function AvatarUploader({ onUploaded }: Props) {
     if (!imageSrc || !croppedAreaPixels) return;
     try {
       const dataUrl = await getCroppedImg(imageSrc, croppedAreaPixels);
-      // Upload cropped base64 to backend
       const res = await uploadCroppedAvatar(dataUrl);
       if (res.error) throw new Error(res.error);
       const url = res.data?.publicUrl || '';
       setCropping(false);
       setImageSrc(null);
+      setValidationError(null);
       if (onUploaded) onUploaded(url);
     } catch (err) {
       console.error('Failed to upload cropped avatar', err);
-      alert('Upload failed: ' + (err instanceof Error ? err.message : 'unknown'));
+      setValidationError(err instanceof Error ? err.message : 'Upload failed.');
     }
   };
 
   const handleCancel = () => {
     setCropping(false);
     setImageSrc(null);
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   return (
     <div>
-      <input ref={inputRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" />
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+        onChange={onFileChange}
+        className="hidden"
+      />
       <button type="button" onClick={() => inputRef.current?.click()} className="btn">Change avatar</button>
+      {validationError ? (
+        <p className="mt-2 text-sm text-archivumRed" role="alert">
+          {validationError}
+        </p>
+      ) : null}
 
       {cropping && imageSrc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -72,7 +120,6 @@ export default function AvatarUploader({ onUploaded }: Props) {
                 onCropComplete={onCropComplete}
                 showGrid={false}
               />
-              {/* Circular overlay */}
               <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <div className="w-56 h-56 rounded-full border-2 border-white shadow-lg" />
               </div>
