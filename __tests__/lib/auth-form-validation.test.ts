@@ -82,4 +82,12 @@ describe('resolveApiError', () => {
       fields: ['email', 'password'],
     });
   });
+
+  it('maps deactivated accounts to a dedicated form-level alert', () => {
+    expect(resolveApiError('Account deactivated. Contact your administrator.')).toEqual({
+      scope: 'form',
+      message: expect.stringContaining('deactivated'),
+      deactivated: true,
+    });
+  });
 });

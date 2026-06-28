@@ -59,6 +59,8 @@ const menuItems: Record<string, MenuItem[]> = {
   admin: [
     { label: 'Dashboard', href: '/admin', icon: <FiHome /> },
     { label: 'Institutions', href: '/admin/institutions', icon: <FiBookOpen /> },
+    { label: 'Users', href: '/admin/users', icon: <FiUsers /> },
+    { label: 'Audit Log', href: '/admin/audit', icon: <FiClipboard /> },
     { label: 'Profile', href: '/admin/profile', icon: <FiUser /> },
     { label: 'Settings', href: '/admin/settings', icon: <FiSettings /> },
   ],

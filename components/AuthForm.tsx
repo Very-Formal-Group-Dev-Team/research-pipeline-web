@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { getUser, login, register, oAuthSignIn, resendVerification } from "@/lib/api/auth";
 import { type AuthField, type AuthErrorTarget, resolveApiError, validateAuthForm } from "@/lib/auth-form-validation";
+import {
+  ACCOUNT_DEACTIVATED_URL_ERROR,
+  isAccountDeactivatedError,
+} from "@/lib/auth/accountDeactivated";
+import DeactivatedAccountAlert from "@/components/auth/DeactivatedAccountAlert";
 import {
   clearSessionTokenCookie,
   hydrateSessionFromServer,
@@ -102,6 +107,7 @@ function GoogleSignInButton() {
   
 
 function AuthForm({ mode }: { mode: Mode }) {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
@@ -115,6 +121,7 @@ function AuthForm({ mode }: { mode: Mode }) {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<AuthField, string>>>({});
   const [highlightedFields, setHighlightedFields] = useState<Partial<Record<AuthField, boolean>>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [showDeactivatedAlert, setShowDeactivatedAlert] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -140,6 +147,7 @@ function AuthForm({ mode }: { mode: Mode }) {
     setFieldErrors({});
     setHighlightedFields({});
     setFormError(null);
+    setShowDeactivatedAlert(false);
   }
 
   function clearFieldError(field: AuthField) {
@@ -156,9 +164,19 @@ function AuthForm({ mode }: { mode: Mode }) {
       return next;
     });
     setFormError(null);
+    setShowDeactivatedAlert(false);
   }
 
   function applyAuthError(target: AuthErrorTarget) {
+    if (target.scope === 'form' && target.deactivated) {
+      setShowDeactivatedAlert(true);
+      setFormError(null);
+      setFieldErrors({});
+      setHighlightedFields({});
+      return;
+    }
+
+    setShowDeactivatedAlert(false);
     if (target.scope === 'form') {
       setFormError(target.message);
       setFieldErrors({});
@@ -197,6 +215,16 @@ function AuthForm({ mode }: { mode: Mode }) {
   }, []);
 
   useEffect(() => {
+    if (mode !== 'login') return;
+    const oauthError = searchParams.get('error');
+    if (oauthError === ACCOUNT_DEACTIVATED_URL_ERROR) {
+      setShowDeactivatedAlert(true);
+      void clearSessionTokenCookie();
+      window.history.replaceState({}, '', '/login');
+    }
+  }, [mode, searchParams]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function resolveExistingSession() {
@@ -211,6 +239,13 @@ function AuthForm({ mode }: { mode: Mode }) {
 
       if (result.data && !result.error) {
         router.replace('/auth/continue');
+        return;
+      }
+
+      if (result.status === 403 && isAccountDeactivatedError(result.error)) {
+        await clearSessionTokenCookie();
+        setShowDeactivatedAlert(true);
+        setCheckingSession(false);
         return;
       }
 
@@ -375,6 +410,12 @@ function AuthForm({ mode }: { mode: Mode }) {
             </div>
           </div>
 
+          {showDeactivatedAlert ? (
+            <div className="mb-6">
+              <DeactivatedAccountAlert />
+            </div>
+          ) : null}
+
           <div className="space-y-4">
             {mode === 'register' && (
               <div>
@@ -533,4 +574,16 @@ function AuthForm({ mode }: { mode: Mode }) {
   );
 }
 
-export default AuthForm
+export default function AuthFormWithSuspense({ mode }: { mode: Mode }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full flex items-center justify-center py-12 px-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-velvetWine" />
+        </div>
+      }
+    >
+      <AuthForm mode={mode} />
+    </Suspense>
+  );
+}
