@@ -17,17 +17,20 @@ import Button from '@/components/Button';
 import Badge from '@/components/ui/Badge';
 import Card, { CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
-import ManuscriptViewer, { type ManuscriptSelection } from '@/components/manuscript/ManuscriptViewer';
+import ManuscriptViewer, { type ManuscriptSelection, type ManuscriptViewerHandle } from '@/components/manuscript/ManuscriptViewer';
 import CommentSidebar from '@/components/manuscript/CommentSidebar';
 import CommentPopover from '@/components/manuscript/CommentPopover';
 import { getPaperVersionDiff, getPaperVersions, type PaperVersion } from '@/lib/api/paperVersions';
 import {
   createPaperComment,
+  deletePaperComment,
   getPaperComments,
   reopenPaperComment,
   requestPaperCommentRevision,
   resolvePaperComment,
+  updatePaperComment,
   type PaperComment,
+  type PaperCommentVisibility,
 } from '@/lib/api/paperComments';
 import {
   completePaperReviewRequest,
@@ -35,6 +38,10 @@ import {
   type PaperReviewRequest,
 } from '@/lib/api/paperReviews';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
+import {
+  filterCommentsForViewer,
+  isAdviserFeedbackThread,
+} from '@/lib/manuscript/commentPermissions';
 import { isDocxFileName } from '@/lib/manuscript/docxPreview';
 
 const PAGE_TITLE_CLASS =
@@ -73,9 +80,11 @@ export default function ManuscriptReviewPage({
 }: ManuscriptReviewPageProps) {
   const router = useRouter();
   const dashboardLabel = role === 'adviser' ? 'Adviser' : 'Student';
-  const { user, handleLogout } = useDashboardUser(dashboardLabel);
+  const { user, profile, isLoading, handleLogout } = useDashboardUser(dashboardLabel);
+  const currentUserId = profile?.id ?? '';
 
   const [version, setVersion] = useState<PaperVersion | null>(null);
+  const [isLatestVersion, setIsLatestVersion] = useState(false);
   const [diff, setDiff] = useState<Awaited<ReturnType<typeof getPaperVersionDiff>>['data']>(null);
   const [comments, setComments] = useState<PaperComment[]>([]);
   const [reviewRequest, setReviewRequest] = useState<PaperReviewRequest | null>(null);
@@ -93,6 +102,7 @@ export default function ManuscriptReviewPage({
   const [completeConflict, setCompleteConflict] = useState<CompleteReviewConflict | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
   const previewCardRef = useRef<HTMLDivElement>(null);
+  const manuscriptViewerRef = useRef<ManuscriptViewerHandle>(null);
   const [sidebarPanelHeight, setSidebarPanelHeight] = useState<number | null>(null);
 
   const isFirstVersion = useMemo(() => version?.version_number === 1, [version]);
@@ -114,7 +124,8 @@ export default function ManuscriptReviewPage({
       getProjectReviewRequest(projectId),
     ]);
 
-    const found = versionsRes.data?.find((v) => v.id === versionId) || null;
+    const versions = versionsRes.data || [];
+    const found = versions.find((v) => v.id === versionId) || null;
     if (!found) {
       toast.error('Version not found');
       router.push(backUrl);
@@ -122,6 +133,7 @@ export default function ManuscriptReviewPage({
     }
 
     setVersion(found);
+    setIsLatestVersion(versions.length > 0 && versions[0].id === found.id);
     setDiff(diffRes.data || null);
     setReviewRequest(reviewRes.data || null);
     setLoading(false);
@@ -177,7 +189,7 @@ export default function ManuscriptReviewPage({
       toast.error(res.error);
       return;
     }
-    toast.success('Comment resolved');
+    toast.success('Comment marked as addressed');
     await loadComments();
   };
 
@@ -198,6 +210,39 @@ export default function ManuscriptReviewPage({
       return;
     }
     toast.success('Comment reopened');
+    await loadComments();
+  };
+
+  const handleEdit = async (commentId: string, body: string) => {
+    const res = await updatePaperComment(projectId, commentId, { body });
+    if (res.error) {
+      toast.error(res.error);
+      throw new Error(res.error);
+    }
+    toast.success('Comment updated');
+    await loadComments();
+  };
+
+  const handleToggleVisibility = async (commentId: string, visibility: PaperCommentVisibility) => {
+    const res = await updatePaperComment(projectId, commentId, { visibility });
+    if (res.error) {
+      toast.error(res.error);
+      throw new Error(res.error);
+    }
+    toast.success(visibility === 'team' ? 'Hidden from adviser' : 'Visible to adviser');
+    await loadComments();
+  };
+
+  const handleDelete = async (commentId: string) => {
+    const res = await deletePaperComment(projectId, commentId);
+    if (res.error) {
+      toast.error(res.error);
+      throw new Error(res.error);
+    }
+    if (selectedCommentId === commentId) {
+      setSelectedCommentId(null);
+    }
+    toast.success('Comment deleted');
     await loadComments();
   };
 
@@ -249,15 +294,26 @@ export default function ManuscriptReviewPage({
 
   const commentCounts = useMemo(() => {
     const parents = comments.filter((c) => !c.parent_id);
+    const adviserFeedback = parents.filter(isAdviserFeedbackThread);
     return {
-      open: parents.filter((c) => c.status === 'open').length,
-      needs_revision: parents.filter((c) => c.status === 'needs_revision').length,
-      resolved: parents.filter((c) => c.status === 'resolved').length,
+      open: adviserFeedback.filter((c) => c.status === 'open').length,
+      needs_revision: adviserFeedback.filter((c) => c.status === 'needs_revision').length,
+      resolved: adviserFeedback.filter((c) => c.status === 'resolved').length,
       total: parents.length,
     };
   }, [comments]);
 
-  if (!user) return null;
+  const visibleComments = useMemo(
+    () => filterCommentsForViewer(comments, role),
+    [comments, role],
+  );
+
+  const handleSelectCommentFromSidebar = useCallback((commentId: string) => {
+    setSelectedCommentId(commentId);
+    manuscriptViewerRef.current?.scrollToComment(commentId);
+  }, []);
+
+  if (isLoading || !user || !currentUserId) return null;
 
   return (
     <DashboardLayout role={role} user={user} onLogout={handleLogout}>
@@ -266,9 +322,17 @@ export default function ManuscriptReviewPage({
           <div className="min-w-0 flex-1">
             <h1 className={PAGE_TITLE_CLASS}>Comments</h1>
             {version ? (
-              <p className="mt-1 font-sans text-sm text-neutral-600">
-                Version {version.version_number}
-                <span className="mx-1.5 text-neutral-400" aria-hidden>
+              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-sans text-sm text-neutral-600">
+                <span>Version {version.version_number}</span>
+                {isLatestVersion ? (
+                  <>
+                    <span className="text-neutral-400" aria-hidden>
+                      ·
+                    </span>
+                    <span>Latest</span>
+                  </>
+                ) : null}
+                <span className="text-neutral-400" aria-hidden>
                   ·
                 </span>
                 <span className="break-words">{version.commit_message}</span>
@@ -303,7 +367,7 @@ export default function ManuscriptReviewPage({
 
         {isReviewTarget && canCompleteReview ? (
           <div className="rounded-md border border-warning-300 bg-warning-50 px-4 py-3 text-sm text-warning-900">
-            Review summary: {commentCounts.open} open, {commentCounts.needs_revision} need revision,{' '}
+            Adviser feedback: {commentCounts.open} open, {commentCounts.needs_revision} need revision,{' '}
             {commentCounts.resolved} resolved.
           </div>
         ) : null}
@@ -321,7 +385,10 @@ export default function ManuscriptReviewPage({
               <CardHeader className="mb-0 border-b-0 pb-0">
                 <div className="min-w-0">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <FiFileText className="shrink-0 text-2xl text-primary-500" aria-hidden />
+                    <div className="flex min-w-0 items-center gap-2">
+                      <FiFileText className="shrink-0 text-2xl text-primary-500" aria-hidden />
+                      <CardTitle className="truncate">Document preview</CardTitle>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setSidebarOpen((open) => !open)}
@@ -342,12 +409,11 @@ export default function ManuscriptReviewPage({
                     </button>
                   </div>
 
-                  <CardTitle>Document preview</CardTitle>
                   <CardDescription className="mt-1">
                     {canComment
                       ? role === 'student'
-                        ? 'Select text to add a comment or reply to adviser feedback.'
-                        : 'Select text in the document to leave inline feedback.'
+                        ? 'Select text to comment, reply to adviser feedback, mark feedback as addressed, or hide team notes from your teacher.'
+                        : 'Select text to leave feedback. Team-only student notes are not shown here — use Request revision on your feedback when more work is needed.'
                       : 'Review comments on this version.'}
                   </CardDescription>
 
@@ -428,10 +494,11 @@ export default function ManuscriptReviewPage({
 
             <div className="flex flex-1 flex-col px-2 pb-4 pt-0 sm:px-6 sm:pb-6">
               <ManuscriptViewer
+                ref={manuscriptViewerRef}
                 diff={diff}
                 mode={isFirstVersion ? 'current' : renderSide}
                 showDiff={showDiff && !isFirstVersion && !isDocx}
-                comments={comments}
+                comments={visibleComments}
                 selectedCommentId={selectedCommentId}
                 pendingAnchor={pendingSelection?.anchor ?? null}
                 canSelect={canComment}
@@ -459,17 +526,21 @@ export default function ManuscriptReviewPage({
             }
           >
             <CommentSidebar
-              comments={comments}
+              comments={visibleComments}
               loading={commentsLoading}
               selectedCommentId={selectedCommentId}
-              canResolve={role === 'adviser'}
-              canRequestRevision={role === 'adviser'}
+              viewingVersionId={versionId}
+              currentUserId={currentUserId}
+              viewerRole={role}
               canReply
-              onSelectComment={setSelectedCommentId}
+              onSelectComment={handleSelectCommentFromSidebar}
               onResolve={handleResolve}
               onRequestRevision={handleRequestRevision}
               onReopen={handleReopen}
               onReply={handleReply}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onToggleVisibility={handleToggleVisibility}
               onClose={() => setSidebarOpen(false)}
               className="h-full min-h-0"
             />
@@ -485,7 +556,7 @@ export default function ManuscriptReviewPage({
           body={newCommentBody}
           commentPlaceholder={
             role === 'student'
-              ? 'Add a note for your adviser…'
+              ? 'Add a comment…'
               : 'Leave feedback for the student…'
           }
           onBodyChange={setNewCommentBody}

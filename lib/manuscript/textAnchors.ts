@@ -126,6 +126,60 @@ function findBoundaryAwareMatch(fullText: string, anchor: TextQuoteSelector) {
   return { start, end: start + chosen[0].length };
 }
 
+function findByPrefixSuffixRegion(fullText: string, anchor: TextQuoteSelector) {
+  const text = normalizeText(fullText);
+  const exact = normalizeText(anchor.exact || '');
+  const prefix = normalizeText(anchor.prefix || '');
+  const suffix = normalizeText(anchor.suffix || '');
+  if (!exact || !prefix || !suffix) return null;
+
+  const prefixTail = prefix.slice(-Math.min(prefix.length, CONTEXT_LEN));
+  const suffixHead = suffix.slice(0, Math.min(suffix.length, CONTEXT_LEN));
+  if (!prefixTail || !suffixHead) return null;
+
+  let searchFrom = 0;
+  while (searchFrom < text.length) {
+    const prefixIdx = text.indexOf(prefixTail, searchFrom);
+    if (prefixIdx === -1) break;
+
+    const regionStart = prefixIdx + prefixTail.length;
+    const suffixIdx = text.indexOf(suffixHead, regionStart);
+    if (suffixIdx === -1) {
+      searchFrom = prefixIdx + 1;
+      continue;
+    }
+
+    const region = text.slice(regionStart, suffixIdx);
+    const exactIdx = region.indexOf(exact);
+    if (exactIdx !== -1) {
+      const start = regionStart + exactIdx;
+      return { start, end: start + exact.length };
+    }
+
+    const pattern = toFlexibleWhitespacePattern(exact);
+    if (pattern) {
+      const re = new RegExp(pattern);
+      const match = region.match(re);
+      if (match && match.index != null) {
+        const start = regionStart + match.index;
+        return { start, end: start + match[0].length };
+      }
+    }
+
+    const boundary = findBoundaryAwareMatch(region, anchor);
+    if (boundary) {
+      return {
+        start: regionStart + boundary.start,
+        end: regionStart + boundary.end,
+      };
+    }
+
+    searchFrom = prefixIdx + 1;
+  }
+
+  return null;
+}
+
 function findFlexibleWhitespaceMatch(fullText: string, anchor: TextQuoteSelector) {
   const pattern = toFlexibleWhitespacePattern(anchor.exact || '');
   if (!pattern) return null;
@@ -198,6 +252,9 @@ export function resolveAnchorInText(
 
   const boundary = findBoundaryAwareMatch(fullText, anchor);
   if (boundary) return boundary;
+
+  const regionMatch = findByPrefixSuffixRegion(fullText, anchor);
+  if (regionMatch) return regionMatch;
 
   return null;
 }
@@ -291,6 +348,55 @@ export function buildTextQuoteSelector(fullText: string, start: number, end: num
   };
 }
 
+function findRawOffsetForNormalizedOffset(raw: string, normalizedOffset: number): number {
+  for (let rawOffset = 0; rawOffset <= raw.length; rawOffset++) {
+    if (rawOffsetToNormalizedOffset(raw, rawOffset) >= normalizedOffset) {
+      return rawOffset;
+    }
+  }
+  return raw.length;
+}
+
+function applyMarkDataAttrs(element: HTMLElement, dataAttrs?: Record<string, string>) {
+  if (!dataAttrs) return;
+  Object.entries(dataAttrs).forEach(([key, value]) => {
+    element.dataset[key] = value;
+  });
+}
+
+function wrapNormalizedPortionInTextNode(
+  textNode: Text,
+  normStart: number,
+  normEnd: number,
+  className: string,
+  dataAttrs?: Record<string, string>,
+) {
+  if (normEnd <= normStart) return;
+
+  const raw = textNode.nodeValue || '';
+  const rawStart = findRawOffsetForNormalizedOffset(raw, normStart);
+  const rawEnd = findRawOffsetForNormalizedOffset(raw, normEnd);
+  if (rawEnd <= rawStart) return;
+
+  let target: Text = textNode;
+  if (rawStart > 0) {
+    target = textNode.splitText(rawStart);
+  }
+  const wrapLength = rawEnd - rawStart;
+  if (wrapLength < target.length) {
+    target.splitText(wrapLength);
+  }
+
+  const mark = document.createElement('mark');
+  mark.className = className;
+  applyMarkDataAttrs(mark, dataAttrs);
+
+  const parent = target.parentNode;
+  if (!parent) return;
+  parent.insertBefore(mark, target);
+  mark.appendChild(target);
+}
+
 export function wrapTextRange(
   container: HTMLElement,
   start: number,
@@ -300,7 +406,7 @@ export function wrapTextRange(
 ) {
   const { nodes } = buildTextNodeIndex(container);
   const textNodes = nodes.filter((entry) => !entry.isSeparator && entry.node);
-  if (!textNodes.length) return;
+  if (!textNodes.length || end <= start) return;
 
   let startNodeIndex = -1;
   for (let i = 0; i < textNodes.length; i++) {
@@ -312,43 +418,36 @@ export function wrapTextRange(
   if (startNodeIndex === -1) return;
 
   let endNodeIndex = startNodeIndex;
-  while (endNodeIndex < textNodes.length && end > textNodes[endNodeIndex].end) endNodeIndex++;
-  if (endNodeIndex >= textNodes.length) return;
-
-  const startEntry = textNodes[startNodeIndex];
-  const endEntry = textNodes[endNodeIndex];
-  const startNode = startEntry.node as Text;
-  const endNode = endEntry.node as Text;
-
-  const startRaw = startNode.nodeValue || '';
-  const endRaw = endNode.nodeValue || '';
-  const startOffset = findRawOffsetForNormalizedOffset(startRaw, start - startEntry.start);
-  const endOffset = findRawOffsetForNormalizedOffset(endRaw, end - endEntry.start);
-
-  const range = document.createRange();
-  try {
-    range.setStart(startNode, startOffset);
-    range.setEnd(endNode, endOffset);
-    const wrapper = document.createElement('mark');
-    wrapper.className = className;
-    if (dataAttrs) {
-      Object.entries(dataAttrs).forEach(([key, value]) => {
-        wrapper.dataset[key] = value;
-      });
-    }
-    range.surroundContents(wrapper);
-  } catch {
-    // surroundContents may throw for overlapping or partial element boundaries
+  while (endNodeIndex < textNodes.length && end > textNodes[endNodeIndex].end) {
+    endNodeIndex++;
   }
-}
-
-function findRawOffsetForNormalizedOffset(raw: string, normalizedOffset: number): number {
-  for (let rawOffset = 0; rawOffset <= raw.length; rawOffset++) {
-    if (rawOffsetToNormalizedOffset(raw, rawOffset) >= normalizedOffset) {
-      return rawOffset;
-    }
+  if (endNodeIndex >= textNodes.length) {
+    endNodeIndex = textNodes.length - 1;
   }
-  return raw.length;
+
+  if (startNodeIndex === endNodeIndex) {
+    wrapNormalizedPortionInTextNode(
+      textNodes[startNodeIndex].node as Text,
+      start - textNodes[startNodeIndex].start,
+      end - textNodes[startNodeIndex].start,
+      className,
+      dataAttrs,
+    );
+    return;
+  }
+
+  for (let i = endNodeIndex; i >= startNodeIndex; i--) {
+    const entry = textNodes[i];
+    const portionStart = i === startNodeIndex ? start - entry.start : 0;
+    const portionEnd = i === endNodeIndex ? end - entry.start : entry.end - entry.start;
+    wrapNormalizedPortionInTextNode(
+      entry.node as Text,
+      portionStart,
+      portionEnd,
+      className,
+      dataAttrs,
+    );
+  }
 }
 
 export function applyDiffHighlights(
