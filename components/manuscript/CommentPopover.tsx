@@ -4,6 +4,8 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FiMessageSquare, FiX } from 'react-icons/fi';
 import Button from '@/components/Button';
+import Card, { CardTitle } from '@/components/ui/Card';
+import { formControlFocusGlowClassName } from '@/lib/utils/formControls';
 
 const MARGIN = 12;
 const GAP = 8;
@@ -123,7 +125,7 @@ export default function CommentPopover({
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed z-[100] flex w-80 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-xl"
+      className="fixed z-[100] w-80"
       style={{
         top: position?.top ?? anchorRect.bottom + GAP,
         left: position?.left ?? Math.max(MARGIN, anchorRect.left),
@@ -131,13 +133,24 @@ export default function CommentPopover({
         visibility: position ? 'visible' : 'hidden',
       }}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-3">
+      <Card
+        padding="none"
+        shadow="soft"
+        hoverShadow={false}
+        className="flex max-h-full flex-col overflow-hidden !rounded-sm"
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-0 sm:p-5 sm:pb-0">
         <div className="mb-3 flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-neutral-900">
-            <FiMessageSquare className="h-4 w-4 text-primary-600" />
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <FiMessageSquare className="h-4 w-4 text-primary-500" />
             Add comment
-          </div>
-          <button type="button" onClick={onCancel} className="text-neutral-400 hover:text-neutral-600">
+          </CardTitle>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-sm p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+            aria-label="Cancel comment"
+          >
             <FiX className="h-4 w-4" />
           </button>
         </div>
@@ -152,18 +165,19 @@ export default function CommentPopover({
           rows={3}
           autoFocus
           placeholder={commentPlaceholder}
-          className="w-full resize-none rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+          className={`w-full resize-none rounded-sm border border-neutral-300 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-600 ${formControlFocusGlowClassName}`}
         />
-      </div>
+        </div>
 
-      <div className="flex shrink-0 justify-end gap-2 border-t border-neutral-100 bg-white px-4 py-3">
-        <Button variant="outline" size="sm" onClick={onCancel} disabled={submitting}>
-          Cancel
-        </Button>
-        <Button variant="primary" size="sm" onClick={onSubmit} disabled={submitting || !body.trim()}>
-          {submitting ? 'Posting…' : 'Comment'}
-        </Button>
-      </div>
+        <div className="flex shrink-0 justify-end gap-2 bg-white px-4 pb-4 pt-2 sm:px-5 sm:pb-5">
+          <Button variant="outline" size="sm" className="!rounded-sm" onClick={onCancel} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button variant="primary" size="sm" className="!rounded-sm" onClick={onSubmit} disabled={submitting || !body.trim()}>
+            {submitting ? 'Posting…' : 'Comment'}
+          </Button>
+        </div>
+      </Card>
     </div>,
     document.body,
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { forwardRef, useRef, useEffect, useCallback, useState, useImperativeHandle } from 'react';
 import { FiRefreshCw } from 'react-icons/fi';
 import type { DiffResult } from '@/lib/api/paperVersions';
 import type { PaperComment, TextQuoteSelector } from '@/lib/api/paperComments';
@@ -17,6 +17,18 @@ import { isDocxFileName, observeDocxPreviewResize, renderDocxPreview, scaleDocxP
 export interface ManuscriptSelection {
   anchor: ReturnType<typeof buildTextQuoteSelector>;
   rect: DOMRect;
+}
+
+export interface ManuscriptViewerHandle {
+  scrollToComment: (commentId: string) => void;
+}
+
+function scrollElementIntoContainer(element: HTMLElement, container: HTMLElement) {
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  const offsetTop = elementRect.top - containerRect.top + container.scrollTop;
+  const targetTop = offsetTop - container.clientHeight / 2 + elementRect.height / 2;
+  container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
 }
 
 interface ManuscriptViewerProps {
@@ -78,7 +90,7 @@ function applyCommentHighlights(
 
   const { fullText } = buildTextNodeIndex(container);
   const highlightable = comments
-    .filter((c) => c.anchor && c.anchor_status !== 'orphaned')
+    .filter((c) => c.anchor)
     .map((comment) => {
       const resolved = comment.anchor ? resolveAnchorInText(fullText, comment.anchor) : null;
       return { comment, resolved };
@@ -111,7 +123,7 @@ function applyCommentHighlights(
   }
 }
 
-export default function ManuscriptViewer({
+const ManuscriptViewer = forwardRef<ManuscriptViewerHandle, ManuscriptViewerProps>(function ManuscriptViewer({
   diff,
   mode,
   showDiff = false,
@@ -127,25 +139,72 @@ export default function ManuscriptViewer({
   onSelection,
   onCommentClick,
   viewerRef,
-}: ManuscriptViewerProps) {
+}, ref) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLElement | null>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
+  const pendingScrollCommentIdRef = useRef<string | null>(null);
+  const overlayStateRef = useRef({
+    comments,
+    selectedCommentId,
+    pendingAnchor,
+    showDiff,
+    mode,
+  });
+  overlayStateRef.current = { comments, selectedCommentId, pendingAnchor, showDiff, mode };
   const [rendering, setRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [docxReady, setDocxReady] = useState(false);
 
   const isDocx = isDocxFileName(fileName);
 
-  const applyHtmlOverlays = useCallback(
+  const tryScrollToComment = useCallback((commentId: string): boolean => {
+    if (loading || (isDocx && !docxReady)) return false;
+
+    const container = containerRef.current;
+    const scrollEl = scrollRef.current;
+    if (!container || !scrollEl) return false;
+
+    const mark = container.querySelector(
+      `mark[data-comment-id="${CSS.escape(commentId)}"]`,
+    ) as HTMLElement | null;
+    if (!mark) return false;
+
+    scrollElementIntoContainer(mark, scrollEl);
+    return true;
+  }, [loading, isDocx, docxReady]);
+
+  const performPendingScroll = useCallback(() => {
+    const commentId = pendingScrollCommentIdRef.current;
+    if (!commentId) return;
+    if (tryScrollToComment(commentId)) {
+      pendingScrollCommentIdRef.current = null;
+    }
+  }, [tryScrollToComment]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToComment(commentId: string) {
+        pendingScrollCommentIdRef.current = commentId;
+        requestAnimationFrame(() => {
+          performPendingScroll();
+        });
+      },
+    }),
+    [performPendingScroll],
+  );
+
+  const applyOverlaysToContainer = useCallback(
     (container: HTMLElement) => {
+      const { comments, selectedCommentId, pendingAnchor, showDiff, mode } = overlayStateRef.current;
       if (showDiff && diff?.changes && diff.changes.length > 0) {
         applyDiffHighlights(container, diff.changes, mode);
       }
       applyCommentHighlights(container, comments, selectedCommentId, pendingAnchor);
     },
-    [comments, selectedCommentId, pendingAnchor, diff, mode, showDiff],
+    [diff],
   );
 
   const rescaleDocx = useCallback(() => {
@@ -175,7 +234,7 @@ export default function ManuscriptViewer({
           }
           rescaleDocx();
           setDocxReady(true);
-          applyHtmlOverlays(container);
+          applyOverlaysToContainer(container);
         } catch {
           if (!cancelled) {
             setRenderError('Failed to render document');
@@ -204,8 +263,8 @@ export default function ManuscriptViewer({
     }
 
     container.innerHTML = html;
-    applyHtmlOverlays(container);
-  }, [diff, mode, isDocx, projectId, versionId, loading, rescaleDocx, applyHtmlOverlays]);
+    applyOverlaysToContainer(container);
+  }, [diff, mode, showDiff, isDocx, projectId, versionId, loading, rescaleDocx, applyOverlaysToContainer]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -213,16 +272,21 @@ export default function ManuscriptViewer({
 
     if (isDocx) {
       if (!docxReady) return;
-      rescaleDocx();
       applyCommentHighlights(container, comments, selectedCommentId, pendingAnchor);
+      requestAnimationFrame(() => {
+        performPendingScroll();
+      });
       return;
     }
 
     const html = mode === 'current' ? diff.currentHtml : diff.previousHtml;
-    if (!html) return;
-    container.innerHTML = html;
-    applyHtmlOverlays(container);
-  }, [comments, selectedCommentId, pendingAnchor, showDiff, applyHtmlOverlays, isDocx, loading, diff, mode, docxReady, rescaleDocx]);
+    if (!html || !container.hasChildNodes()) return;
+
+    applyCommentHighlights(container, comments, selectedCommentId, pendingAnchor);
+    requestAnimationFrame(() => {
+      performPendingScroll();
+    });
+  }, [comments, selectedCommentId, pendingAnchor, isDocx, loading, diff, mode, docxReady, performPendingScroll]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -296,4 +360,6 @@ export default function ManuscriptViewer({
       </div>
     </div>
   );
-}
+});
+
+export default ManuscriptViewer;

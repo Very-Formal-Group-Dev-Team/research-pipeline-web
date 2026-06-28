@@ -2,9 +2,10 @@
  * Inline manuscript comment API.
  */
 
-import { get, patch, post } from './client';
+import { del, get, patch, post } from './client';
 
 export type PaperCommentStatus = 'open' | 'resolved' | 'needs_revision';
+export type PaperCommentVisibility = 'adviser' | 'team';
 export type AnchorStatus = 'active' | 'modified' | 'orphaned';
 
 export interface TextQuoteSelector {
@@ -35,8 +36,10 @@ export interface PaperComment {
   resolved_at: string | null;
   revision_requested_by: string | null;
   revision_requested_at: string | null;
+  visibility: PaperCommentVisibility;
   created_at: string;
   updated_at: string;
+  edited_at: string | null;
   mapped_start: number | null;
   mapped_end: number | null;
   anchor_status: AnchorStatus | null;
@@ -73,8 +76,12 @@ export function createPaperComment(
   return post<PaperComment>(`/projects/${projectId}/paper-comments`, payload);
 }
 
-export function updatePaperComment(projectId: string, commentId: string, body: string) {
-  return patch<PaperComment>(`/projects/${projectId}/paper-comments/${commentId}`, { body });
+export function updatePaperComment(
+  projectId: string,
+  commentId: string,
+  payload: { body?: string; visibility?: PaperCommentVisibility },
+) {
+  return patch<PaperComment>(`/projects/${projectId}/paper-comments/${commentId}`, payload);
 }
 
 export function resolvePaperComment(projectId: string, commentId: string) {
@@ -87,4 +94,8 @@ export function requestPaperCommentRevision(projectId: string, commentId: string
 
 export function reopenPaperComment(projectId: string, commentId: string) {
   return post<PaperComment>(`/projects/${projectId}/paper-comments/${commentId}/reopen`, {});
+}
+
+export function deletePaperComment(projectId: string, commentId: string) {
+  return del<{ success: boolean }>(`/projects/${projectId}/paper-comments/${commentId}`);
 }
