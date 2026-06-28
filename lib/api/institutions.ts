@@ -32,6 +32,16 @@ export interface InstitutionCourse {
   updated_at?: string;
 }
 
+export interface InstitutionSection {
+  id: string;
+  institution_id: string;
+  name: string;
+  code: string | null;
+  is_active?: number | boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 /** Search registered institutions (seeded from hardcoded list). */
 export function searchInstitutions(query = '') {
   const params = new URLSearchParams();
@@ -48,4 +58,9 @@ export function getMyInstitutionCourses() {
 /** List active programs for the current user's institution. */
 export function getMyInstitutionPrograms() {
   return get<InstitutionProgram[]>('/institutions/me/programs');
+}
+
+/** List active sections for the current user's institution. */
+export function getMyInstitutionSections() {
+  return get<InstitutionSection[]>('/institutions/me/sections');
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getUser } from "@/lib/api/auth";
 import type { AuthUser } from "@/lib/api/auth";
 import { clearSessionTokenCookie, hydrateSessionFromServer } from "@/lib/auth-session";
+import { isAccountDeactivatedError, redirectForDeactivatedAccount } from "@/lib/auth/accountDeactivated";
 
 export default function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -19,7 +20,9 @@ export default function useAuth() {
       if (res.error || !res.data) {
         setUser(null);
         setError(res.error || "No user");
-        if (res.status === 401) {
+        if (res.status === 403 && isAccountDeactivatedError(res.error)) {
+          void redirectForDeactivatedAccount();
+        } else if (res.status === 401) {
           await clearSessionTokenCookie();
         }
       } else {

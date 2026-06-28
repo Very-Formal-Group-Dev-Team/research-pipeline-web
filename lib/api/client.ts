@@ -1,4 +1,5 @@
 import { getClientSessionToken } from '@/lib/auth-session';
+import { isAccountDeactivatedError, redirectForDeactivatedAccount } from '@/lib/auth/accountDeactivated';
 
 /**
  * Centralized API client for communicating with the dedicated backend server.
@@ -82,9 +83,13 @@ async function request<T>(
     }
 
     if (!res.ok) {
+      const errorMessage = body?.error || body?.message || res.statusText;
+      if (res.status === 403 && isAccountDeactivatedError(errorMessage)) {
+        void redirectForDeactivatedAccount();
+      }
       return {
         data: null,
-        error: body?.error || body?.message || res.statusText,
+        error: errorMessage,
         status: res.status,
       };
     }

@@ -369,6 +369,37 @@ export function deleteCoordinatorRubric(rubricId: string) {
   return del<{ success: boolean }>(`/coordinator/rubrics/${rubricId}`);
 }
 
+// ─── Sections ───────────────────────────────────────────────────────────────
+
+export interface InstitutionSectionRecord {
+  id: string;
+  institution_id: string;
+  name: string;
+  code: string | null;
+  is_active: number | boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getCoordinatorSections() {
+  return get<InstitutionSectionRecord[]>('/coordinator/sections');
+}
+
+export function createCoordinatorSection(payload: { name: string; code?: string }) {
+  return post<InstitutionSectionRecord>('/coordinator/sections', payload);
+}
+
+export function updateCoordinatorSection(
+  sectionId: string,
+  payload: { name?: string; code?: string; isActive?: boolean },
+) {
+  return put<InstitutionSectionRecord>(`/coordinator/sections/${sectionId}`, payload);
+}
+
+export function deleteCoordinatorSection(sectionId: string) {
+  return del<{ success: boolean }>(`/coordinator/sections/${sectionId}`);
+}
+
 export function bookDefenseSchedule(payload: BookDefenseSchedulePayload) {
   return post<BookDefenseScheduleResult | VerifyDefenseConflict>('/coordinator/defenses/book', payload);
 }
@@ -388,6 +419,8 @@ export interface InstitutionProject {
   course_label: string | null;
   course_name: string | null;
   course_code: string | null;
+  section_id: string | null;
+  section: string | null;
 }
 
 export interface AdviserWithProjects {

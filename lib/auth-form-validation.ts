@@ -1,10 +1,11 @@
 import { validatePassword } from '@/lib/passwordPolicy';
+import { isAccountDeactivatedError, ACCOUNT_DEACTIVATED_DISPLAY_MESSAGE } from '@/lib/auth/accountDeactivated';
 
 export type AuthField = 'fullName' | 'email' | 'password' | 'confirmPassword';
 
 export type AuthErrorTarget =
   | { scope: 'field'; field: AuthField; message: string }
-  | { scope: 'form'; message: string; fields?: AuthField[] };
+  | { scope: 'form'; message: string; fields?: AuthField[]; deactivated?: boolean };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -90,6 +91,14 @@ function resolveFieldApiError(message: string): AuthField {
 
 export function resolveApiError(message: string): AuthErrorTarget {
   const lower = message.toLowerCase();
+
+  if (isAccountDeactivatedError(message)) {
+    return {
+      scope: 'form',
+      message: ACCOUNT_DEACTIVATED_DISPLAY_MESSAGE,
+      deactivated: true,
+    };
+  }
 
   if (
     lower.includes('invalid email or password')

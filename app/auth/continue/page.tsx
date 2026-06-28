@@ -6,6 +6,7 @@ import useAuth from '@/lib/hooks/useAuth';
 import { getRoleHomePath } from '@/lib/auth/roleAccess';
 import { isDebriefPending } from '@/lib/onboarding/debriefSession';
 import { clearSessionTokenCookie, setSessionTokenCookie } from '@/lib/auth-session';
+import { isAccountDeactivatedError, redirectForDeactivatedAccount } from '@/lib/auth/accountDeactivated';
 
 function AuthContinueContent() {
   const router = useRouter();
@@ -26,12 +27,16 @@ function AuthContinueContent() {
     })();
   }, [searchParams]);
 
-  const { user, loading } = useAuth();
+  const { user, loading, error } = useAuth();
 
   useEffect(() => {
     if (!tokenSaved || loading) return;
 
     if (!user) {
+      if (isAccountDeactivatedError(error)) {
+        void redirectForDeactivatedAccount();
+        return;
+      }
       void clearSessionTokenCookie();
       router.replace('/login');
       return;
@@ -49,7 +54,7 @@ function AuthContinueContent() {
     }
 
     router.replace(getRoleHomePath(user.role));
-  }, [tokenSaved, loading, user, router]);
+  }, [tokenSaved, loading, user, error, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50">

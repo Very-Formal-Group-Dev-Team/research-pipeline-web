@@ -8,6 +8,7 @@ import Select from './ui/Select';
 import Avatar from './ui/Avatar';
 import { useRouter } from 'next/navigation';
 import { completeProfile } from '@/lib/api/users';
+import { get } from '@/lib/api/client';
 import useAuth from '@/lib/hooks/useAuth';
 import { markDebriefPending } from '@/lib/onboarding/debriefSession';
 import InstitutionSearchField from '@/components/InstitutionSearchField';
@@ -22,7 +23,17 @@ export interface NewAccountConfigModalProps {
   googlePhotoUrl?: string | null;
 }
 
-type UserRole = 'student' | 'teacher' | 'coordinator' | 'admin';
+type UserRole = 'student' | 'teacher' | 'admin';
+
+interface OnboardingRoleOption {
+  value: string;
+  label: string;
+}
+
+const DEFAULT_ROLE_OPTIONS: OnboardingRoleOption[] = [
+  { value: 'student', label: 'Student' },
+  { value: 'teacher', label: 'Teacher / Adviser' },
+];
 
 interface FormData {
   role: UserRole | '';
@@ -57,6 +68,16 @@ export default function NewAccountConfigModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [roleOptions, setRoleOptions] = useState<OnboardingRoleOption[]>(DEFAULT_ROLE_OPTIONS);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void get<{ onboardingRoles?: OnboardingRoleOption[] }>('/public/config').then((res) => {
+      if (res.data?.onboardingRoles?.length) {
+        setRoleOptions(res.data.onboardingRoles);
+      }
+    });
+  }, [isOpen]);
 
   useEffect(() => {
     if (googleDisplayName) {
@@ -150,7 +171,7 @@ export default function NewAccountConfigModal({
 
     const result = await completeProfile({
       displayName: formData.displayName,
-      role: formData.role as 'student' | 'teacher' | 'coordinator' | 'admin',
+      role: formData.role as 'student' | 'teacher' | 'admin',
       email: userEmail,
       avatarFile,
       googlePhotoUrl,
@@ -168,13 +189,6 @@ export default function NewAccountConfigModal({
     onClose();
     router.push('/onboarding/welcome');
   };
-
-  const roleOptions = [
-    { value: 'student', label: 'Student' },
-    { value: 'teacher', label: 'Teacher / Adviser' },
-    { value: 'coordinator', label: 'Coordinator' },
-    { value: 'admin', label: 'Admin' },
-  ];
 
   return (
     <Modal

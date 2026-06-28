@@ -43,8 +43,10 @@ import type { SearchUserResult } from '@/lib/api/users';
 import {
   getMyInstitutionCourses,
   getMyInstitutionPrograms,
+  getMyInstitutionSections,
   type InstitutionCourse,
   type InstitutionProgram,
+  type InstitutionSection,
 } from '@/lib/api/institutions';
 import { toast } from 'sonner';
 import {
@@ -161,9 +163,11 @@ export default function ProjectDetailPage() {
   const [detailsCourseId, setDetailsCourseId] = useState('');
   const [institutionCourses, setInstitutionCourses] = useState<InstitutionCourse[]>([]);
   const [institutionPrograms, setInstitutionPrograms] = useState<InstitutionProgram[]>([]);
+  const [institutionSections, setInstitutionSections] = useState<InstitutionSection[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [programsLoading, setProgramsLoading] = useState(true);
-  const [detailsSection, setDetailsSection] = useState('');
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [detailsSectionId, setDetailsSectionId] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [leaveConfirmModalOpen, setLeaveConfirmModalOpen] = useState(false);
@@ -238,20 +242,57 @@ export default function ProjectDetailPage() {
     [],
   );
 
+  const resolveSectionId = useCallback(
+    (projectData: Project, sections: InstitutionSection[]) => {
+      if (projectData.section_id) {
+        return projectData.section_id;
+      }
+
+      const savedSection = projectData.section?.trim().toLowerCase();
+      if (!savedSection) return '';
+
+      const matched = sections.find((item) => {
+        const byName = item.name.trim().toLowerCase() === savedSection;
+        const byLabel = item.code
+          ? `${item.name} (${item.code})`.trim().toLowerCase() === savedSection
+          : false;
+        return byName || byLabel;
+      });
+
+      return matched?.id || '';
+    },
+    [],
+  );
+
+  const legacySectionLabel = useMemo(() => {
+    if (!project?.section?.trim()) return null;
+    if (detailsSectionId) return null;
+    const saved = project.section.trim();
+    const inCatalog = institutionSections.some(
+      (item) => item.name.trim().toLowerCase() === saved.toLowerCase(),
+    );
+    return inCatalog ? null : saved;
+  }, [project, detailsSectionId, institutionSections]);
+
   const loadInstitutionCatalog = useCallback(async () => {
     setCoursesLoading(true);
     setProgramsLoading(true);
-    const [coursesRes, programsRes] = await Promise.all([
+    setSectionsLoading(true);
+    const [coursesRes, programsRes, sectionsRes] = await Promise.all([
       getMyInstitutionCourses(),
       getMyInstitutionPrograms(),
+      getMyInstitutionSections(),
     ]);
     const courses = coursesRes.data || [];
     const programs = programsRes.data || [];
+    const sections = sectionsRes.data || [];
     setInstitutionCourses(courses);
     setInstitutionPrograms(programs);
+    setInstitutionSections(sections);
     setCoursesLoading(false);
     setProgramsLoading(false);
-    return { courses, programs };
+    setSectionsLoading(false);
+    return { courses, programs, sections };
   }, []);
 
   const loadMembers = useCallback(async () => {
@@ -287,6 +328,7 @@ export default function ProjectDetailPage() {
         if (projectData) {
           setDetailsCourseId(resolveCourseId(projectData, catalog.courses));
           setDetailsProgramId(resolveProgramId(projectData, catalog.programs));
+          setDetailsSectionId(resolveSectionId(projectData, catalog.sections));
         }
         setLoading(false);
       }
@@ -295,7 +337,7 @@ export default function ProjectDetailPage() {
     loadPaperVersions();
     loadReviewRequest();
     return () => { cancelled = true; };
-  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCatalog, resolveCourseId, resolveProgramId, loadReviewRequest]);
+  }, [params.id, loadPaperVersions, loadMembers, loadInstitutionCatalog, resolveCourseId, resolveProgramId, resolveSectionId, loadReviewRequest]);
 
   useEffect(() => {
     setEditableKeywords(project?.keywords || []);
@@ -312,8 +354,8 @@ export default function ProjectDetailPage() {
     setDetailsPaperStandard(paperStandardFormValue(project.paper_standard));
     setDetailsProgramId(resolveProgramId(project, institutionPrograms));
     setDetailsCourseId(resolveCourseId(project, institutionCourses));
-    setDetailsSection(project.section || '');
-  }, [project, institutionCourses, institutionPrograms, resolveCourseId, resolveProgramId]);
+    setDetailsSectionId(resolveSectionId(project, institutionSections));
+  }, [project, institutionCourses, institutionPrograms, institutionSections, resolveCourseId, resolveProgramId, resolveSectionId]);
 
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
@@ -346,7 +388,8 @@ export default function ProjectDetailPage() {
       detailsProgramId !==
         (project.program_id || resolveProgramId(project, institutionPrograms)) ||
       detailsCourseId !== (project.course_id || resolveCourseId(project, institutionCourses)) ||
-      detailsSection !== (project.section || '')
+      detailsSectionId !==
+        (project.section_id || resolveSectionId(project, institutionSections))
     );
   }, [
     project,
@@ -354,11 +397,13 @@ export default function ProjectDetailPage() {
     detailsPaperStandard,
     detailsProgramId,
     detailsCourseId,
-    detailsSection,
+    detailsSectionId,
     institutionCourses,
     institutionPrograms,
+    institutionSections,
     resolveCourseId,
     resolveProgramId,
+    resolveSectionId,
   ]);
 
   const abstractDirty = useMemo(() => {
@@ -575,7 +620,7 @@ export default function ProjectDetailPage() {
       paperStandard: detailsPaperStandard,
       programId: detailsProgramId || undefined,
       courseId: detailsCourseId || undefined,
-      section: detailsSection.trim(),
+      sectionId: detailsSectionId || null,
     });
 
     if (res.error || !res.data) {
@@ -614,7 +659,7 @@ export default function ProjectDetailPage() {
       paperStandard: detailsPaperStandard,
       programId: detailsProgramId || undefined,
       courseId: detailsCourseId || undefined,
-      section: detailsSection.trim(),
+      sectionId: detailsSectionId || null,
     });
 
     if (res.error || !res.data) {
@@ -948,13 +993,31 @@ export default function ProjectDetailPage() {
                   </select>
                 </ProjectDetailFieldRow>
                 <ProjectDetailFieldRow label="Section" htmlFor="project-detail-section">
-                  <Input
+                  <select
                     id="project-detail-section"
-                    value={detailsSection}
-                    onChange={(e) => setDetailsSection(e.target.value)}
-                    placeholder="Section"
-                    className={PROJECT_DETAIL_CONTROL_CLASS}
-                  />
+                    value={detailsSectionId}
+                    onChange={(e) => setDetailsSectionId(e.target.value)}
+                    disabled={sectionsLoading}
+                    className={`${formSelectResponsiveClassName} ${PROJECT_DETAIL_CONTROL_CLASS} !pr-8 bg-[length:0.875rem_0.875rem] bg-[right_0.5rem_center]`}
+                  >
+                    <option value="">
+                      {sectionsLoading
+                        ? 'Loading sections...'
+                        : institutionSections.length === 0
+                          ? 'No sections available'
+                          : 'Select section'}
+                    </option>
+                    {legacySectionLabel ? (
+                      <option value="" disabled>
+                        {`Legacy: ${legacySectionLabel}`}
+                      </option>
+                    ) : null}
+                    {institutionSections.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.code ? `${item.name} (${item.code})` : item.name}
+                      </option>
+                    ))}
+                  </select>
                 </ProjectDetailFieldRow>
                 <ProjectDetailFieldRow label="Project Type" htmlFor="project-detail-type">
                   <select

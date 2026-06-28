@@ -26,6 +26,7 @@ export interface Project {
   course_id?: string | null;
   course_code?: string | null;
   section?: string;
+  section_id?: string | null;
   member_role?: string;
 }
 
@@ -62,7 +63,7 @@ export interface CreateProjectPayload {
   programId?: string;
   course?: string;
   courseId?: string;
-  section?: string;
+  sectionId?: string;
   file?: File | null;
   invites?: CreateProjectInvite[];
 }
@@ -222,7 +223,7 @@ export async function createProject(payload: CreateProjectPayload) {
   if (payload.program) formData.append('program', payload.program);
   if (payload.programId) formData.append('programId', payload.programId);
   if (payload.courseId) formData.append('courseId', payload.courseId);
-  if (payload.section) formData.append('section', payload.section);
+  if (payload.sectionId) formData.append('sectionId', payload.sectionId);
   if (payload.file) formData.append('file', payload.file);
   if (payload.invites?.length) {
     formData.append('invites', JSON.stringify(payload.invites));
@@ -382,7 +383,7 @@ export interface UpdateProjectDetailsPayload {
   programId?: string;
   course?: string;
   courseId?: string;
-  section?: string;
+  sectionId?: string | null;
 }
 
 /** Update project title, type, paper standard, and class fields (student members). */
