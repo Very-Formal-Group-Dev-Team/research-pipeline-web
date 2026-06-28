@@ -25,6 +25,7 @@ export interface ProjectListToolbarProps {
   filters: ProjectListFilterState;
   courseOptions: string[];
   programOptions: string[];
+  sectionOptions?: string[];
   onFiltersChange: (next: ProjectListFilterState) => void;
   sortOptions?: { value: ProjectSortBy; label: string; shortLabel: string }[];
 }
@@ -39,6 +40,7 @@ export default function ProjectListToolbar({
   filters,
   courseOptions,
   programOptions,
+  sectionOptions,
   onFiltersChange,
   sortOptions = DEFAULT_SORT_OPTIONS,
 }: ProjectListToolbarProps) {
@@ -69,7 +71,7 @@ export default function ProjectListToolbar({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:contents">
+        <div className={`grid gap-2 sm:contents ${sectionOptions?.length ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
           <div className="min-w-0 sm:w-40 sm:shrink-0">
             <Select
               aria-label="Filter by course"
@@ -94,6 +96,20 @@ export default function ProjectListToolbar({
               fullWidth
             />
           </div>
+          {sectionOptions?.length ? (
+            <div className="min-w-0 sm:w-40 sm:shrink-0">
+              <Select
+                aria-label="Filter by section"
+                value={filters.section}
+                onChange={(event) => update({ section: event.target.value })}
+                options={[
+                  { value: '', label: 'All sections' },
+                  ...sectionOptions.map((section) => ({ value: section, label: section })),
+                ]}
+                fullWidth
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 

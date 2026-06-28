@@ -21,6 +21,7 @@ import {
   filterAndSortProjects,
   getProjectCourseOptions,
   getProjectProgramOptions,
+  getProjectSectionOptions,
   isProjectListFiltersDirty,
   type ProjectListFilterState,
   type ProjectSortBy,
@@ -103,6 +104,7 @@ export default function CoordinatorProjectsPage() {
 
   const courseOptions = useMemo(() => getProjectCourseOptions(allProjects), [allProjects]);
   const programOptions = useMemo(() => getProjectProgramOptions(allProjects), [allProjects]);
+  const sectionOptions = useMemo(() => getProjectSectionOptions(allProjects), [allProjects]);
   const filteredProjects = useMemo(
     () =>
       filterAndSortProjects(allProjects, listFilters, {
@@ -120,7 +122,7 @@ export default function CoordinatorProjectsPage() {
         title="No matching projects"
         description={
           filtersActive
-            ? 'Try adjusting your search, course, or program filters.'
+            ? 'Try adjusting your search, course, program, or section filters.'
             : 'No projects match the current sort and filter settings.'
         }
         action={
@@ -151,6 +153,7 @@ export default function CoordinatorProjectsPage() {
               filters={listFilters}
               courseOptions={courseOptions}
               programOptions={programOptions}
+              sectionOptions={sectionOptions}
               onFiltersChange={setListFilters}
               sortOptions={COORDINATOR_SORT_OPTIONS}
             />
@@ -184,6 +187,9 @@ export default function CoordinatorProjectsPage() {
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
                       Course
+                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
+                      Section
                     </th>
                     <th className="whitespace-nowrap px-4 py-3 sm:px-6 font-medium text-neutral-600">
                       Status
@@ -226,6 +232,9 @@ export default function CoordinatorProjectsPage() {
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 sm:px-6 text-neutral-600">
                           {formatProjectCourse(project)}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 sm:px-6 text-neutral-600">
+                          {project.section?.trim() || '—'}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 sm:px-6">
                           <Badge variant={badge.variant}>{badge.label}</Badge>

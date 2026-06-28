@@ -10,6 +10,7 @@ export interface ProjectListFilterable {
   created_at: string;
   course_code?: string | null;
   program?: string | null;
+  section?: string | null;
 }
 
 export type ProjectSortBy = 'date' | 'title' | 'stage' | 'adviser';
@@ -19,6 +20,7 @@ export interface ProjectListFilterState {
   searchQuery: string;
   course: string;
   program: string;
+  section: string;
   sortBy: ProjectSortBy;
   sortDirection: ProjectSortDirection;
 }
@@ -27,6 +29,7 @@ export const DEFAULT_PROJECT_LIST_FILTERS: ProjectListFilterState = {
   searchQuery: '',
   course: '',
   program: '',
+  section: '',
   sortBy: 'date',
   sortDirection: 'desc',
 };
@@ -61,6 +64,10 @@ export function getProjectProgramOptions(projects: ProjectListFilterable[]): str
   return uniqueSortedLabels(projects.map((project) => project.program));
 }
 
+export function getProjectSectionOptions(projects: ProjectListFilterable[]): string[] {
+  return uniqueSortedLabels(projects.map((project) => project.section));
+}
+
 export interface FilterAndSortProjectsOptions<T extends ProjectListFilterable> {
   getAdviserName?: (project: T) => string;
 }
@@ -80,6 +87,9 @@ export function filterAndSortProjects<T extends ProjectListFilterable>(
       return false;
     }
     if (filters.program && (project.program?.trim() || '') !== filters.program) {
+      return false;
+    }
+    if (filters.section && (project.section?.trim() || '') !== filters.section) {
       return false;
     }
     return true;
@@ -123,7 +133,7 @@ export function filterAndSortProjects<T extends ProjectListFilterable>(
 }
 
 export function hasActiveProjectListFilters(filters: ProjectListFilterState): boolean {
-  return Boolean(filters.searchQuery.trim() || filters.course || filters.program);
+  return Boolean(filters.searchQuery.trim() || filters.course || filters.program || filters.section);
 }
 
 export function isProjectListFiltersDirty(filters: ProjectListFilterState): boolean {
@@ -131,6 +141,7 @@ export function isProjectListFiltersDirty(filters: ProjectListFilterState): bool
     filters.searchQuery.trim() !== DEFAULT_PROJECT_LIST_FILTERS.searchQuery ||
     filters.course !== DEFAULT_PROJECT_LIST_FILTERS.course ||
     filters.program !== DEFAULT_PROJECT_LIST_FILTERS.program ||
+    filters.section !== DEFAULT_PROJECT_LIST_FILTERS.section ||
     filters.sortBy !== DEFAULT_PROJECT_LIST_FILTERS.sortBy ||
     filters.sortDirection !== DEFAULT_PROJECT_LIST_FILTERS.sortDirection
   );

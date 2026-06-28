@@ -15,6 +15,7 @@ import {
   FiBookOpen,
   FiBell,
   FiVideo,
+  FiLayers,
 } from 'react-icons/fi';
 import { useSidebar } from './SidebarContext';
 import { defenseTranscriptionArchiveUrl } from '@/lib/meetings/navigation';
@@ -70,6 +71,7 @@ const menuItems: Record<string, MenuItem[]> = {
     { label: 'Notifications', href: '/coordinator/notifications', icon: <FiBell />, tooltip: 'Defense and schedule notifications' },
     { label: 'Recordings', href: RECORDINGS_HREF, icon: <FiVideo />, tooltip: 'Recorded meetings and transcripts' },
     { label: 'Courses', href: '/coordinator/courses', icon: <FiBookOpen /> },
+    { label: 'Sections', href: '/coordinator/sections', icon: <FiLayers /> },
     { label: 'All Projects', href: '/coordinator/projects', icon: <FiFolder /> },
     { label: 'Rubrics', href: '/coordinator/rubrics', icon: <FiClipboard /> },
     { label: 'Profile', href: '/coordinator/profile', icon: <FiUser /> },

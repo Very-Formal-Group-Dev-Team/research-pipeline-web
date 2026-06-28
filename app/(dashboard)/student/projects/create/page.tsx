@@ -14,8 +14,10 @@ import type { SearchUserResult } from '@/lib/api/users';
 import {
   getMyInstitutionCourses,
   getMyInstitutionPrograms,
+  getMyInstitutionSections,
   type InstitutionCourse,
   type InstitutionProgram,
+  type InstitutionSection,
 } from '@/lib/api/institutions';
 import { toast } from 'sonner';
 import CreateProjectFormSkeleton from '@/components/skeletons/CreateProjectFormSkeleton';
@@ -42,9 +44,11 @@ export default function CreateProjectPage() {
   const [courseId, setCourseId] = useState('');
   const [institutionCourses, setInstitutionCourses] = useState<InstitutionCourse[]>([]);
   const [institutionPrograms, setInstitutionPrograms] = useState<InstitutionProgram[]>([]);
+  const [institutionSections, setInstitutionSections] = useState<InstitutionSection[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [programsLoading, setProgramsLoading] = useState(true);
-  const [section, setSection] = useState('');
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [sectionId, setSectionId] = useState('');
   const [projectType, setProjectType] = useState('');
   const [researchType, setResearchType] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -72,15 +76,19 @@ export default function CreateProjectPage() {
     async function loadInstitutionCatalog() {
       setCoursesLoading(true);
       setProgramsLoading(true);
-      const [coursesRes, programsRes] = await Promise.all([
+      setSectionsLoading(true);
+      const [coursesRes, programsRes, sectionsRes] = await Promise.all([
         getMyInstitutionCourses(),
         getMyInstitutionPrograms(),
+        getMyInstitutionSections(),
       ]);
       if (!cancelled) {
         setInstitutionCourses(coursesRes.data || []);
         setInstitutionPrograms(programsRes.data || []);
+        setInstitutionSections(sectionsRes.data || []);
         setCoursesLoading(false);
         setProgramsLoading(false);
+        setSectionsLoading(false);
       }
     }
 
@@ -100,7 +108,7 @@ export default function CreateProjectPage() {
       projectType ||
       programId ||
       courseId ||
-      section ||
+      sectionId ||
       selectedFile ||
       invitedMembers.length > 0
     ) {
@@ -108,7 +116,7 @@ export default function CreateProjectPage() {
     } else {
       setIsDirty(false);
     }
-  }, [title, researchType, projectType, programId, courseId, section, selectedFile, invitedMembers]);
+  }, [title, researchType, projectType, programId, courseId, sectionId, selectedFile, invitedMembers]);
 
   const validateFile = (file: File): string | null => {
     // Validate file type
@@ -246,7 +254,7 @@ export default function CreateProjectPage() {
         projectType: projectType as 'thesis' | 'capstone',
         programId: programId || undefined,
         courseId: courseId || undefined,
-        section: section.trim() || undefined,
+        sectionId: sectionId || undefined,
         file: selectedFile,
       });
 
@@ -368,11 +376,22 @@ export default function CreateProjectPage() {
                   disabled={coursesLoading}
                   responsiveText
                 />
-                <Input
+                <Select
                   label="Section"
-                  placeholder="Enter section"
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
+                  placeholder={
+                    sectionsLoading
+                      ? 'Loading sections...'
+                      : institutionSections.length === 0
+                        ? 'No sections available'
+                        : 'Select section'
+                  }
+                  value={sectionId}
+                  onChange={(e) => setSectionId(e.target.value)}
+                  options={institutionSections.map((item) => ({
+                    value: item.id,
+                    label: item.code ? `${item.name} (${item.code})` : item.name,
+                  }))}
+                  disabled={sectionsLoading || institutionSections.length === 0}
                   responsiveText
                 />
                 <Select
