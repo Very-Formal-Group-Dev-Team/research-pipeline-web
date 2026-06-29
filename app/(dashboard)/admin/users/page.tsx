@@ -1,12 +1,19 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FiCheckCircle, FiEdit2, FiMinusCircle } from 'react-icons/fi';
+import { FiEdit2, FiUsers } from 'react-icons/fi';
 
+import AdminUsersListToolbar, {
+  DEFAULT_ADMIN_USERS_FILTERS,
+  isAdminUsersFiltersDirty,
+  type AdminUsersFilterState,
+} from '@/components/admin/AdminUsersListToolbar';
 import Button from '@/components/Button';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import EmptyState from '@/components/layout/EmptyState';
+import AdminUsersListSkeleton from '@/components/skeletons/AdminUsersListSkeleton';
+import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
-import Input from '@/components/ui/Input';
 import Modal, { ModalFooter } from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import { useDashboardUser } from '@/lib/hooks/useDashboardUser';
@@ -19,20 +26,11 @@ import {
 } from '@/lib/api/admin';
 import { toast } from 'sonner';
 
-const ROLE_OPTIONS = [
-  { value: '', label: 'All roles' },
+const EDIT_ROLE_OPTIONS = [
   { value: 'student', label: 'Student' },
   { value: 'adviser', label: 'Adviser' },
   { value: 'coordinator', label: 'Coordinator' },
   { value: 'admin', label: 'Admin' },
-];
-
-const EDIT_ROLE_OPTIONS = ROLE_OPTIONS.filter((option) => option.value);
-
-const STATUS_FILTER_OPTIONS = [
-  { value: '', label: 'All statuses' },
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
 ];
 
 function isUserActive(user: AdminUser): boolean {
@@ -50,9 +48,7 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [institutions, setInstitutions] = useState<AdminInstitution[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [listFilters, setListFilters] = useState<AdminUsersFilterState>(DEFAULT_ADMIN_USERS_FILTERS);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null);
@@ -65,12 +61,19 @@ export default function AdminUsersPage() {
     [institutions],
   );
 
+  const filtersActive = isAdminUsersFiltersDirty(listFilters);
+
+  const handleFiltersChange = (next: AdminUsersFilterState) => {
+    setPage(1);
+    setListFilters(next);
+  };
+
   const loadUsers = useCallback(async () => {
     setLoading(true);
     const res = await listAdminUsers({
-      search: search.trim() || undefined,
-      role: roleFilter || undefined,
-      status: statusFilter ? (statusFilter as 'active' | 'inactive') : undefined,
+      search: listFilters.search.trim() || undefined,
+      role: listFilters.role || undefined,
+      status: listFilters.status ? (listFilters.status as 'active' | 'inactive') : undefined,
       page,
       limit: 25,
     });
@@ -79,7 +82,7 @@ export default function AdminUsersPage() {
       setTotalPages(res.data.pagination.totalPages);
     }
     setLoading(false);
-  }, [search, roleFilter, statusFilter, page]);
+  }, [listFilters, page]);
 
   useEffect(() => {
     void listAdminInstitutions().then((res) => {
@@ -132,95 +135,90 @@ export default function AdminUsersPage() {
   return (
     <DashboardLayout role="admin" user={user} onLogout={handleLogout}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-primary-700">Users</h1>
-          <p className="mt-1 text-neutral-600">
-            View accounts, assign roles, and manage access across the platform
-          </p>
+        <div className="space-y-4">
+          <div>
+            <h1 className="text-3xl font-bold text-primary-700">Users</h1>
+            <p className="mt-1 text-neutral-600">
+              View accounts, assign roles, and manage access across the platform
+            </p>
+          </div>
+
+          {!loading && (users.length > 0 || filtersActive) ? (
+            <AdminUsersListToolbar filters={listFilters} onFiltersChange={handleFiltersChange} />
+          ) : null}
         </div>
 
-        <Card>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Input
-              label="Search"
-              value={search}
-              onChange={(e) => {
-                setPage(1);
-                setSearch(e.target.value);
-              }}
-              placeholder="Email or name"
-              fullWidth
-            />
-            <Select
-              label="Role"
-              value={roleFilter}
-              onChange={(e) => {
-                setPage(1);
-                setRoleFilter(e.target.value);
-              }}
-              options={ROLE_OPTIONS}
-              fullWidth
-            />
-            <Select
-              label="Status"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value);
-              }}
-              options={STATUS_FILTER_OPTIONS}
-              fullWidth
-            />
-          </div>
-        </Card>
-
         {loading ? (
-          <Card>
-            <div className="py-8 text-center text-neutral-500">Loading users…</div>
-          </Card>
+          <AdminUsersListSkeleton />
         ) : users.length === 0 ? (
           <Card>
-            <div className="py-8 text-center text-neutral-500">No users match your filters.</div>
+            <EmptyState
+              icon={<FiUsers />}
+              title={filtersActive ? 'No matching users' : 'No users yet'}
+              description={
+                filtersActive
+                  ? 'Try adjusting your search, role, or status filters.'
+                  : 'User accounts will appear here once people register on the platform.'
+              }
+              action={
+                filtersActive
+                  ? {
+                      label: 'Reset filters',
+                      onClick: () => handleFiltersChange(DEFAULT_ADMIN_USERS_FILTERS),
+                    }
+                  : undefined
+              }
+            />
           </Card>
         ) : (
-          <Card padding="none">
-            <ul className="divide-y divide-neutral-100">
-              {users.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-neutral-800">{row.full_name || 'Unnamed user'}</p>
-                    <p className="text-sm text-neutral-500">{row.email}</p>
-                    <p className="mt-1 text-xs text-neutral-400">
-                      {formatRole(row.role)}
-                      {row.institution_name ? ` · ${row.institution_name}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                        isUserActive(row)
-                          ? 'bg-success-50 text-success-700'
-                          : 'bg-neutral-100 text-neutral-600'
-                      }`}
-                    >
-                      {isUserActive(row) ? (
-                        <FiCheckCircle className="h-3.5 w-3.5" aria-hidden />
-                      ) : (
-                        <FiMinusCircle className="h-3.5 w-3.5" aria-hidden />
-                      )}
-                      {isUserActive(row) ? 'Active' : 'Inactive'}
-                    </span>
-                    <Button type="button" variant="outline" size="sm" onClick={() => openEdit(row)}>
-                      <FiEdit2 className="mr-1.5 h-4 w-4" aria-hidden />
-                      Manage
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <Card padding="none" className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm text-left">
+                <thead className="border-b border-neutral-200 bg-neutral-50">
+                  <tr>
+                    <th className="px-4 py-3 font-medium text-neutral-600 sm:px-6">Name</th>
+                    <th className="px-4 py-3 font-medium text-neutral-600 sm:px-6">Role</th>
+                    <th className="px-4 py-3 font-medium text-neutral-600 sm:px-6">Institution</th>
+                    <th className="px-4 py-3 font-medium text-neutral-600 sm:px-6">Status</th>
+                    <th className="px-4 py-3 font-medium text-neutral-600 sm:px-6">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100 bg-white">
+                  {users.map((row) => (
+                    <tr key={row.id} className="hover:bg-neutral-50">
+                      <td className="px-4 py-3 sm:px-6">
+                        <div>
+                          <p className="font-medium text-neutral-800">
+                            {row.full_name || 'Unnamed user'}
+                          </p>
+                          <p className="text-xs text-neutral-500">{row.email}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-neutral-700 sm:px-6">{formatRole(row.role)}</td>
+                      <td className="px-4 py-3 text-neutral-600 sm:px-6">
+                        {row.institution_name || '—'}
+                      </td>
+                      <td className="px-4 py-3 sm:px-6">
+                        <Badge variant={isUserActive(row) ? 'success' : 'default'} size="sm">
+                          {isUserActive(row) ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 sm:px-6">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          leftIcon={<FiEdit2 aria-hidden />}
+                          onClick={() => openEdit(row)}
+                        >
+                          Manage
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         )}
 
