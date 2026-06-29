@@ -9,7 +9,7 @@
 - Put shared UI primitives in `components/ui/` and feature-specific components in `components/`.
 - Put route pages under `app/`, especially the `(auth)` and `(dashboard)` groups.
 - Use `lib/api/client.ts` and the domain wrappers in `lib/api/` for all backend calls; do not add raw `fetch()` calls in components.
-- Respect the `session_token` cookie flow and the protection logic in `middleware.ts`.
+- Respect the `session_token` cookie flow and the protection logic in `proxy.ts`.
 - Use `'use client'` only when a component needs client-side behavior.
 - Keep TypeScript explicit and render loading and empty states for async UI.
 - Prefer Tailwind utilities and the existing design tokens over inline styles.
@@ -22,6 +22,8 @@
 - Build with `npm run build`.
 
 ## Before changing behavior
-- Check [README.md](README.md), [Tasks.md](Tasks.md), and the existing convention file at [.github/instructions/paper-version-control.instructions.md](.github/instructions/paper-version-control.instructions.md).
-- If you touch auth, routing, or API behavior, update the matching wrapper in `lib/api/` and keep route protection consistent with `middleware.ts`.
+- Check [README.md](README.md), [DOCS/ARCHITECTURE.md](DOCS/ARCHITECTURE.md), [DOCS/USER_GUIDE.md](DOCS/USER_GUIDE.md), [Tasks.md](Tasks.md), and the existing convention file at [.github/instructions/paper-version-control.instructions.md](.github/instructions/paper-version-control.instructions.md).
+- Design tokens: [DOCS/Notes/DESIGN.md](DOCS/Notes/DESIGN.md).
+- If you touch auth, routing, or API behavior, update the matching wrapper in `lib/api/` and keep route protection consistent with `proxy.ts`.
+- If you change role workflows, update [DOCS/USER_GUIDE.md](DOCS/USER_GUIDE.md) and [lib/content/roleGuides.ts](lib/content/roleGuides.ts).
 - If you touch paper version control, follow the dedicated instruction file instead of re-deriving that workflow.
